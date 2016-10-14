@@ -55,12 +55,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET chkmac=? WHERE id=?', array($_GET['chkmac'], $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'chkmac' => $_GET['chkmac']
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -68,12 +67,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET halfduplex=? WHERE id=?', array($_GET['duplex'], $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'halfduplex' => $_GET['duplex']
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -81,12 +79,11 @@ switch ($action) {
 		$DB->Execute('UPDATE nodes SET authtype=? WHERE id=?', array(intval($_GET['authtype']), $nodeid));
 		if ($SYSLOG) {
 			$args = array(
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE] => $nodeid,
-				$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST] => $customerid,
+				SYSLOG::RES_NODE => $nodeid,
+				SYSLOG::RES_CUST => $customerid,
 				'authtype' => intval($_GET['authtype']),
 			);
-			$SYSLOG->AddMessage(SYSLOG_RES_NODE, SYSLOG_OPER_UPDATE, $args,
-				array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_NODE], $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_CUST]));
+			$SYSLOG->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
 		}
 		$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 		break;
@@ -116,7 +113,7 @@ if (isset($_POST['nodeedit'])) {
 		$nodeedit['macs'][$key] = str_replace('-', ':', $value);
 
 	foreach ($nodeedit as $key => $value)
-		if ($key != 'macs' && $key != 'authtype')
+		if ($key != 'macs' && $key != 'authtype' && $key != 'wysiwyg')
 			$nodeedit[$key] = trim($value);
 
 	if ($nodeedit['ipaddr'] == '' && $nodeedit['ipaddr_pub'] == '' && empty($nodeedit['macs']) && $nodeedit['name'] == '' && $nodeedit['info'] == '' && $nodeedit['passwd'] == '' && !isset($nodeedit['wholenetwork'])) {
@@ -320,6 +317,7 @@ if (isset($_POST['nodeedit'])) {
 	$nodeinfo['latitude'] = $nodeedit['latitude'];
 	$nodeinfo['longitude'] = $nodeedit['longitude'];
 	$nodeinfo['invprojectid'] = $nodeedit['invprojectid'];
+	$nodeinfo['wysiwyg'] = $nodeedit['wysiwyg'];
 
 	if ($nodeedit['ipaddr_pub'] == '0.0.0.0')
 		$nodeinfo['ipaddr_pub'] = '';
@@ -365,6 +363,7 @@ $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);
 $SMARTY->assign('nodeauthtype', $nodeauthtype);
+$SMARTY->assign('nodeedit_sortable_order', $SESSION->get_persistent_setting('nodeedit-sortable-order'));
 $SMARTY->display('node/nodeedit.html');
 
 ?>

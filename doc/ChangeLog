@@ -1,8 +1,143 @@
 $Id$
 
-version ?.??.?? (????-??-??):
+version 1.11.21 (2016-10-14):
 
   - added support for DSN and MDN in lms-notify.php script [chilan]
+  - smarty installation is provided by composer from now [chilan]
+  - added support for sms notifications in timetable type [chilan]
+  - show event summary for all found events at bottom [chilan]
+  - unification of cash import code as preparation for cashimport backend
+    scripts' usage [chilan]
+  - added bin/lms-cashimport.php script as universal backend for
+    loading cash import file contents from specified files [chilan]
+  - added creation time for events [chilan]
+  - added selection between invoice report and debit note report and
+    generating related report according to this selection [chilan]
+  - current is marked by darker title bar in timetable [chilan]
+  - allow to select between all, public and private events in event list filter [chilan]
+  - lms-notify.php: added %totalB, %totalsaldo, %totalbalance special
+    symbol support for debtors notification type which store total customer balance [chilan]
+  - added script which fetches cash import files from mailbox (pop3, imap, etc.) [chilan]
+  - sending invoices code moved to LMS::SendInvoices() as preparation for
+    invoice sends from LMS UI [chilan]
+  - invoice sends are possible from LMS UI [chilan]
+  - print events accordingly to privacy filter selection [chilan]
+  - changed input types to email and tel where it is sane [kyob]
+  - set required attibute for some form fields [kyob]
+  - improved selection of node and network devices which should be connected
+    to given network device [kosa/chilan]
+  - log customer properties changes after commit userpanel changes from LMS UI [chilan]
+  - added new doc types (price-list, promotion, warranty, regulations) [kyob]
+  - visual improvements of event list [kyob/chilan]
+  - unified visual layout of event list and event search results [chilan]
+  - added preliminary support for voip price lists [kosa/chilan]
+  - phpui.customer_ten_existence_check and phpui.customer_ssn_existence_check settings
+    decide if customer ten and ssn duplication warnings/errors are enabled [chilan]
+  - workaround new mysql version restricted sql mode forbiding default value
+    for text/blob fields [chilan]
+  - improved voip scripts and updated voip tables in database [kosa/chilan]
+  - improved voip billing list search [kosa/chilan]
+  - added check for maximum helpdesk subject length [kosa/chilan]
+  - allow plugins to modify button list in network device info [chilan]
+  - automatically move transfer form to separate page if there is no
+    enough space on tcpdf invoice page [chilan]
+  - invoices.header_image config variable controls pdf invoice logo placement [chilan]
+  - added backend script for voip emergency numbers database creation [chilan]
+  - added backend script which generates sip account and extensions configuration
+    files in asterisk format [chilan]
+  - asterisk configuration file generation script checks call recodings flags [chilan]
+  - added possibility to hide customer balance by invoices.show_balance configuration
+    variable on tcpdf invoice [gbn.pl]
+  - automatically position of invoice footnote on tcpdf invoice [gbn.pl]
+  - listening of voip call recordings are possible from now [chilan]
+  - added tags for tariffs [kyob]
+  - switched to ezpdf supported by composer [chilan]
+  - adding support for dialing phone from smartfones [kosa/chilan]
+  - added variable phpui.settings_timeout determine inactivity time after which
+    user session settings are cleared (0 means settings are stored only to logout) [chilan]
+  - added support for %srcaccount%, %dstaccount% and %customername% replace symbols
+    in imported financial operation comments [chilan]
+  - unification customer contact management code [chilan]
+  - added new customer contact type support - url addresses [chilan]
+  - important fix: avoid to settle duplicated liabilities on invoices when almost their
+    all properties are identical [chilan]
+  - added support for voip tariff rules [kosa/chilan]
+  - simplicity syslog code and make it more oop [chilan]
+  - more oop improvements for SYSLOG and Auth classes [chilan]
+  - added support for %last_10_in_a_table symbol in lms-notify.php [chilan]
+  - allow to filter balance history list by cash import file [chilan]
+  - added cashimport_after_commit hook which is executed immediately after
+    cash import record commit [chilan]
+  - jquery and jquery-ui composer and header/layout template support [chilan]
+  - got rid of old calendar js - use jquery calendar from now [chilan]
+  - ported almost all dynamic popups to jquery [chilan]
+  - added module to user panel for view VoIP billings [kosa/chilan]
+  - added receipts.default_printpage config variable support [chilan]
+  - added support for create voip billing invoices [kosa/chilan]
+  - allow to add attachments for helpdesk notes [chilan]
+  - added support for audio prelisten and video preview clicked from helpdesk
+    message and note attachment links [chilan]
+  - support for customer document attachment preview in popup dialogs [chilan]
+  - added support for document multi-attachments [chilan]
+  - document attached file management is possible from document edit form [chilan]
+  - helpdesk and documents: remember selected file attachments between form posts - brand new
+    file uploader which hardly uses html5 [chilan]
+  - added support for multiple phone numbers [kosa/chilan]
+  - bumped openlayers version to current 2.x series HEAD and allow to use
+    google maps api key defined by phpui.googlemaps_api_key variable [chilan]
+  - show selected position on map for network device and node current coordinates
+    presentaion [chilan]
+  - allow to select company/division for mass invoice printing [chilan]
+  - defined html class multi-check which allows tbodies function with multi
+    select elements on lists [chilan]
+  - support of multi message deletions [chilan]
+  - multi customer group assignments can be added and deleted from customer form [chilan]
+  - selected liabilities can be deleted from customer form [chilan]
+  - added support for jquery datatables plugin and use it for cash import package list,
+    customer messages and customer balance box [chilan]
+  - multiselect control supports onchange event handler so we can use it quite
+    easy in resource filters [chilan]
+  - tariff list can be filtered by multi selection of tariff tags from upper filter [chilan]
+  - multi node group assignments can be added and deleted from node form [chilan]
+  - added global try/catch block as default resort error handler [chilan]
+  - ported node group list sort to jquery and ajax [chilan]
+  - support of auth type for networks [chilan]
+  - user is able to sort node and customer tabs on his own and order is persistent [chilan]
+  - added support for ssl_verify_peer, ssl_verify_peer_name, ssl_allow_self_signed boolean
+    configuration variables in LMS::SendMail (for now these variables are handled only
+    by phpmailer mail.backend) [chilan]
+  - allow to switch on column filter and toggle for lms-ui-datatable using
+    lms-ui-datatable-column-search and lms-ui-datatable-column-toggle classes respectively [chilan]
+  - introduced persistent settings: tabs order are stored persistently
+    in users.persistentsettings database table [chilan]
+  - allow to limit invoice send by mail count per hour [olimplan/chilan]
+  - lms-ui-wysiwyg-editor css class point text areas which should have
+    tinymce toggle feature [chilan]
+  - many items can be opened in menu at the same time - phpui.max_opened_menus
+    (default: 3; 0 means unlimited) configuration variable controls this [chilan]
+  - main menu items are sortable by draging menu icon and dropping it in another place [chilan]
+  - removed support for swekey [prezes_kk]
+  - datatables column search supports selection lists [chilan]
+  - allow to toggle main menu visibility [chilan]
+  - added published flag to documents which means if document has been published and
+    probably received by customer [chilan]
+  - financial documents can be previewed without publishing [chilan]
+  - added support for voip pool numbers [kosa/chilan]
+  - document form title is automatically set after document template selection
+    to form_title or title template property [chilan]
+  - dynamic presentation of quick search input depending - they are shown after
+    mouse over on quick search icons [chilan]
+  - added quick search customers by phone numbers on top [chilan]
+  - added phpui.node_assignment_warning configuration variable which
+    determines if alert is displayed when no node has selected for internet assignment [chilan]
+  - added node list filter: without gps coordinates [chilan]
+  - added customer list filter: liabilities without invoice flag [chilan]
+  - added support for voip phone priority [kosa/chilan]
+  - changed customer instant messengers handling code to more generic code which will allow
+    to easier support more im types in the future [chilan]
+  - added support for change voip account settings in userpanel by customer [kosa/chilan]
+  - when phpui.big_networks is set to true show customer name on right side of input control [chilan]
+  - added support for convenient dynamic plugin javascript code loading in document templates [chilan]
 
 version 1.11.20 (2016-04-19):
 

@@ -3,7 +3,7 @@
 {block name=module_content}
 <!-- $Id$ -->
 <H1>{$layout.pagetitle}</H1>
-<FORM method="POST" name="ticket" action="?m=rtticketadd" enctype="multipart/form-data">
+<FORM method="POST" name="ticket" action="?m=rtticketadd">
 <p style="display: none;">
 <INPUT type="submit" class="hiddenbtn">
 </p>
@@ -68,12 +68,12 @@
 		</TD>
 	</TR>
 	<TR>
-		<TD style="width: 1%;" class="bold nobr">
+		<TD style="width: 1%;" class="bold nobr valign-top">
 			<IMG src="img/attach.gif" alt="">
 			{trans("Attachments:")}
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT name="files[]" type="file" size="55" {tip text="Enter path to file or click 'Browse' button" trigger="files"} multiple>
+			{fileupload id="files" fileupload=$fileupload}
 		</TD>
 	</TR>
 	<TR>
@@ -85,7 +85,7 @@
 			<TABLE width="100%" cellpadding="1" {tip trigger="categories"}>
 				{foreach from=$categories item=category}
 				<TR>
-					<TD style="width: 1%;" class="text-center=">
+					<TD style="width: 1%;" class="text-center">
 						<INPUT type="checkbox" name="ticket[categories][{$category.id}]" ID="cat{$category.id}" value="1" {if $category.checked > 0}checked{/if}>
 					</TD>
 					<TD style="width: 99%;">

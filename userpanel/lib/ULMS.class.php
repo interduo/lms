@@ -42,7 +42,6 @@ class ULMS extends LMS {
 			FROM customeraddressview c WHERE c.id = ?', array($id))) {
 			$result['balance'] = $this->GetCustomerBalance($result['id']);
 			$result['bankaccount'] = bankaccount($result['id']);
-			$result['messengers'] = $this->DB->GetAllByKey('SELECT uid, type FROM imessengers WHERE customerid = ? ORDER BY type', 'type', array($id));
 
 			$result['contacts'] = $this->DB->GetAllByKey('SELECT id, contact AS phone, name
 				FROM customercontacts WHERE customerid = ? AND (type & ?) > 0 AND (type & ?) = 0
@@ -52,6 +51,10 @@ class ULMS extends LMS {
 				FROM customercontacts WHERE customerid = ? AND (type & ?) > 0 AND (type & ?) = 0
 				ORDER BY id', 'id',
 				array($id, CONTACT_EMAIL | CONTACT_DISABLED, CONTACT_DISABLED));
+			$result['ims'] = $this->DB->GetAllByKey('SELECT id, contact AS uid, name, type
+				FROM customercontacts WHERE customerid = ? AND (type & ?) > 0 AND (type & ?) = 0
+				ORDER BY id', 'id',
+				array($id, CONTACT_IM | CONTACT_DISABLED, CONTACT_DISABLED));
 			$result['accounts'] = $this->DB->GetAllByKey('SELECT id, contact AS account, name
 				FROM customercontacts WHERE customerid = ? AND (type & ?) = ? ORDER BY id', 'id',
 				array($id, CONTACT_BANKACCOUNT | CONTACT_INVOICES | CONTACT_DISABLED, CONTACT_BANKACCOUNT | CONTACT_INVOICES));
@@ -98,7 +101,7 @@ class ULMS extends LMS {
 				FROM rtmessages
 				LEFT JOIN customers ON (customers.id = customerid)
 				LEFT JOIN users ON (users.id = userid)
-				WHERE ticketid = ? ORDER BY createtime ASC', array($id));
+				WHERE ticketid = ? AND rtmessages.type = ? ORDER BY createtime ASC', array($id, RTMESSAGE_REGULAR));
 
 		foreach ($ticket['messages'] as &$message)
 			$message['attachments'] = $this->DB->GetAll('SELECT filename, contenttype FROM rtattachments WHERE messageid = ?',

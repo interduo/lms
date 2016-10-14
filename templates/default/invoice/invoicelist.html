@@ -36,6 +36,12 @@ window.open('?m=invoice&amp;id={$invoice.invoice}&amp;original={$invoice.origina
 		document.page.submit();
 	}
 
+	function send_invoices() {
+		document.page.action="?m=invoicesend&marks=invoice";
+		document.page.target="_blank";
+		document.page.submit();
+	}
+
 	function filter()
 	{
 		document.page.action="?m=invoicelist";
@@ -128,7 +134,7 @@ window.open('?m=invoice&amp;id={$invoice.invoice}&amp;original={$invoice.origina
 	</TR>
 	{/if}
     </THEAD>
-    <TBODY>
+    <TBODY class="lms-ui-multi-check">
 	{cycle values="light,lucid" print=false}
 	{section name=invoicelist loop=$invoicelist start=$start max=$pagelimit}
 	{assign var=invoice value=$invoicelist[invoicelist]}
@@ -156,34 +162,53 @@ window.open('?m=invoice&amp;id={$invoice.invoice}&amp;original={$invoice.origina
 			{foreach $invoice.customlinks as $link}
 			<A href="{$link.url}" rel="external"{if isset($link.onclick)} onclick="{$link.onclick}"{/if}>{if isset($link.icon)}<IMG src="{$link.icon}" alt="[ {$link.label} ]" {$link.tip}>{else}{$link.label}{/if}</A>
 			{/foreach}
+			{if $invoice.sendinvoices && ($invoice.type == $smarty.const.DOC_INVOICE || $invoice.type == $smarty.const.DOC_CNOTE)}
+			<A href="?m=invoicesend&id={$invoice.id}" target="_blank" OnClick="return confirmLink(this, '{t a=$invoice.name|escape:"javascript"|escape:"html"}Are you sure, you want to send invoice to customer \'$a\'?{/t}');"><IMG src="img/mail.gif" alt="[ {trans("Send invoice")} ]" title="[ {trans("Send invoice")} ]"></A>
+			{/if}
 			{if $invoice.type == $smarty.const.DOC_INVOICE}
-			    <A HREF="?m=invoicenote&amp;id={$invoice.id}&amp;action=init"><IMG src="img/eraser.gif" alt="[ {trans("Revise")} ]" title="[ {trans("Revise")} ]"></A>
-			    {if ! $invoice.closed}
-			    <A onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to remove invoice \'$a\' from database?{/t}')" HREF="?m=invoicedel&amp;id={$invoice.id}"><IMG src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
-			    {/if}
+				<A HREF="?m=invoicenote&id={$invoice.id}&action=init"><IMG src="img/eraser.gif" alt="[ {trans("Revise")} ]" title="[ {trans("Revise")} ]"></A>
+				{if !$invoice.closed}
+				{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+				<A onClick="{if $invoice.published}if (!confirmLink(this, '{trans("Document has been published already! Are you sure you want to remove it despite this?")}')) return false;{/if}return confirmLink(this, '{t a=$number}Are you sure, you want to remove invoice \'$a\' from database?{/t}')" HREF="?m=invoicedel&id={$invoice.id}"><IMG src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
+				{/if}
+				{/if}
 			{/if}
 			{if !$invoice.closed}
 				{if $invoice.type == $smarty.const.DOC_CNOTE}
-				<A onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to remove credit note \'$a\' from database?{/t}')" HREF="?m=invoicedel&amp;id={$invoice.id}"><IMG src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
+				{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+				<A onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to remove credit note \'$a\' from database?{/t}')" HREF="?m=invoicedel&id={$invoice.id}"><IMG src="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
+				{/if}
 				{/if}
 				{if $invoice.type == $smarty.const.DOC_INVOICE}
-				<A HREF="?m=invoiceedit&amp;id={$invoice.id}&amp;action=edit"><IMG src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
+				{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+				<A HREF="?m=invoiceedit&id={$invoice.id}&action=edit"{if $invoice.published} onclick="return confirmLink(this, '{trans("Document has been published already! Are you sure you want to edit it despite this?")}')"{/if}><IMG src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
+				{/if}
 				{elseif $invoice.type == $smarty.const.DOC_CNOTE}
-				<A HREF="?m=invoicenoteedit&amp;id={$invoice.id}&amp;action=edit"><IMG src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
+				{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+				<A HREF="?m=invoicenoteedit&id={$invoice.id}&action=edit"{if $invoice.published} onclick="return confirmLink(this, '{trans("Document has been published already! Are you sure you want to edit it despite this?")}')"{/if}><IMG src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
+				{/if}
 				{/if}
 			{/if}
 			{if !$invoice.cancelled}
-				<a onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to cancel invoice \'$a\' from database?{/t}')" href="?m=invoicecancel&amp;id={$invoice.id}"><img src="img/cancel.gif" alt="[ {trans("Cancel")} ]" title="[{trans("Cancel")}]"></a>
+				{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+				<a onClick="{if $invoice.published}if (!confirmLink(this, '{trans("Document has been published already! Are you sure you want to cancel it despite this?")}')) return false;{/if}return confirmLink(this, '{t a=$number}Are you sure, you want to cancel invoice \'$a\' from database?{/t}')" href="?m=invoicecancel&id={$invoice.id}"><img src="img/cancel.gif" alt="[ {trans("Cancel")} ]" title="[{trans("Cancel")}]"></a>
+				{/if}
 			{elseif $invoice.cancelled}
 				<a onClick="return confirmLink(this, '{t a=$number}Are you sure, you want to recover cancelled invoice \'$a\' from database?{/t}')" href="?m=invoicecancel&amp;id={$invoice.id}&recover=1"><img src="img/recover.gif" alt="[ {trans("Recover")} ]" title="[{trans("Recover")}]"></a>
 			{/if}
 			{if $invoice.type == $smarty.const.DOC_INVOICE}
-			<A HREF="?m=invoice&amp;id={$invoice.id}" TARGET="_blank"><IMG src="img/print.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
+			{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+			<A HREF="?m=invoice&id={$invoice.id}&dontpublish=1" TARGET="_blank"><IMG src="img/view.gif" alt="[ {trans("View")} ]" title="[ {trans("View")} ]"></A>
+			{/if}
+			<A HREF="?m=invoice&id={$invoice.id}" TARGET="_blank"><IMG src="img/print.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
 			{/if}
 			{if $invoice.type == $smarty.const.DOC_CNOTE}
-			<A HREF="?m=invoice&amp;id={$invoice.id}" TARGET="_blank"><IMG src="img/printn.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
+			{if !$invoice.published || ConfigHelper::checkConfig('privileges.superuser')}
+			<A HREF="?m=invoice&id={$invoice.id}&dontpublish=1" TARGET="_blank"><IMG src="img/view.gif" alt="[ {trans("View")} ]" title="[ {trans("View")} ]"></A>
 			{/if}
-			<INPUT TYPE="checkbox" NAME="marks[{$invoice.id}]" VALUE="{$invoice.id}"{if $marks.$invoiceid}CHECKED{/if}>
+			<A HREF="?m=invoice&id={$invoice.id}" TARGET="_blank"><IMG src="img/printn.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
+			{/if}
+			<INPUT TYPE="checkbox" NAME="marks[{$invoice.id}]" VALUE="{$invoice.id}" class="lms-ui-multi-check"{if $marks.$invoiceid} checked{/if}>
 		</TD>
 	</TR>
 	{sectionelse}
@@ -208,13 +233,17 @@ window.open('?m=invoice&amp;id={$invoice.invoice}&amp;original={$invoice.origina
 				<TR>
 					<TD class="text-left nobr">
 						<A HREF="javascript:pays();">{trans("Check/Uncheck as accounted")} <IMG SRC="img/pay.gif" ALT=""></A>&nbsp;
+						<A HREF="javascript:send_invoices();" OnClick="return confirm('{t}Are you sure, you want to send invoices to customers?{/t}');">{trans("Send invoices")} <IMG SRC="img/mail.gif" ALT=""></A>&nbsp;
 						<A HREF="javascript:prints();">{trans("Print")} <IMG SRC="img/print.gif" ALT="" ></A>&nbsp;
 						<INPUT type="checkbox" name="original" id="original"{if preg_match('/original/i', $default_printpage)} checked{/if}><label for="original">{trans("original")}</label>
 						<INPUT type="checkbox" name="copy" id="copy"{if preg_match('/copy/i', $default_printpage)} checked{/if}><label for="copy">{trans("copy")}</label>
 						<INPUT type="checkbox" name="duplicate" id="duplicate"{if preg_match('/duplicate/i', $default_printpage)} checked{/if}><label for="duplicate">{trans("duplicate")}</label>
 					</TD>
 					<TD class="text-right nobr">
-						<label for="allbox">{trans("Check All")}</label><INPUT TYPE="checkbox" NAME="allbox" id="allbox" onchange="CheckAll('page', this, ['original', 'duplicate', 'copy', 'groupexclude', 'hideclosed'])" VALUE="1">
+						<label>
+							{trans("Check All")}
+							<INPUT TYPE="checkbox" NAME="allbox" class="lms-ui-multi-check-all" VALUE="1">
+						</label>
 					</TD>
 				</TR>
 			</TABLE>

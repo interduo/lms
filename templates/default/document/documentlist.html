@@ -50,9 +50,18 @@
 		document.page.method="get";
 		document.page.submit();
 	}
+
+	function toggle_all_attachments(docid) {
+		var elem = $('#allattachments-' + docid);
+		var toggle = $('#allattachments-toggle-' + docid);
+		elem.toggle();
+		if (elem.is(':visible'))
+			toggle.html('<img src="img/desc_order.gif">');
+		else
+			toggle.html('<img src="img/asc_order.gif">');
+	}
 //-->
 </SCRIPT>
-{include file="calendar_js.html"}
 <FORM METHOD="POST" NAME="page" ACTION="?m=documentedit&amp;action=confirm">
 <INPUT type="hidden" name="m" value="documentlist">
 <INPUT type="hidden" name="page" value="1">
@@ -104,7 +113,7 @@
 	</TR>
 	{/if}
     </THEAD>
-    <TBODY>
+    <TBODY class="lms-ui-multi-check">
 	{cycle values="light,lucid" print=false}
 	{section loop=$documentlist name=documentlist start=$start max=$pagelimit}
 	{assign var=doc value=$documentlist[documentlist]}
@@ -137,8 +146,27 @@
 			{if ($docrights.$type.rights & 8)}
 			<a href="?m=documentedit&amp;id={$doc.docid}"><img src="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></a>
 			{/if}
-			<a href="?m=documentview&amp;id={$doc.docid}" target="_blank"><img src="img/{if preg_match('/pdf/',$doc.contenttype)}pdf{elseif preg_match('/csv|excel|spreadsheet/',$doc.contenttype)}xls{else}view{/if}.gif" alt="[ {trans("View")} ]" title="[ {trans("View")} ]"></a>
-			<INPUT TYPE="checkbox" NAME="marks[{$docid}]" VALUE="{$docid}"{if $marks.$docid}CHECKED{/if}>
+			{$docattach = $doc.attachments[0]}
+			{if $docattach.main || count($doc.attachments) == 1}
+			{documentview id="{$doc.docid}-{$docattach.id}" type=$docattach.contenttype name=$docattach.filename
+				url="?m=documentview&id={$doc.docid}" external=true
+				text="<img src=\"img/{if preg_match('/pdf/',$docattach.contenttype)}pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)}xls{else}view{/if}.gif\">"}
+			{/if}
+			{if count($doc.attachments) > 1}
+			<a href="#" id="allattachments-toggle-{$doc.docid}" onclick="toggle_all_attachments({$doc.docid}); return false;" title="{trans("more document attachments")}">
+				<img src="img/asc_order.gif">
+			</a>
+			{/if}
+			<INPUT TYPE="checkbox" NAME="marks[{$docid}]" VALUE="{$docid}" class="lms-ui-multi-check"{if $marks.$docid} checked{/if}>
+			<div id="allattachments-{$doc.docid}" style="display: none;">
+				{foreach $doc.attachments as $docattach}
+				{if $docattach@first && $docattach.main}{continue}{/if}
+				{documentview id="{$doc.docid}-{$docattach.id}" type=$docattach.contenttype name=$docattach.filename
+					url="?m=documentview&id={$doc.docid}&attachmentid={$docattach.id}" external=true
+					text="{$docattach.filename} <img src=\"img/{if preg_match('/pdf/',$docattach.contenttype)}pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)}xls{else}view{/if}.gif\">"}
+				<br>
+				{/foreach}
+			</div>
 		</TD>
 	</TR>
 	{sectionelse}
@@ -159,7 +187,7 @@
 	{/if}
 	<TR>
 		<TD COLSPAN="5">
-		        <TABLE WIDTH="100%">
+			<TABLE WIDTH="100%">
 				<TR>
 					<TD ALIGN="left" class="nobr">
 						<A HREF="javascript:print_docs();">{trans("Print")} <IMG SRC="img/print.gif" ALT="{trans("Print")}"></A>&nbsp;
@@ -167,9 +195,12 @@
 						<A HREF="javascript:delete_docs();">{trans("Delete")} <IMG SRC="img/delete.gif" ALT="{trans("Delete")}"></A>
 					</TD>
 					<TD ALIGN="right" class="nobr">
-				                <label for="allbox">{trans("Check All")}</label><INPUT TYPE="checkbox" NAME="allbox" id="allbox" onchange="CheckAll('page', this)" VALUE="1">
+						<label>
+							{trans("Check All")}
+							<INPUT TYPE="checkbox" NAME="allbox" class="lms-ui-multi-check-all" VALUE="1">
+						</label>
 					</TD>
-				 </TR>
+				</TR>
 			</TABLE>
 		</TD>
 	</TR>

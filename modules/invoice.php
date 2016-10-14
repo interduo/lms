@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2014 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -32,6 +32,7 @@ function invoice_body($document, $invoice) {
 
 $attachment_name = ConfigHelper::getConfig('invoices.attachment_name');
 $invoice_type = strtolower(ConfigHelper::getConfig('invoices.type'));
+$dontpublish = isset($_GET['dontpublish']);
 
 if ($invoice_type == 'pdf') {
 	$pdf_type = ConfigHelper::getConfig('invoices.pdf_type', 'tcpdf');
@@ -83,6 +84,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		if (count($ids) == 1)
 			$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
 
+		$invoice['dontpublish'] = $dontpublish;
 		foreach ($which as $type) {
 			$i++;
 			if ($i == $count) $invoice['last'] = TRUE;
@@ -96,6 +98,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	$offset = intval(date('Z'));
 	$ids = $DB->GetCol('SELECT id FROM documents d
 				WHERE cdate >= ? AND cdate <= ? AND (type = ? OR type = ?)'
+				.(!empty($_GET['divisionid']) ? ' AND d.divisionid = ' . intval($_GET['divisionid']) : '')
 				.(!empty($_GET['customerid']) ? ' AND d.customerid = '.intval($_GET['customerid']) : '')
 				.(!empty($_GET['numberplanid']) ? ' AND d.numberplanid = '.intval($_GET['numberplanid']) : '')
 				.(!empty($_GET['autoissued']) ? ' AND d.userid = 0' : '')
@@ -129,6 +132,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		if (count($ids) == 1)
 			$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
 
+		$invoice['dontpublish'] = $dontpublish;
 		foreach ($which as $type) {
 			$i++;
 			if ($i == $count) $invoice['last'] = TRUE;
@@ -137,6 +141,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		}
 	}
 } elseif ($invoice = $LMS->GetInvoiceContent($_GET['id'])) {
+	$ids = array($_GET['id']);
+
 	$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
 	if(!isset($invoice['invoice']))
 		$layout['pagetitle'] = trans('Invoice No. $a', $docnumber);
@@ -162,6 +168,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	$count = sizeof($which);
 	$i = 0;
 
+	$invoice['dontpublish'] = $dontpublish;
 	foreach ($which as $type) {
 		$i++;
 		if ($i == $count) $invoice['last'] = TRUE;
@@ -178,5 +185,8 @@ if (!is_null($attachment_name) && isset($docnumber)) {
 	$attachment_name = 'invoices.' . ($invoice_type == 'pdf' ? 'pdf' : 'html');
 
 $document->WriteToBrowser($attachment_name);
+
+if (!$dontpublish && isset($ids) && !empty($ids))
+	$DB->Execute('UPDATE documents SET published = 1 WHERE id IN (' . implode(',', $ids) . ')');
 
 ?>

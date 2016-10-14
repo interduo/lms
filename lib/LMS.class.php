@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2015 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -179,10 +179,12 @@ class LMS
      * @param mixed $hook_data Hook data
      * @return mixed Modfied hook data
      */
-    public function executeHook($hook_name, $hook_data = null)
-    {
-        return $this->plugin_manager->executeHook($hook_name, $hook_data);
-    }
+	public function executeHook($hook_name, $hook_data = null) {
+		if (!empty($this->plugin_manager))
+			return $this->plugin_manager->executeHook($hook_name, $hook_data);
+		else
+			return $hook_data;
+	}
 
     /*
      *  Database functions (backups)
@@ -279,7 +281,7 @@ class LMS
             $res = $this->DBDump(ConfigHelper::getConfig('directories.backup_dir') . DIRECTORY_SEPARATOR . $filename, FALSE, $stats);
         }
         if ($this->SYSLOG)
-            $this->SYSLOG->AddMessage(SYSLOG_RES_DBBACKUP, SYSLOG_OPER_ADD, array('filename' => $filename), null);
+            $this->SYSLOG->AddMessage(SYSLOG::RES_DBBACKUP, SYSLOG::OPER_ADD, array('filename' => $filename));
         return $res;
     }
 
@@ -437,6 +439,16 @@ class LMS
         $manager = $this->getCashManager();
         return $manager->GetCashByID($id);
     }
+
+	public function CashImportParseFile($filename, $contents, $patterns, $quiet = true) {
+		$manager = $this->getCashManager();
+		return $manager->CashImportParseFile($filename, $contents, $patterns, $quiet);
+	}
+
+	public function CashImportCommit() {
+		$manager = $this->getCashManager();
+		return $manager->CashImportCommit();
+	}
 
     public function GetCustomerStatus($id)
     {
@@ -1580,148 +1592,162 @@ class LMS
         return FALSE;
     }
 
-    public function SendMail($recipients, $headers, $body, $files = NULL, $host = null, $port = null, $user = null, $pass = null, $auth = null, $persist = null)
-    {
-	$persist = is_null($persist) ? ConfigHelper::getConfig('mail.smtp_persist', true) : $persist;
+	public function SendMail($recipients, $headers, $body, $files = NULL, $persist = null, $smtp_options = null) {
+		$persist = is_null($persist) ? ConfigHelper::getConfig('mail.smtp_persist', true) : $persist;
 
-	if(ConfigHelper::getConfig('mail.backend') == 'pear'){
-	    @include_once('Mail.php');
-	    if (!class_exists('Mail'))
-		return trans('Can\'t send message. PEAR::Mail not found!');
+		if (ConfigHelper::getConfig('mail.backend') == 'pear') {
+			@include_once('Mail.php');
+			if (!class_exists('Mail'))
+				return trans('Can\'t send message. PEAR::Mail not found!');
 
-	    if (!is_object($this->mail_object) || !$persist) {
-		$params['host'] = (!$host ? ConfigHelper::getConfig('mail.smtp_host') : $host);
-		$params['port'] = (!$port ? ConfigHelper::getConfig('mail.smtp_port') : $port);
-		$smtp_username = ConfigHelper::getConfig('mail.smtp_username');
-		if (!empty($smtp_username) || $user) {
-		    $params['auth'] = (!$auth ? ConfigHelper::getConfig('mail.smtp_auth_type', true) : $auth);
-		    $params['username'] = (!$user ? $smtp_username : $user);
-		    $params['password'] = (!$pass ? ConfigHelper::getConfig('mail.smtp_password') : $pass);
-		} else
-		    $params['auth'] = false;
-		$params['persist'] = $persist;
+			if (!is_object($this->mail_object) || !$persist) {
+				$params['host'] = (!isset($smtp_options['host']) ? ConfigHelper::getConfig('mail.smtp_host') : $smtp_options['host']);
+				$params['port'] = (!isset($smtp_options['port']) ? ConfigHelper::getConfig('mail.smtp_port') : $smtp_options['port']);
+				$smtp_username = ConfigHelper::getConfig('mail.smtp_username');
+				if (!empty($smtp_username) || isset($smtp_options['user'])) {
+					$params['auth'] = (!isset($smtp_options['auth']) ? ConfigHelper::getConfig('mail.smtp_auth_type', true) : $smtp_options['auth']);
+					$params['username'] = (!isset($smtp_options['user']) ? $smtp_username : $smtp_options['user']);
+					$params['password'] = (!isset($smtp_options['pass']) ? ConfigHelper::getConfig('mail.smtp_password') : $smtp_options['pass']);
+				} else
+					$params['auth'] = false;
+				$params['persist'] = $persist;
 
-		$error = $this->mail_object = & Mail::factory('smtp', $params);
-		//if (PEAR::isError($error))
-		if (is_a($error, 'PEAR_Error'))
-		    return $error->getMessage();
-	    }
+				$error = $this->mail_object = & Mail::factory('smtp', $params);
+				//if (PEAR::isError($error))
+				if (is_a($error, 'PEAR_Error'))
+					return $error->getMessage();
+			}
 
-	    $headers['X-Mailer'] = 'LMS-' . $this->_version;
-	    if (!empty($_SERVER['REMOTE_ADDR']))
-		$headers['X-Remote-IP'] = $_SERVER['REMOTE_ADDR'];
-	    if (isset($_SERVER['HTTP_USER_AGENT']))
-		$headers['X-HTTP-User-Agent'] = $_SERVER['HTTP_USER_AGENT'];
-	    $headers['Mime-Version'] = '1.0';
-	    $headers['Subject'] = qp_encode($headers['Subject']);
+			$headers['X-Mailer'] = 'LMS-' . $this->_version;
+			if (!empty($_SERVER['REMOTE_ADDR']))
+				$headers['X-Remote-IP'] = $_SERVER['REMOTE_ADDR'];
+			if (isset($_SERVER['HTTP_USER_AGENT']))
+				$headers['X-HTTP-User-Agent'] = $_SERVER['HTTP_USER_AGENT'];
+			$headers['Mime-Version'] = '1.0';
+			$headers['Subject'] = qp_encode($headers['Subject']);
 
-	    $debug_email = ConfigHelper::getConfig('mail.debug_email');
-	    if (!empty($debug_email)) {
-		$recipients = ConfigHelper::getConfig('mail.debug_email');
-		$headers['To'] = '<' . $recipients . '>';
-	    }
+			$debug_email = ConfigHelper::getConfig('mail.debug_email');
+			if (!empty($debug_email)) {
+				$recipients = ConfigHelper::getConfig('mail.debug_email');
+				$headers['To'] = '<' . $recipients . '>';
+			}
 
-	    if (empty($headers['Date']))
-		$headers['Date'] = date('r');
+			if (empty($headers['Date']))
+				$headers['Date'] = date('r');
 
-	    if ($files || $headers['X-LMS-Format'] == 'html') {
-		$boundary = '-LMS-' . str_replace(' ', '.', microtime());
-		$headers['Content-Type'] = "multipart/mixed;\n  boundary=\"" . $boundary . '"';
-		$buf = "\nThis is a multi-part message in MIME format.\n\n";
-		$buf .= '--' . $boundary . "\n";
-		$buf .= "Content-Type: text/" . ($headers['X-LMS-Format'] == 'html' ? "html" : "plain") . "; charset=UTF-8\n\n";
-		$buf .= $body . "\n";
-		if ($files)
-		    while (list(, $chunk) = each($files)) {
-			$buf .= '--' . $boundary . "\n";
-			$buf .= "Content-Transfer-Encoding: base64\n";
-			$buf .= "Content-Type: " . $chunk['content_type'] . "; name=\"" . $chunk['filename'] . "\"\n";
-			$buf .= "Content-Description:\n";
-			$buf .= "Content-Disposition: attachment; filename=\"" . $chunk['filename'] . "\"\n\n";
-			$buf .= chunk_split(base64_encode($chunk['data']), 60, "\n");
-		    }
-		$buf .= '--' . $boundary . '--';
-	    } else {
-		$headers['Content-Type'] = 'text/plain; charset=UTF-8';
-		$buf = $body;
-	    }
+			if ($files || $headers['X-LMS-Format'] == 'html') {
+				$boundary = '-LMS-' . str_replace(' ', '.', microtime());
+				$headers['Content-Type'] = "multipart/mixed;\n  boundary=\"" . $boundary . '"';
+				$buf = "\nThis is a multi-part message in MIME format.\n\n";
+				$buf .= '--' . $boundary . "\n";
+				$buf .= "Content-Type: text/" . ($headers['X-LMS-Format'] == 'html' ? "html" : "plain") . "; charset=UTF-8\n\n";
+				$buf .= $body . "\n";
+				if ($files)
+					while (list(, $chunk) = each($files)) {
+						$buf .= '--' . $boundary . "\n";
+						$buf .= "Content-Transfer-Encoding: base64\n";
+						$buf .= "Content-Type: " . $chunk['content_type'] . "; name=\"" . $chunk['filename'] . "\"\n";
+						$buf .= "Content-Description:\n";
+						$buf .= "Content-Disposition: attachment; filename=\"" . $chunk['filename'] . "\"\n\n";
+						$buf .= chunk_split(base64_encode($chunk['data']), 60, "\n");
+					}
+				$buf .= '--' . $boundary . '--';
+			} else {
+				$headers['Content-Type'] = 'text/plain; charset=UTF-8';
+				$buf = $body;
+			}
 
-	    $error = $this->mail_object->send($recipients, $headers, $buf);
-	    //if (PEAR::isError($error))
-	    if (is_a($error, 'PEAR_Error'))
-		return $error->getMessage();
-	    else
-		return MSG_SENT;
+			$error = $this->mail_object->send($recipients, $headers, $buf);
+			//if (PEAR::isError($error))
+			if (is_a($error, 'PEAR_Error'))
+				return $error->getMessage();
+			else
+				return MSG_SENT;
+		} elseif(ConfigHelper::getConfig('mail.backend') == 'phpmailer') {
+			$this->mail_object = new PHPMailer();
+			$this->mail_object->isSMTP();
+
+			$this->mail_object->SMTPKeepAlive = $persist;
+
+			$this->mail_object->Host = (!isset($smtp_options['host']) ? ConfigHelper::getConfig('mail.smtp_host') : $smtp_options['host']);
+			$this->mail_object->Port = (!isset($smtp_options['port']) ? ConfigHelper::getConfig('mail.smtp_port') : $smtp_options['port']);
+			$smtp_username = ConfigHelper::getConfig('mail.smtp_username');
+			if (!empty($smtp_username) || isset($smtp_options['user'])) {
+				$this->mail_object->Username = (!isset($smtp_options['user']) ? $smtp_username : $smtp_options['user']);
+				$this->mail_object->Password = (!isset($smtp_options['pass']) ? ConfigHelper::getConfig('mail.smtp_password') : $smtp_options['pass']);
+				$this->mail_object->SMTPAuth  = (!isset($smtp_options['auth']) ? ConfigHelper::getConfig('mail.smtp_auth_type', true) : $smtp_options['auth']);
+				$this->mail_object->SMTPSecure  = (!isset($smtp_options['auth']) ? ConfigHelper::getConfig('mail.smtp_secure', true) : $smtp_options['auth']);
+			}
+
+			$this->mail_object->SMTPOptions = array(
+				'ssl' => array(
+					'verify_peer' => isset($smtp_options['ssl_verify_peer']) ? $smtp_options['ssl_verify_peer'] : false,
+					'verify_peer_name' => isset($smtp_options['ssl_verify_peer_name']) ? $smtp_options['ssl_verify_peer_name'] : false,
+					'allow_self_signed' => isset($smtp_options['ssl_allow_self_signed']) ? $smtp_options['ssl_allow_self_signed'] : true,
+				)
+			);
+
+			$this->mail_object->XMailer = 'LMS-' . $this->_version;
+			if (!empty($_SERVER['REMOTE_ADDR']))
+				$this->mail_object->addCustomHeader('X-Remote-IP: '.$_SERVER['REMOTE_ADDR']);
+			if (isset($_SERVER['HTTP_USER_AGENT']))
+				$this->mail_object->addCustomHeader('X-HTTP-User-Agent: '.$_SERVER['HTTP_USER_AGENT']);
+
+			if (isset($headers['X-LMS-Message-Item-Id']))
+				$this->mail_object->addCustomHeader('X-LMS-Message-Item-Id: ' . $headers['X-LMS-Message-Item-Id']);
+
+			if (isset($headers['Disposition-Notification-To']))
+				$this->mail_object->ConfirmReadingTo = $headers['Disposition-Notification-To'];
+			elseif (isset($headers['Return-Receipt-To']))
+				$this->mail_object->ConfirmReadingTo = $headers['Return-Receipt-To'];
+
+			$this->mail_object->Dsn = isset($headers['Delivery-Status-Notification-To']);
+
+			preg_match('/^(.+) <([a-z0-9_\.-]+@[\da-z\.-]+\.[a-z\.]{2,6})>$/A', $headers['From'], $from);
+			$this->mail_object->setFrom($from[2], trim($from[1], "\""));
+			$this->mail_object->addReplyTo($headers['Reply-To']);
+			$this->mail_object->CharSet = 'UTF-8';
+			$this->mail_object->Subject = $headers['Subject'];
+
+			$debug_email = ConfigHelper::getConfig('mail.debug_email');
+			if (!empty($debug_email)) {
+				$this->mail_object->SMTPDebug = 2;
+				$recipients = ConfigHelper::getConfig('mail.debug_email');
+			}
+
+			if (empty($headers['Date']))
+				$headers['Date'] = date('r');
+
+			if ($files)
+				while (list(, $chunk) = each($files))
+					$this->mail_object->AddStringAttachment($chunk['data'],$chunk['filename'],'base64',$chunk['content_type']);
+
+			if ($headers['X-LMS-Format'] == 'html') {
+				$this->mail_object->isHTML(true);
+				$this->mail_object->AltBody = trans("To view the message, please use an HTML compatible email viewer");
+				$this->mail_object->msgHTML($body);
+			} else {
+				$this->mail_object->isHTML(false);
+				$this->mail_object->Body = $body;
+			}
+
+			foreach (explode(",", $recipients) as $recipient)
+				$this->mail_object->addAddress($recipient);
+
+			// setup your cert & key file
+			$cert = LIB_DIR . DIRECTORY_SEPARATOR . 'lms-mail.cert';
+			$key = LIB_DIR . DIRECTORY_SEPARATOR . 'lms.key';
+
+			// set email digital signature
+			if (file_exists($cert) && file_exists($key))
+				$this->mail_object->sign($cert, $key, null);
+
+			if (!$this->mail_object->Send())
+				return "Mailer Error: " . $this->mail_object->ErrorInfo;
+			else
+				return MSG_SENT;
+		}
 	}
-	elseif(ConfigHelper::getConfig('mail.backend') == 'phpmailer'){
-	    $this->mail_object = new PHPMailer();
-	    $this->mail_object->isSMTP();
-
-	    $this->mail_object->SMTPKeepAlive = $persist;
-
-	    $this->mail_object->Host = (!$host ? ConfigHelper::getConfig('mail.smtp_host') : $host);
-	    $this->mail_object->Port = (!$port ? ConfigHelper::getConfig('mail.smtp_port') : $port);
-	    $smtp_username = ConfigHelper::getConfig('mail.smtp_username');
-	    if (!empty($smtp_username) || $user) {
-		$this->mail_object->Username = (!$user ? $smtp_username : $user);
-		$this->mail_object->Password = (!$pass ? ConfigHelper::getConfig('mail.smtp_password') : $pass);
-		$this->mail_object->SMTPAuth  = (!$auth ? ConfigHelper::getConfig('mail.smtp_auth_type', true) : $auth);
-		$this->mail_object->SMTPSecure  = (!$auth ? ConfigHelper::getConfig('mail.smtp_secure', true) : $auth);
-	    }
-	    $this->mail_object->XMailer = 'LMS-' . $this->_version;
-	    if (!empty($_SERVER['REMOTE_ADDR']))
-		$this->mail_object->addCustomHeader('X-Remote-IP: '.$_SERVER['REMOTE_ADDR']);
-	    if (isset($_SERVER['HTTP_USER_AGENT']))
-		$this->mail_object->addCustomHeader('X-HTTP-User-Agent: '.$_SERVER['HTTP_USER_AGENT']);
-
-		if (isset($headers['X-LMS-Message-Item-Id']))
-			$this->mail_object->addCustomHeader('X-LMS-Message-Item-Id: ' . $headers['X-LMS-Message-Item-Id']);
-
-		if (isset($headers['Disposition-Notification-To']))
-			$this->mail_object->ConfirmReadingTo = $headers['Disposition-Notification-To'];
-		elseif (isset($headers['Return-Receipt-To']))
-			$this->mail_object->ConfirmReadingTo = $headers['Return-Receipt-To'];
-
-		$this->mail_object->Dsn = isset($headers['Delivery-Status-Notification-To']);
-
-	    preg_match('/^(.+) <([a-z0-9_\.-]+@[\da-z\.-]+\.[a-z\.]{2,6})>$/A', $headers['From'], $from);
-	    $this->mail_object->setFrom($from[2], trim($from[1], "\""));
-	    $this->mail_object->addReplyTo($headers['Reply-To']);
-	    $this->mail_object->CharSet = 'UTF-8';
-	    $this->mail_object->Subject = $headers['Subject'];
-
-	    $debug_email = ConfigHelper::getConfig('mail.debug_email');
-	    if (!empty($debug_email)) {
-                $this->mail_object->SMTPDebug = 2;
-		$recipients = ConfigHelper::getConfig('mail.debug_email');
-	    }
-
-	    if (empty($headers['Date']))
-		$headers['Date'] = date('r');
-
-	    if ($files)
-	        while (list(, $chunk) = each($files))
-		    $this->mail_object->AddStringAttachment($chunk['data'],$chunk['filename'],'base64',$chunk['content_type']);
-
-	    if($headers['X-LMS-Format'] == 'html') {
-	        $this->mail_object->isHTML(true);
-	        $this->mail_object->AltBody = trans("To view the message, please use an HTML compatible email viewer");
-	        $this->mail_object->msgHTML($body);
-	    } else {
-		$this->mail_object->isHTML(false);
-		$this->mail_object->Body = $body;
-	    }
-
-	    foreach(explode(",", $recipients) as $recipient)
-	    	$this->mail_object->addAddress($recipient);
-
-	    if(!$this->mail_object->Send()) {
-		return "Mailer Error: " . $this->mail_object->ErrorInfo;
-	    } else {
-		return MSG_SENT;
-	    }
-	}
-    }
 
     public function SendSMS($number, $message, $messageid = 0, $script_service = null)
     {
@@ -1776,6 +1802,7 @@ class LMS
 
         // call external SMS handler(s)
         $data = $this->ExecHook('send_sms_before', $data);
+        $data = $this->executeHook('send_sms_before', $data);
 
 	if ($data['abort'])
 		if (is_string($data['result'])) {
@@ -2123,6 +2150,12 @@ class LMS
         return $manager->CalcAt($period, $date);
     }
 
+    public function isDocumentPublished($id)
+    {
+        $manager = $this->getFinanaceManager();
+        return $manager->isDocumentPublished($id);
+    }
+
     /**
      * VoIP functions
      */
@@ -2197,6 +2230,26 @@ class LMS
         $manager = $this->getVoipAccountManager();
         return $manager->voipAccountUpdate($voipaccountdata);
     }
+
+    public function getVoipBillings(array $params)
+    {
+    	$manager = $this->getVoipAccountManager();
+        return $manager->getVoipBillings($params);
+    }
+
+    public function getVoipTariffs()
+    {
+        return $this->getVoipAccountManager()->getVoipTariffs();
+    }
+
+    public function getVoipTariffRuleGroups()
+    {
+        return $this->getVoipAccountManager()->getVoipTariffRuleGroups();
+    }
+
+	/**
+	 * End VoIP functions
+	 */
 
     public function GetCustomerVoipAccounts($id)
     {
@@ -2778,5 +2831,283 @@ class LMS
         $manager = $this->getUserGroupManager();
         return $manager->UsergroupGetAll();
     }
-    
+
+    /**
+     * Returns tariff tag manager
+     *
+     * @return LMSTariffTagManagerInterface Tariff tag manager
+     */
+    protected function getTariffTagManager()
+    {
+        if (!isset($this->tariff_tag_manager)) {
+            $this->tariff_tag_manager = new LMSTariffTagManager($this->DB, $this->AUTH, $this->cache, $this->SYSLOG);
+        }
+        return $this->tariff_tag_manager;
+    }
+
+    public function TarifftagGetId($name)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TariffTagGetId($name);
+    }
+
+    public function TarifftagAdd($tarifftagdata)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagAdd($tarifftagdata);
+    }
+
+    public function TarifftagGetList()
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagGetList();
+    }
+
+    public function TarifftagGet($id)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagGet($id);
+    }
+
+    public function TarifftagExists($id)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagExists($id);
+    }
+
+    public function GetTariffWithoutTagNames($tagid)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->GetTariffWithoutTagNames($tagid);
+    }
+
+    public function TariffassignmentDelete($tariffassignmentdata)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TariffassignmentDelete($tariffassignmentdata);
+    }
+
+    public function TariffassignmentExist($tagid, $tariffid)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TariffassignmentExist($tagid, $tariffid);
+    }
+
+    public function TariffassignmentAdd($tariffassignmentdata)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TariffassignmentAdd($tariffassignmentdata);
+    }
+
+    public function TarifftagDelete($id)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagDelete($id);
+    }
+
+    public function TarifftagUpdate($tarifftagdata)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagUpdate($tarifftagdata);
+    }
+
+    public function TarifftagGetAll()
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->TarifftagGetAll();
+    }
+
+	public function SendInvoices($docs, $type, $params) {
+		extract($params);
+
+		if ($type == 'frontend')
+			$eol = '<br>';
+		else
+			$eol = PHP_EOL;
+
+		$month = sprintf('%02d', intval(date('m', $currtime)));
+		$day = sprintf('%02d', intval(date('d', $currtime)));
+		$year = sprintf('%04d', intval(date('Y', $currtime)));
+
+		if ($invoice_filetype == 'pdf') {
+			$invoice_ftype = 'application/pdf';
+			$invoice_fext = 'pdf';
+
+			$pdf_type = ConfigHelper::getConfig('invoices.pdf_type', 'tcpdf');
+			$pdf_type = ucwords($pdf_type);
+			$invoice_classname = 'LMS' . $pdf_type . 'Invoice';
+		} else {
+			$invoice_ftype = 'text/html';
+			$invoice_fext = 'html';
+
+			$invoice_classname = 'LMSHtmlInvoice';
+		}
+
+		if ($dnote_filetype == 'pdf') {
+			$dnote_ftype = 'application/pdf';
+			$dnote_fext = 'pdf';
+
+			$dnote_classname = 'LMSTcpdfDebitNote';
+		} else {
+			$dnote_ftype = 'text/html';
+			$dnote_fext = 'html';
+
+			$dnote_classname = 'LMSHtmlDebitNote';
+		}
+
+		$from = $sender_email;
+
+		if (!empty($sender_name))
+			$from = "$sender_name <$from>";
+
+		foreach ($docs as $doc) {
+			if ($doc['doctype'] == DOC_DNOTE) {
+				if ($dnote_filetype == 'pdf')
+					$document = new $dnote_classname(trans('Notes'));
+				else
+					$document = new $dnote_classname($SMARTY);
+				$invoice = $this->GetNoteContent($doc['id']);
+			} else {
+				if ($invoice_filetype == 'pdf')
+					$document = new $invoice_classname(trans('Invoices'));
+				else
+					$document = new $invoice_classname($SMARTY);
+				$invoice = $this->GetInvoiceContent($doc['id']);
+			}
+
+			$invoice['type'] = trans('ORIGINAL');
+			$document->Draw($invoice);
+			$res = $document->WriteToString();
+
+			$custemail = (!empty($debug_email) ? $debug_email : $doc['email']);
+			$invoice_number = (!empty($doc['template']) ? $doc['template'] : '%N/LMS/%Y');
+			if (!is_null($mail_body))
+				if (is_readable($mail_body) && ($mail_body[0] == DIRECTORY_SEPARATOR))
+					$body = file_get_contents($mail_body);
+				else
+					$body = $mail_body;
+			$subject = $mail_subject;
+
+			$invoice_number = docnumber($doc['number'], $invoice_number, $doc['cdate'] + date('Z'));
+			$body = preg_replace('/%invoice/', $invoice_number, $body);
+			$body = preg_replace('/%balance/', $this->GetCustomerBalance($doc['customerid']), $body);
+			$body = preg_replace('/%today/', $year . '-' . $month . '-' . $day, $body);
+			$body = str_replace('\n', "\n", $body);
+			$subject = preg_replace('/%invoice/', $invoice_number, $subject);
+			$filename = preg_replace('/%docid/', $doc['id'], $doc['doctype'] == DOC_DNOTE ? $dnote_filename : $invoice_filename);
+			$filename = str_replace('%number', $invoice_number, $filename);
+			$filename = preg_replace('/[^[:alnum:]_\.]/i', '_', $filename);
+			$doc['name'] = '"' . $doc['name'] . '"';
+
+			$mailto = array();
+			$mailto_qp_encoded = array();
+			foreach (explode(',', $custemail) as $email) {
+				$mailto[] = $doc['name'] . " <$email>";
+				$mailto_qp_encoded[] = qp_encode($doc['name']) . " <$email>";
+			}
+			$mailto = implode(', ', $mailto);
+			$mailto_qp_encoded = implode(', ', $mailto_qp_encoded);
+
+			if (!$quiet || $test) {
+				switch ($doc['doctype']) {
+					case DOC_DNOTE:
+						$msg = trans('Debit Note No. $a for $b', $invoice_number, $mailto);
+						break;
+					case DOC_CNOTE:
+						$msg = trans('Credit Note No. $a for $b', $invoice_number, $mailto);
+						break;
+					case DOC_INVOICE:
+						$msg = trans('Invoice No. $a for $b', $invoice_number, $mailto);
+						break;
+				}
+				if ($type == 'frontend') {
+					echo htmlspecialchars($msg) . $eol;
+					flush();
+					ob_flush();
+				} else
+					echo $msg . $eol;
+			}
+
+			if (!$test) {
+				$files = array();
+				$files[] = array(
+					'content_type' => $doc['doctype'] == DOC_DNOTE ? $dnote_ftype : $invoice_ftype,
+					'filename' => $filename . '.' . ($doc['doctype'] == DOC_DNOTE ? $dnote_fext : $invoice_fext),
+					'data' => $res
+				);
+
+				if ($extrafile) {
+					$files[] = array(
+						'content_type' => mime_content_type($extrafile),
+						'filename' => basename($extrafile),
+						'data' => file_get_contents($extrafile)
+					);
+				}
+
+				$headers = array(
+					'From' => empty($dsn_email) ? $from : $dsn_email,
+					'To' => $mailto_qp_encoded,
+					'Subject' => $subject,
+					'Reply-To' => empty($reply_email) ? $sender_email : $reply_email,
+				);
+
+				if (!empty($mdn_email)) {
+					$headers['Return-Receipt-To'] = $mdn_email;
+					$headers['Disposition-Notification-To'] = $mdn_email;
+				}
+
+				if (!empty($notify_email))
+					$headers['Cc'] = $notify_email;
+
+				if ($add_message) {
+					$this->DB->Execute('INSERT INTO messages (subject, body, cdate, type, userid)
+						VALUES (?, ?, ?NOW?, ?, ?)',
+						array($subject, $body, MSG_MAIL, empty($this->AUTH) ? 0 : $this->AUTH->id));
+					$msgid = $this->DB->GetLastInsertID('messages');
+					foreach (explode(',', $custemail) as $email) {
+						$this->DB->Execute('INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
+							VALUES (?, ?, ?, ?NOW?, ?)',
+							array($msgid, $doc['customerid'], $email, MSG_NEW));
+						$msgitemid = $this->DB->GetLastInsertID('messageitems');
+						if (!isset($msgitems[$doc['customerid']]))
+							$msgitems[$doc['customerid']] = array();
+						$msgitems[$doc['customerid']][$email] = $msgitemid;
+					}
+				}
+
+				foreach (explode(',', $custemail) as $email) {
+					if ($add_message && (!empty($dsn_email) || !empty($mdn_email))) {
+						if (!empty($dsn_email))
+						$headers['X-LMS-Message-Item-Id'] = $msgitems[$doc['customerid']][$email];
+					}
+
+					$res = $this->SendMail($email . ',' . $notify_email, $headers, $body,
+						$files, (isset($smtp_options) ? $smtp_options : null));
+
+					if (is_string($res)) {
+						$msg = trans('Error sending mail: $a', $res);
+						if ($type == 'backend')
+							fprintf(STDERR, $msg . $eol);
+						else {
+							echo '<span class="red">' . htmlspecialchars($msg) . '</span>' . $eol;
+							flush();
+						}
+						$status = MSG_ERROR;
+					} else {
+						$status = MSG_SENT;
+						$res = NULL;
+					}
+
+					if ($status == MSG_SENT) {
+						$this->DB->Execute('UPDATE documents SET published = 1 WHERE id = ?', array($doc['id']));
+						$published = true;
+					}
+
+					if ($add_message)
+						$this->DB->Execute('UPDATE messageitems SET status = ?, error = ?
+							WHERE id = ?', array($status, $res, $msgitems[$doc['customerid']][$email]));
+				}
+			}
+		}
+	}
 }

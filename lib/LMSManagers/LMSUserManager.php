@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C) 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -35,22 +35,20 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     /**
      * Sets user password
      * 
-     * @global array $SYSLOG_RESOURCE_KEYS
      * @param int $id User id
      * @param string $passwd Password
      */
     public function setUserPassword($id, $passwd)
     {
-        global $SYSLOG_RESOURCE_KEYS;
         $args = array(
             'passwd' => crypt($passwd),
-            $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER] => $id
+            SYSLOG::RES_USER => $id
         );
         $this->db->Execute('UPDATE users SET passwd=?, passwdlastchange=?NOW? WHERE id=?', array_values($args));
 	$this->db->Execute('INSERT INTO passwdhistory (userid, hash) VALUES (?, ?)', array($id, crypt($passwd)));
         if ($this->syslog) {
             unset($args['passwd']);
-            $this->syslog->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_USERPASSWDCHANGE, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
+            $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_USERPASSWDCHANGE, $args);
         }
     }
 
@@ -96,7 +94,7 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     public function getUserList()
     {
         $userlist = $this->db->GetAll(
-            'SELECT id, login, name, lastlogindate, lastloginip, passwdexpiration, passwdlastchange, access, swekey_id, accessfrom, accessto  
+            'SELECT id, login, name, lastlogindate, lastloginip, passwdexpiration, passwdlastchange, access, accessfrom, accessto  
             FROM users 
             WHERE deleted=0 
             ORDER BY login ASC'
@@ -161,13 +159,11 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     /**
      * Adds user
      * 
-     * @global array $SYSLOG_RESOURCE_KEYS
      * @param array $user User data
      * @return int|false User id on success, false otherwise
      */
     public function userAdd($user)
     {
-        global $SYSLOG_RESOURCE_KEYS;
         $args = array(
             'login' => $user['login'],
             'name' => $user['name'],
@@ -195,8 +191,8 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             );
             if ($this->syslog) {
                 unset($args['passwd']);
-                $args[$SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]] = $id;
-                $this->syslog->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_ADD, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
+                $args[SYSLOG::RES_USER] = $id;
+                $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_ADD, $args);
             }
             return $id;
         } else {
@@ -207,21 +203,19 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     /**
      * Deletes user
      * 
-     * @global array $SYSLOG_RESOURCE_KEYS
      * @param int $id User id
      * @return boolean True on success
      */
     public function userDelete($id)
     {
-        global $SYSLOG_RESOURCE_KEYS;
         if ($this->db->Execute('UPDATE users SET deleted=1, access=0 WHERE id=?', array($id))) {
             if ($this->syslog) {
                 $args = array(
-                    $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER] => $id,
+                    SYSLOG::RES_USER => $id,
                     'deleted' => 1,
                     'access' => 0,
                 );
-                $this->syslog->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_UPDATE, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
+                $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_UPDATE, $args);
             }
             $this->cache->setCache('users', $id, 'deleted', 1);
             return true;
@@ -328,13 +322,11 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     /**
      * Updates user data
      * 
-     * @global array $SYSLOG_RESOURCE_KEYS
      * @param array $user New user data
      * @return int|false Affected rows
      */
     public function userUpdate($user)
     {
-        global $SYSLOG_RESOURCE_KEYS;
         $args = array(
             'login' => $user['login'],
             'name' => $user['name'],
@@ -342,19 +334,18 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             'rights' => $user['rights'],
             'hosts' => $user['hosts'],
             'position' => $user['position'],
-            'swekey_id' => !empty($user['use_swekey']) ? $user['swekey_id'] : null,
             'ntype' => !empty($user['ntype']) ? $user['ntype'] : null,
             'phone' => !empty($user['phone']) ? $user['phone'] : null,
             'passwdexpiration' => !empty($user['passwdexpiration']) ? $user['passwdexpiration'] : 0,
             'access' => !empty($user['access']) ? 1 : 0,
             'accessfrom' => !empty($user['accessfrom']) ? $user['accessfrom'] : 0,
             'accessto' => !empty($user['accessto']) ? $user['accessto'] : 0,
-            $SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER] => $user['id']
+            SYSLOG::RES_USER => $user['id']
         );
         $res = $this->db->Execute('UPDATE users SET login=?, name=?, email=?, rights=?,
-				hosts=?, position=?, swekey_id=?, ntype=?, phone=?, passwdexpiration=?, access=?, accessfrom=?, accessto=? WHERE id=?', array_values($args));
+				hosts=?, position=?, ntype=?, phone=?, passwdexpiration=?, access=?, accessfrom=?, accessto=? WHERE id=?', array_values($args));
         if ($res && $this->syslog) {
-            $this->syslog->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_UPDATE, $args, array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
+            $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_UPDATE, $args);
         }
         return $res;
     }

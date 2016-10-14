@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 
 /*
@@ -159,11 +159,17 @@ try {
 	die("Fatal error: cannot connect to database!" . PHP_EOL);
 }
 
-$host = ConfigHelper::getConfig($config_section . '.smtp_host');
-$port = ConfigHelper::getConfig($config_section . '.smtp_port');
-$user = ConfigHelper::getConfig($config_section . '.smtp_user');
-$pass = ConfigHelper::getConfig($config_section . '.smtp_pass');
-$auth = ConfigHelper::getConfig($config_section . '.smtp_auth');
+// now it's time for script settings
+$smtp_options = array(
+	'host' => ConfigHelper::getConfig($config_section . '.smtp_host'),
+	'port' => ConfigHelper::getConfig($config_section . '.smtp_port'),
+	'user' => ConfigHelper::getConfig($config_section . '.smtp_user'),
+	'pass' => ConfigHelper::getConfig($config_section . '.smtp_pass'),
+	'auth' => ConfigHelper::getConfig($config_section . '.smtp_auth'),
+	'ssl_verify_peer' => ConfigHelper::checkValue(ConfigHelper::getConfig($config_section . '.smtp_ssl_verify_peer', true)),
+	'ssl_verify_peer_name' => ConfigHelper::checkValue(ConfigHelper::getConfig($config_section . '.smtp_ssl_verify_peer_name', true)),
+	'ssl_allow_self_signed' => ConfigHelper::checkConfig($config_section . '.smtp_ssl_allow_self_signed'),
+);
 
 $debug_email = ConfigHelper::getConfig($config_section . '.debug_email', '', true);
 $mail_from = ConfigHelper::getConfig($config_section . '.mailfrom', '', true);
@@ -214,15 +220,12 @@ $dayend = $daystart + 86399;
 $deadline = ConfigHelper::getConfig('payments.deadline', ConfigHelper::getConfig('invoices.paytime', 0));
 
 // Include required files (including sequence is important)
+require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'unstrip.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 
-if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG'))
-	$SYSLOG = new SYSLOG($DB);
-else
-	$SYSLOG = null;
+$SYSLOG = SYSLOG::getInstance();
 
 // Initialize Session, Auth and LMS classes
 
@@ -240,9 +243,11 @@ function parse_customer_data($data, $row) {
 	global $DB;
 
 	$amount = -$row['balance'];
+	$totalamount = -$row['totalbalance'];
 	$data = preg_replace("/\%bankaccount/",
 		format_bankaccount(bankaccount($row['id'], $row['account'])), $data);
 	$data = preg_replace("/\%b/", $amount, $data);
+	$data = preg_replace("/\%totalb/", $totalamount, $data);
 	$data = preg_replace("/\%date-y/", strftime("%Y"), $data);
 	$data = preg_replace("/\%date-m/", strftime("%m"), $data);
 	$data = preg_replace("/\%date_month_name/", strftime("%B"), $data);
@@ -251,7 +256,9 @@ function parse_customer_data($data, $row) {
 	$data = preg_replace("/\%deadline-m/", strftime("%m", $deadline), $data);
 	$data = preg_replace("/\%deadline-d/", strftime("%d", $deadline), $data);
 	$data = preg_replace("/\%B/", $row['balance'], $data);
+	$data = preg_replace("/\%totalB/", $row['totalbalance'], $data);
 	$data = preg_replace("/\%saldo/", moneyf($row['balance']), $data);
+	$data = preg_replace("/\%totalsaldo/", moneyf($row['totalbalance']), $data);
 	$data = preg_replace("/\%pin/", $row['pin'], $data);
 	$data = preg_replace("/\%cid/", $row['id'], $data);
 	if (preg_match("/\%abonament/", $data)) {
@@ -263,6 +270,22 @@ function parse_customer_data($data, $row) {
 			array($row['id']));
 		$data = preg_replace("/\%abonament/", $saldo, $data);
 	}
+
+	if (preg_match("/\%last_10_in_a_table/", $data)) {
+		$last10 = $DB->GetAll("SELECT comment, value, time FROM cash WHERE
+			customerid = ? ORDER BY time DESC LIMIT 10", array($row['id']));
+		// ok, now we are going to rise up system's load
+		$l10 = "-----------+-----------+----------------------------------------------------\n";
+		foreach ($last10 as $row_s) {
+			$op_time = strftime( "%Y/%m/%d", $row_s['time']);
+			$op_amount = sprintf("%9.2f", $row_s['value']);
+			$for_what = sprintf("%-52s", $row_s['comment']);
+			$l10 = $l10 . "$op_time | $op_amount | $for_what\n";
+		}
+		$l10 = $l10."-----------+-----------+----------------------------------------------------\n";
+		$data = preg_replace("/\%last_10_in_a_table/", $l10, $data);
+	}
+
 	// invoices, debit notes
 	$data = preg_replace("/\%invoice/", $row['doc_number'], $data);
 	$data = preg_replace("/\%number/", $row['doc_number'], $data);
@@ -295,7 +318,7 @@ function create_message($type, $subject, $template) {
 
 function send_mail($msgid, $cid, $rmail, $rname, $subject, $body) {
 	global $LMS, $DB, $mail_from, $notify_email, $reply_email, $dsn_email, $mdn_email;
-	global $host, $port, $user, $pass, $auth;
+	global $smtp_options;
 
 	$DB->Execute("INSERT INTO messageitems
 		(messageid, customerid, destination, status)
@@ -324,7 +347,7 @@ function send_mail($msgid, $cid, $rmail, $rname, $subject, $body) {
 		$headers['X-LMS-Message-Item-Id'] = $msgitemid;
 	}
 
-	$result = $LMS->SendMail($rmail, $headers, $body, null, $host, $port, $user, $pass, $auth);
+	$result = $LMS->SendMail($rmail, $headers, $body, null, $smtp_options);
 
 	$query = "UPDATE messageitems
 		SET status = ?, lastdate = ?NOW?, error = ?
@@ -357,13 +380,13 @@ function send_sms($msgid, $cid, $phone, $data) {
 
 function send_mail_to_user($rmail, $rname, $subject, $body) {
 	global $LMS, $mail_from, $notify_email;
-	global $host, $port, $user, $pass, $auth;
+	global $smtp_options;
 
 	$headers = array('From' => $mail_from, 'To' => qp_encode($rname) . " <$rmail>",
 		'Subject' => $subject);
 	if (!empty($notify_email))
 		$headers['Cc'] = $notify_email;
-	$result = $LMS->SendMail($rmail, $headers, $body, null, $host, $port, $user, $pass, $auth);
+	$result = $LMS->SendMail($rmail, $headers, $body, null, $smtp_options);
 }
 
 function send_sms_to_user($phone, $data) {
@@ -379,15 +402,18 @@ function send_sms_to_user($phone, $data) {
 // timetable
 if (empty($types) || in_array('timetable', $types)) {
 	$days = $notifications['timetable']['days'];
-	$users = $DB->GetAll("SELECT id, name, email FROM users
-		WHERE deleted = 0 AND email <> '' AND ntype & ? = ? AND access = 1",
-		array(1, 1));
+	$users = $DB->GetAll("SELECT id, name, (CASE WHEN ntype & ? > 0 THEN email ELSE '' END) AS email,
+			(CASE WHEN ntype & ? > 0 THEN phone ELSE '' END) AS phone FROM users
+		WHERE deleted = 0 AND access = 1 AND ntype & ? > 0 AND (email <> '' OR phone <> '')",
+		array(MSG_MAIL, MSG_SMS, (MSG_MAIL | MSG_SMS)));
 	$date = mktime(0, 0, 0);
-	$subject = trans("Timetable for today");
+	$subject = $notifications['timetable']['subject'];
 	$today = date("Y/m/d");
-	foreach ($users as $usr) {
+	foreach ($users as $user) {
+		if (empty($user['email']) && empty($user['phone']))
+			continue;
+
 		$contents = '';
-		$recipient = $usr['email'];
 		$events = $DB->GetAll("SELECT DISTINCT title, description, begintime, endtime,
 			customerid, UPPER(lastname) AS lastname, customers.name AS name, street, city, zip
 			FROM events
@@ -397,40 +423,60 @@ if (empty($types) || in_array('timetable', $types)) {
 			((private=1 AND (events.userid=? OR eventassignments.userid=?)) OR
 			(private=0 AND eventassignments.userid=?) OR
 			(private=0 AND eventassignments.userid IS NULL))
-			ORDER BY begintime", array($date, $usr['id'], $usr['id'], $usr['id']));
+			ORDER BY begintime", array($date, $user['id'], $user['id'], $user['id']));
 
 		if (!empty($events)) {
-			foreach ($events as $event){
-				$begintime = sprintf("%02d:%02d", floor($event['begintime']/100), $event['begintime']%100);
-				$contents .= trans("Timetable for today") . ': '  . $today . PHP_EOL;
-				$contents .= "----------------------------------------------------------------------------".PHP_EOL;
-				$contents .= trans("Time:")."\t".$begintime;
+			$mail_contents = '';
+			$sms_contents = '';
+			foreach ($events as $event) {
+				$begintime = sprintf("%02d:%02d", floor($event['begintime'] / 100), $event['begintime'] % 100);
+				$mail_contents .= trans("Timetable for today") . ': '  . $today . PHP_EOL;
+				$sms_contents .= trans("Timetable for today") . ': '  . $today . ', ';
+				$mail_contents .= "----------------------------------------------------------------------------".PHP_EOL;
+				$mail_contents .= trans("Time:") . "\t" . $begintime;
+				$sms_contents .= trans("Time:") . " " . $begintime;
 				if ($event['endtime'] != 0 && $event['begintime'] != $event['endtime']) {
-					$endtime = sprintf("%02d:%02d", floor($event['endtime']/100), $event['endtime']%100);
-					$contents .= " - " .$endtime;
+					$endtime = sprintf("%02d:%02d", floor($event['endtime'] / 100), $event['endtime'] % 100);
+					$mail_contents .= ' - ' . $endtime;
+					$sms_contents .= ' - ' . $endtime;
 				}
-				$contents .= PHP_EOL;
-				$contents .= trans('Title:')."\t".$event['title'].PHP_EOL;
-				$contents .= trans('Description:')."\t".$event['description'].PHP_EOL;
-				if($event['customerid']){
-					$contents .= trans('Customer:')."\t".$event['lastname']." ".$event['name'].", ".$event['zip']." ".$event['city']." ".$event['street'].PHP_EOL;
-					$contents .= trans('customer contacts: ').PHP_EOL;
-					$contacts = $DB->GetAll("SELECT contact FROM customercontacts WHERE customerid = ? AND (type & ?) = ? ",
-						array($event['customerid'], (CONTACT_MOBILE | CONTACT_FAX | CONTACT_LANDLINE | CONTACT_DISABLED),
-						(CONTACT_MOBILE | CONTACT_FAX | CONTACT_LANDLINE)));
-					foreach ($contacts as $phone){
-						$contents .= $phone['contact'].PHP_EOL;
+				$mail_contents .= PHP_EOL;
+				$sms_contents .= ': ';
+				$mail_contents .= trans('Title:') . "\t" . $event['title'] . PHP_EOL;
+				$sms_contents .= $event['title'];
+				$mail_contents .= trans('Description:') . "\t" . $event['description'] . PHP_EOL;
+				$sms_contents .=  ' (' . $event['description'] . ')';
+				if ($event['customerid']) {
+					$mail_contents .= trans('Customer:') . "\t" . $event['lastname'] . " " . $event['name']
+						. ", " . $event['zip'] . " " . $event['city'] . " " . $event['street'] . PHP_EOL;
+					$sms_contents .= trans('Customer:') . ' ' . $event['lastname'] . " " . $event['name']
+						. ", " . $event['zip'] . " " . $event['city'] . " " . $event['street'];
+					$contacts = $DB->GetCol("SELECT contact FROM customercontacts
+						WHERE customerid = ? AND (type & ?) = 0 AND (type & ?) > 0",
+						array($event['customerid'], CONTACT_DISABLED, (CONTACT_MOBILE | CONTACT_FAX | CONTACT_LANDLINE)));
+					if (!empty($contacts)) {
+						$mail_contents .= trans('customer contacts: ') . PHP_EOL . implode(', ', $contacts) . PHP_EOL;
+						$sms_contents .= ' - ' . implode(', ', $contacts);
 					}
 				}
-				$contents .= "----------------------------------------------------------------------------".PHP_EOL;
+				$mail_contents .= "----------------------------------------------------------------------------" . PHP_EOL;
+				$sms_contents .= ' ';
 			}
 
-			$recipient_name = $row['lastname'] . ' ' . $row['name'];
-			$recipient_mails = ($debug_email ? explode(',', $debug_email) : (!empty($usr['email']) ? explode(',', trim($usr['email'])) : null));
-			if (!$quiet)
-				echo trans('User').": ".$usr['name']." id: ".$usr['id']." ".trans('have $a events',$counter).PHP_EOL;
-			if (!$debug)
-				send_mail_to_user($usr['email'], $usr['name'], $subject, $contents);
+			if (!empty($user['email'])) {
+				$recipient_name = $row['lastname'] . ' ' . $row['name'];
+				$recipient_mails = ($debug_email ? explode(',', $debug_email) : (!empty($user['email']) ? explode(',', trim($user['email'])) : null));
+				if (!$quiet)
+					printf("[timetable/mail] %s (%04d): %s" . PHP_EOL, $user['name'], $user['id'], $user['email']);
+				if (!$debug)
+					send_mail_to_user($user['email'], $user['name'], $subject, $mail_contents);
+			}
+			if (!empty($user['sms'])) {
+				if (!$quiet)
+					printf("[timetable/sms] %s (%04d): %s" . PHP_EOL, $user['name'], $user['id'], $user['phone']);
+				if (!$debug)
+					send_sms_to_user($user['phone'], $sms_contents);
+			}
 		}
 	}
 }
@@ -509,9 +555,12 @@ if (empty($types) || in_array('debtors', $types)) {
 	$limit = $notifications['debtors']['limit'];
 	// @TODO: check 'messages' table and don't send notifies to often
 	$customers = $DB->GetAll("SELECT c.id, c.pin, c.lastname, c.name,
-			SUM(value) AS balance, m.email, x.phone, divisions.account
+			SUM(value) AS balance, b.balance AS totalbalance, m.email, x.phone, divisions.account
 		FROM customers c
 		LEFT JOIN divisions ON divisions.id = c.divisionid
+		LEFT JOIN (
+			SELECT customerid, SUM(value) AS balance FROM cash GROUP BY customerid
+		) b ON b.customerid = c.id
 		JOIN cash ON (c.id = cash.customerid)
 		LEFT JOIN (SELECT " . $DB->GroupConcat('contact') . " AS email, customerid
 			FROM customercontacts

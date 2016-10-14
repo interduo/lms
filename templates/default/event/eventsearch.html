@@ -3,7 +3,6 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
-{include file="calendar_js.html"}
 <FORM method="POST" action="?m=eventsearch" name="event" id="event">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
@@ -34,8 +33,8 @@
 			<B>{trans("Date:")}</B>
 		</TD>
 		<TD width="98%">
-			{trans("From:")} <INPUT type="text" name="event[datefrom]" size="10" {tip class="calendar" text="Enter date in YYYY/MM/DD format or click to choose it from calendar"}>
-			{trans("To:")} <INPUT type="text" name="event[dateto]" size="10" {tip class="calendar" text="Enter date in YYYY/MM/DD format or click to choose it from calendar"}>
+			{trans("From:")} <INPUT type="text" placeholder="{trans("yyyy/mm/dd")}" name="event[datefrom]" size="12" {tip class="calendar" text="Enter date in YYYY/MM/DD format or click to choose it from calendar"}>
+			{trans("To:")} <INPUT type="text" placeholder="{trans("yyyy/mm/dd")}" name="event[dateto]" size="12" {tip class="calendar" text="Enter date in YYYY/MM/DD format or click to choose it from calendar"}>
 		</TD>
 	</TR>
 	<TR>
@@ -108,10 +107,10 @@
 			<B>{trans("User:")}</B>
 		</TD>
 		<TD style="width: 98%;" class="multiselect nobr">
-			<SELECT name="event[userid][]" id="userid" multiple>
-				{section name=userlist loop=$userlist}
-				<OPTION value="{$userlist[userlist].id}">{$userlist[userlist].name}</OPTION>
-				{/section}
+			<SELECT name="event[userid][]" class="lms-ui-multiselect" multiple data-default-value="{trans("- select user -")}">
+				{foreach $userlist as $user}
+				<OPTION value="{$user.id}">{$user.name}</OPTION>
+				{/foreach}
 			</SELECT>
 		</TD>
 	</TR>
@@ -126,8 +125,7 @@
 </form>
 <SCRIPT type="text/javascript">
 <!--
-multiselect('event', 'userid', '{trans("- select user -")}');
-document.forms['event'].elements['event[title]'].focus();
+	document.forms['event'].elements['event[title]'].focus();
 //-->
 </SCRIPT>
 {/block}

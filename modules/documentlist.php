@@ -57,13 +57,13 @@ function GetDocumentList($order='cdate,asc', $search) {
 	}
 
 	$list = $DB->GetAll('SELECT docid, d.number, d.type, title, d.cdate, fromdate, todate, description, 
-				filename, md5sum, contenttype, template, d.closed, d.name, d.customerid
-                	FROM documentcontents
+				template, d.closed, d.name, d.customerid
+			FROM documentcontents
 			JOIN documents d ON (d.id = documentcontents.docid)
 			JOIN docrights r ON (d.type = r.doctype AND r.userid = ? AND (r.rights & 1) = 1)
-		        LEFT JOIN numberplans ON (d.numberplanid = numberplans.id)
+			LEFT JOIN numberplans ON (d.numberplanid = numberplans.id)
 			LEFT JOIN (
-			        SELECT DISTINCT a.customerid FROM customerassignments a
+				SELECT DISTINCT a.customerid FROM customerassignments a
 				JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 				WHERE e.userid = lms_current_user()
 			) e ON (e.customerid = d.customerid)
@@ -75,6 +75,11 @@ function GetDocumentList($order='cdate,asc', $search) {
 			.($to ? ' AND d.cdate <= '.intval($to) : '')
 			.($status == -1 ? '' : ' AND d.closed = ' . intval($status))
 			.$sqlord, array($AUTH->id));
+
+	if (!empty($list))
+		foreach ($list as &$document)
+			$document['attachments'] = $DB->GetAll('SELECT id, filename, md5sum, contenttype, main
+				FROM documentattachments WHERE docid = ? ORDER BY main DESC, filename', array($document['docid']));
 
 	$list['total'] = sizeof($list);
 	$list['direction'] = $direction;
@@ -194,7 +199,7 @@ if($listdata['total'])
 if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 
-$SMARTY->assign('numberplans', $LMS->GetNumberPlans(array(DOC_CONTRACT, DOC_ANNEX, DOC_PROTOCOL, DOC_ORDER, DOC_SHEET, -6, -7, -8, -9, -99, DOC_OTHER)));
+$SMARTY->assign('numberplans', $LMS->GetNumberPlans(array(DOC_CONTRACT, DOC_ANNEX, DOC_PROTOCOL, DOC_ORDER, DOC_SHEET, -6, -7, -8, -9, -99, DOC_PRICELIST, DOC_PROMOTION, DOC_WARRANTY, DOC_REGULATIONS, DOC_OTHER)));
 $SMARTY->assign('documentlist', $documentlist);
 $SMARTY->assign('pagelimit', $pagelimit);
 $SMARTY->assign('page', $page);

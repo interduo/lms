@@ -42,6 +42,7 @@ $DEFAULTS = array(
 		'allow_from' => '',
 		'default_module' => 'welcome',
 		'timeout' => 600,
+		'settings_timeout' => 28800,
 		'customerlist_pagelimit' => 100,
 		'nodelist_pagelimit' => 100,
 		'balancelist_pagelimit' => 100,
@@ -151,6 +152,9 @@ $DEFAULTS = array(
 		'default_mailserver_ip' => '127.0.0.1',
 		'default_mx' => 'localhost'
 	),
+	'voip' => array(
+		'default_account_flags' => 0,
+	)
 );
 
 foreach ($DEFAULTS as $section => $values)

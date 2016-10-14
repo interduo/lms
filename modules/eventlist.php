@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-function GetEventList($year=NULL, $month=NULL, $day=NULL, $forward=0, $customerid=0, $userid=0, $type = 0, $private = 0, $closed = '') {
+function GetEventList($year=NULL, $month=NULL, $day=NULL, $forward=0, $customerid=0, $userid=0, $type = 0, $privacy = 0, $closed = '') {
 	global $AUTH;
 
 	$DB = LMSDB::getInstance();
@@ -118,10 +118,10 @@ if (!empty($_POST)) {
 
 	$type = $_POST['type'];
 
-	if (isset($_POST['private']))
-		$private = 1;
+	if (isset($_POST['privacy']))
+		$privacy = intval($_POST['privacy']);
 	else
-		$private = 0;
+		$privacy = 0;
 
 	if (isset($_POST['closed']))
 		$closed = $_POST['closed'];
@@ -144,14 +144,14 @@ if (!empty($_POST)) {
 	$SESSION->restore('elu', $u);
 	$SESSION->restore('ela', $a);
 	$SESSION->restore('elt', $type);
-	$SESSION->restore('elp', $private);
+	$SESSION->restore('elp', $privacy);
 	$SESSION->restore('elc', $closed);
 }
 
 $SESSION->save('elu', $u);
 $SESSION->save('ela', $a);
 $SESSION->save('elt', $type);
-$SESSION->save('elp', $private);
+$SESSION->save('elp', $privacy);
 $SESSION->save('elc', $closed);
 
 $day = (isset($day) ? $day : date('j',time()));
@@ -160,11 +160,11 @@ $year = (isset($year) ? $year : date('Y',time()));
 
 $layout['pagetitle'] = trans('Timetable');
 
-$eventlist = GetEventList($year, $month, $day, ConfigHelper::getConfig('phpui.timetable_days_forward'), $u, $a, $type, $private, $closed);
+$eventlist = GetEventList($year, $month, $day, ConfigHelper::getConfig('phpui.timetable_days_forward'), $u, $a, $type, $privacy, $closed);
 $SESSION->restore('elu', $listdata['customerid']);
 $SESSION->restore('ela', $listdata['userid']);
 $SESSION->restore('elt', $listdata['type']);
-$SESSION->restore('elp', $listdata['private']);
+$SESSION->restore('elp', $listdata['privacy']);
 $SESSION->restore('elc', $listdata['closed']);
 
 // create calendars
@@ -184,6 +184,9 @@ for ($i = 1; $i < $daysnum + 1; $i++) {
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 $SESSION->save('edate', sprintf('%04d/%02d/%02d', $year, $month, $day));
+
+$today = mktime(0, 0, 0, date('n'), date('j'), date('Y'));
+$SMARTY->assign('today', $today);
 
 $SMARTY->assign('period', $DB->GetRow('SELECT MIN(date) AS fromdate, MAX(date) AS todate FROM events'));
 $SMARTY->assign('eventlist',$eventlist);

@@ -3,7 +3,6 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
-{include file="calendar_js.html"}
 <SCRIPT type="text/javascript">
 <!-- 
 	function PrintList() {
@@ -92,7 +91,7 @@
 			<IMG src="img/phone.gif" alt=""> {trans("Phone:")}
 		</TD>
 		<TD style="width: 99%;" class="nobr">
-			<INPUT type="text" name="search[phone]" VALUE="{$search.phone}">
+			<INPUT type="tel" name="search[phone]" VALUE="{$search.phone}">
 		</TD>
 	</TR>
 	<TR>
@@ -100,7 +99,7 @@
 			<IMG src="img/mail.gif" alt=""> {trans("E-mail:")}
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT type="text" name="search[email]" VALUE="{$search.email}">
+			<INPUT type="email" name="search[email]" VALUE="{$search.email}">
 		</TD>
 	</TR>
 	{*
@@ -240,9 +239,9 @@
 			<IMG src="img/money.gif" alt=""> {trans("Tariffs:")}
 		</TD>
 		<TD style="width: 99%;" class="multiselect">
-			<SELECT SIZE="1" name="search[tariffs][]" multiple id="customertariffs">
-				{foreach from=$tariffs item=item}
-				 	<OPTION VALUE="{$item.id}">{$item.name}</OPTION>
+			<SELECT SIZE="1" name="search[tariffs][]" class="lms-ui-multiselect" multiple data-default-value="{trans("- all -")}">
+				{foreach $tariffs as $item}
+				<OPTION VALUE="{$item.id}">{$item.name}</OPTION>
 				{/foreach}
 			</SELECT>
 		</TD>
@@ -376,8 +375,7 @@
 </FORM>
 <SCRIPT type="text/javascript">
 <!--
-document.forms['customersearch'].elements['search[customername]'].focus();
-multiselect('customersearch', 'customertariffs', '{trans("- all -")}', null);
+	document.forms['customersearch'].elements['search[customername]'].focus();
 //-->
 </SCRIPT>
 {/block}

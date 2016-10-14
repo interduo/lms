@@ -1,6 +1,6 @@
 <!--// $Id$ //-->
 <script type="text/javascript" src="img/netnodehelper.js"></script>
-<script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false"></script>
+{include file="google-maps.html"}
 <FORM NAME="nodeadd" ID="nodeadd" METHOD="POST" ACTION="?m=nodeadd{if $customerinfo.id}&ownerid={$customerinfo.id}{/if}">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
@@ -10,7 +10,7 @@
 			<IMG SRC="img/node.gif" ALT="{trans("Name:")}">
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT TYPE="TEXT" NAME="nodedata[name]" VALUE="{$nodedata.name}" MAXLENGTH="32" size="30" {tip text="Enter node name" trigger="name" bold=1}>
+			<INPUT TYPE="TEXT" NAME="nodedata[name]" VALUE="{$nodedata.name}" MAXLENGTH="32" size="30" required {tip text="Enter node name" trigger="name" bold=1}>
 		</TD>
 	</TR>
     </THEAD>
@@ -39,7 +39,7 @@
 			<IMG SRC="img/ip.gif" ALT="{trans("IP address:")}">
 		</TD>
 		<TD style="width: 99%;">
-			<INPUT TYPE="TEXT" NAME="nodedataipaddr" VALUE="{$nodedata.ipaddr}" {tip text="Enter IP address" trigger="ipaddr"}> <a href="javascript:void(0);" onClick="return ipchoosewin(document.nodeadd.nodedataipaddr, document.nodeadd.nodedatanetid);" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="nodedataipaddr" VALUE="{$nodedata.ipaddr}" required {tip text="Enter IP address" trigger="ipaddr"}> <a href="javascript:void(0);" onClick="return ipchoosewin(document.nodeadd.nodedataipaddr, document.nodeadd.nodedatanetid);" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	{if ConfigHelper::checkValue(ConfigHelper::checkConfig('phpui.public_ip', 'true'))}
@@ -60,7 +60,7 @@
 			<TABLE style="width: 100%;" cellpadding="1" cellspacing="0">
 				{foreach from=$nodedata.macs item=item key=key}
 				<TR ID="mac{$key}">
-					<TD style="width: 100%"><INPUT TYPE="TEXT" NAME="nodedata[macs][{$key}]" VALUE="{$item}" {tip text="Enter MAC address" trigger="mac`$key`"}> <a href="javascript:void(0);" onClick="return macchoosewin(document.nodeadd.elements['nodedata[macs][{$key}]']);" {tip text="Click to select MAC from the list"}>&raquo;&raquo;&raquo;</A></TD>
+					<TD style="width: 100%"><INPUT TYPE="TEXT" NAME="nodedata[macs][{$key}]" VALUE="{$item}" required {tip text="Enter MAC address" trigger="mac`$key`"}> <a href="javascript:void(0);" onClick="return macchoosewin(document.nodeadd.elements['nodedata[macs][{$key}]']);" {tip text="Click to select MAC from the list"}>&raquo;&raquo;&raquo;</A></TD>
 				</TR>
 				{/foreach}
 			</TABLE>
@@ -110,7 +110,7 @@
 			<IMG SRC="img/netdev.gif" ALT="{trans("Net device:")}">
 		</TD>
 		<TD style="width: 99%; white-space: nowrap;">
-                        <a href="javascript: void(0);" onclick="return choosenetdevice(document.nodeadd.elements['nodedata[netdev]']);" {tip trigger="netdev" text="Search device"}>&raquo;&raquo;&raquo;</A>
+                        <a href="javascript: void(0);" onclick="return netDevChooseWin(document.nodeadd.elements['nodedata[netdev]']);" {tip trigger="netdev" text="Search device"}>&raquo;&raquo;&raquo;</A>
 			<SELECT SIZE="1" NAME="nodedata[netdev]" {tip text="Select network device (optional)" trigger="netdev"} onchange="change_netdevice(this.options[this.selectedIndex].value)" style="max-width:250px;">
 				<OPTION VALUE="0"{if !$nodedata.netdev} SELECTED{/if}>{trans("- select device -")}</OPTION>
 				{section name=netdevices loop=$netdevices}
@@ -181,7 +181,10 @@
 		</TD>
 		<TD style="width: 99%;" class="nobr">
 			{foreach $_SESSIONTYPES as $idx => $sessiontype}
-			<label>{$sessiontype.label} <INPUT TYPE="checkbox" NAME="nodedata[authtype][{$idx}]" value="{$idx}" id="authtype{$idx}" {tip text="`$sessiontype.tip`" trigger="authtype`$idx`"}{if ($nodedata.authtype & $idx) == $idx} checked{/if}></label>&nbsp;
+			<label>
+				<INPUT TYPE="checkbox" NAME="nodedata[authtype][{$idx}]" value="{$idx}" id="authtype{$idx}" {tip text="`$sessiontype.tip`" trigger="authtype`$idx`"}{if ($nodedata.authtype & $idx) == $idx} checked{/if}>
+				{$sessiontype.label}
+			</label>
 			{/foreach}
 		</TD>
 	</TR>
@@ -226,7 +229,7 @@
 			<IMG SRC="img/info1.gif" ALT="{trans("Description:")}">
 		</TD>
 		<TD style="width: 99%;" COLSPAN="2">
-			<TEXTAREA NAME="nodedata[info]" COLS="50" ROWS="5" {tip text="Enter additional information (optional)"}>{$nodedata.info}</TEXTAREA>
+			<TEXTAREA NAME="nodedata[info]" class="lms-ui-wysiwyg-editor" COLS="50" ROWS="5" {tip text="Enter additional information (optional)"}{if isset($nodedata.wysiwyg.info)} data-wysiwyg="{$nodedata.wysiwyg.info}"{/if}>{$nodedata.info}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>
@@ -271,20 +274,12 @@
 <!--
 	document.forms['nodeadd'].elements['nodedata[name]'].focus();
 
-	function GenPasswd()
-	{
-		var passwd = new Array();
-		var items = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	function GenPasswd() {
 		var length = {ConfigHelper::getConfig('phpui.nodepassword_length', '16')};
 		if (length > 32) length = 32;
 
-		for (var i=0; i<length; i++)
-		{
-			n = Math.floor(Math.random() * items.length);
-			passwd[i] = items.substring(n, n+1);
-		}
-
-		document.forms['nodeadd'].elements['nodedata[passwd]'].value = passwd.join("");
+		document.forms['nodeadd'].elements['nodedata[passwd]'].value =
+			generate_random_string(length, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 	}
 
 	function newmac()
@@ -297,9 +292,12 @@
 		var newcell = newrow.insertCell(0);
 		newcell.style.width = '100%';
 		newcell.innerHTML = '<INPUT TYPE="TEXT" NAME="nodedata[macs][' + nr + ']" VALUE=""'
-			+ ' onmouseover="popup(\'{trans("Enter MAC address")}\')" onmouseout="pophide()">'
+			+ ' title="{trans("Enter MAC address")}">'
 			+ '<a href="javascript:void(0);" onClick="return macchoosewin(document.nodeadd.elements[\'nodedata[macs][' + nr + ']\']);"'
-			+ ' onmouseover="popup(\'{trans("Click to select MAC from the list")}\')" onmouseout="pophide()">&nbsp;&raquo;&raquo;&raquo;</A>';
+			+ ' title="{trans("Click to select MAC from the list")}">&nbsp;&raquo;&raquo;&raquo;</A>';
+		$(newcell).children("[title]").tooltip({
+			position: { my: "left top" }
+		});
 		macscountelem.value = parseInt(nr) + 1;
 	}
 

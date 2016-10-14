@@ -137,13 +137,14 @@ $RT_CAUSE = array(
 );
 
 // Helpdesk note type
-define('RTNOTE', 1);
-define('RTNOTE_OWNER_CHANGE', 2);
-define('RTNOTE_QUEUE_CHANGE', 4);
-define('RTNOTE_STATE_CHANGE', 8);
-define('RTNOTE_CAUSE_CHANGE', 16);
-define('RTNOTE_CUSTOMER_CHANGE', 32);
-define('RTNOTE_SUBJECT_CHANGE', 64);
+define('RTMESSAGE_REGULAR', 0);
+define('RTMESSAGE_NOTE', 1);
+define('RTMESSAGE_OWNER_CHANGE', 2);
+define('RTMESSAGE_QUEUE_CHANGE', 4);
+define('RTMESSAGE_STATE_CHANGE', 8);
+define('RTMESSAGE_CAUSE_CHANGE', 16);
+define('RTMESSAGE_CUSTOMER_CHANGE', 32);
+define('RTMESSAGE_SUBJECT_CHANGE', 64);
 
 // Messages status and type
 define('MSG_NEW', 1);
@@ -190,6 +191,11 @@ define('DOC_ORDER', -4);
 define('DOC_SHEET', -5);
 define('DOC_OTHER', -128);
 define('DOC_BILLING',-10);
+define('DOC_PRICELIST', -11);
+define('DOC_PROMOTION', -12);
+define('DOC_WARRANTY', -13);
+define('DOC_REGULATIONS', -14);
+
 
 $DOCTYPES = array(
     DOC_BILLING         =>      trans('billing'),
@@ -209,7 +215,11 @@ $DOCTYPES = array(
     -7  =>      trans('payments book'), // ksiazeczka oplat
     -8  =>      trans('payment summons'), // wezwanie do zapłaty
     -9  =>      trans('payment pre-summons'), // przedsądowe wezw. do zapłaty
-    DOC_OTHER       =>  trans('other'),
+    DOC_PRICELIST       =>  trans('price-list'), // cennik
+    DOC_PROMOTION       =>  trans('promotion'), // promocja
+    DOC_WARRANTY       =>  trans('warranty'), // gwarancja
+    DOC_REGULATIONS       =>  trans('regulations'), // regulamin
+    DOC_OTHER       =>  trans('other')
 );
 
 // Guarantee periods
@@ -221,17 +231,6 @@ $GUARANTEEPERIODS = array(
     36 => trans('$a months', 36),
     48 => trans('$a months', 48),
     60 => trans('$a months', 60)
-);
-
-// Internet Messengers
-define('IM_GG', 0);
-define('IM_YAHOO', 1);
-define('IM_SKYPE', 2);
-
-$MESSENGERS = array(
-    IM_GG    => trans('Gadu-Gadu'),
-    IM_YAHOO => trans('Yahoo'),
-    IM_SKYPE => trans('Skype'),
 );
 
 define('DISPOSABLE', 0);
@@ -273,6 +272,20 @@ define('TARIFF_PHONE', 4);
 define('TARIFF_TV', 5);
 define('TARIFF_OTHER', -1);
 
+// VoIP call types
+define('CALL_INCOMING', 1);
+define('CALL_OUTGOING', 2);
+
+// VoIP call status
+define('CALL_BUSY', 1);
+define('CALL_ANSWERED', 2);
+define('CALL_NO_ANSWER', 3);
+define('CALL_SERVER_FAILED', 4);
+
+// bit flags for VoIP call
+define('CALL_FLAG_ADMIN_RECORDING', 1);
+define('CALL_FLAG_CUSTOMER_RECORDING', 2);
+
 $TARIFFTYPES = array(
 	TARIFF_INTERNET	=> ConfigHelper::getConfig('tarifftypes.internet', trans('internet')),
 	TARIFF_HOSTING	=> ConfigHelper::getConfig('tarifftypes.hosting', trans('hosting')),
@@ -301,6 +314,13 @@ define('CONTACT_EMAIL', 8);
 define('CONTACT_INVOICES', 16);
 define('CONTACT_NOTIFICATIONS', 32);
 define('CONTACT_BANKACCOUNT', 64);
+define('CONTACT_TECHNICAL', 128);
+define('CONTACT_URL', 256);
+define('CONTACT_IM', 7680);
+define('CONTACT_IM_GG', 512);
+define('CONTACT_IM_YAHOO', 1024);
+define('CONTACT_IM_SKYPE', 2048);
+define('CONTACT_IM_FACEBOOK', 4096);
 define('CONTACT_DISABLED', 16384);
 
 $CONTACTTYPES = array(
@@ -309,6 +329,11 @@ $CONTACTTYPES = array(
     CONTACT_INVOICES        =>	trans('invoices'),
     CONTACT_DISABLED        =>	trans('disabled'),
     CONTACT_NOTIFICATIONS   =>	trans('notifications'),
+    CONTACT_TECHNICAL       =>	trans('technical'),
+    CONTACT_IM_GG           =>	trans('Gadu-Gadu'),
+    CONTACT_IM_YAHOO        =>	trans('Yahoo'),
+    CONTACT_IM_SKYPE        =>	trans('Skype'),
+    CONTACT_IM_FACEBOOK     =>	trans('Facebook'),
 );
 
 define('DISCOUNT_PERCENTAGE', 1);
@@ -494,6 +519,14 @@ $EVENTTYPES = array(
 	EVENT_OTHER        => trans('other')
 );
 
+$EVENTSTYLES = array(
+	EVENT_SERVICE		=> 'background-color: red; color: white;',
+	EVENT_INSTALLATION	=> 'background-color: green; color: white;',
+	EVENT_NETWORK		=> 'background-color: blue; color: white;',
+	EVENT_MEETING		=> 'background-color: yellow; color: black;',
+	EVENT_OTHER			=> 'background-color: gray; color: white;'
+);
+
 define('SESSIONTYPE_PPPOE', 1);
 define('SESSIONTYPE_DHCP', 2);
 define('SESSIONTYPE_EAP', 4);
@@ -549,6 +582,7 @@ if(isset($SMARTY))
 	$SMARTY->assign('_NETELEMENTOWNERSHIPS', $NETELEMENTOWNERSHIPS);
 	$SMARTY->assign('_USERPANEL_ID_TYPES', $USERPANEL_ID_TYPES);
 	$SMARTY->assign('_EVENTTYPES', $EVENTTYPES);
+	$SMARTY->assign('_EVENTSTYLES', $EVENTSTYLES);
 	$SMARTY->assign('_SESSIONTYPES', $SESSIONTYPES);
 }
 

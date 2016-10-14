@@ -9,7 +9,6 @@
 {if $receipt.receipt2}
 <SCRIPT type="text/javascript">window.open('?m=receipt&id={$receipt.receipt2}&which={$receipt.which}');</SCRIPT>
 {/if}
-{include file="calendar_js.html"}
 <SCRIPT type="text/javascript">
 <!--
 	function prints()
@@ -51,6 +50,7 @@
 {/if}
 //-->
 </SCRIPT>
+{$default_printpage = ConfigHelper::getConfig('receipts.default_printpage')}
 <FORM METHOD="POST" NAME="page">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
@@ -94,8 +94,8 @@
 					<OPTION value="address"{if $listdata.cat == "address"} SELECTED{/if}>{trans("address")}</OPTION>
 				</SELECT>&nbsp;
 				<B>{trans("Period:")}</B>&nbsp;
-				{trans("from")}&nbsp;<INPUT TYPE="text" NAME="from" SIZE="10" MAXSIZE="10" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" {tip class="calendar" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
-				{trans("to")}&nbsp;<INPUT TYPE="text" NAME="to" SIZE="10" MAXSIZE="10" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" {tip class="calendar" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>&nbsp;
+				{trans("from")}&nbsp;<INPUT TYPE="text" NAME="from" SIZE="10" MAXSIZE="10" value="{if $listdata.from > 0}{$listdata.from|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>
+				{trans("to")}&nbsp;<INPUT TYPE="text" NAME="to" SIZE="10" MAXSIZE="10" value="{if $listdata.to > 0}{$listdata.to|date_format:"%Y/%m/%d"}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter date in YYYY/MM/DD format (empty field means no limit) or click to choose it from calendar"}>&nbsp;
 				<INPUT type="checkbox" id="advances" name="advances" value="1"{if $listdata.advances} checked{/if}><label for="advances">{trans("not settled adv. only")}</label>&nbsp;
 				<A href="javascript: filter();">&raquo;&raquo;&raquo;</A>
 		</TD>
@@ -108,7 +108,7 @@
 	</TR>
 	{/if}
     </THEAD>
-    <TBODY>
+    <TBODY class="lms-ui-multi-check">
 	{cycle values="light,lucid" print=false}
 	{section name=receiptlist loop=$receiptlist start=$start max=$pagelimit}
 	{assign var=receipt value=$receiptlist[receiptlist]}
@@ -146,7 +146,7 @@
 			<A onClick="return confirmLink(this, '{t a=$receipt.number}Are you sure, you want to remove receipt \'$a\' from database?{/t}')" HREF="?m=receiptdel&id={$receipt.id}"><IMG SRC="img/delete.gif" alt="[ {trans("Delete")} ]" title="[ {trans("Delete")} ]"></A>
 			<A HREF="?m=receiptedit&id={$receipt.id}"><IMG SRC="img/edit.gif" alt="[ {trans("Edit")} ]" title="[ {trans("Edit")} ]"></A>
 			<A HREF="?m=receipt&id={$receipt.id}" TARGET="_blank"><IMG src="img/printr.gif" alt="[ {trans("Print")} ]" title="[ {trans("Print")} ]"></A>
-			<INPUT TYPE="checkbox" NAME="marks[{$receipt.id}]" VALUE="{$receipt.id}"{if $marks.$receiptid}CHECKED{/if}>
+			<INPUT TYPE="checkbox" NAME="marks[{$receipt.id}]" VALUE="{$receipt.id}" class="lms-ui-multi-check"{if $marks.$receiptid} checked{/if}>
 		</TD>
 	</TR>
 	{sectionelse}
@@ -171,11 +171,20 @@
 				<TR>
 					<TD ALIGN="left" nowrap>
 						<A HREF="javascript:prints();">{trans("Print")} <IMG SRC="img/printr.gif" ALT="" ></A>&nbsp;
-						<INPUT type="checkbox" id="original" name="original" checked> <label for="original">{trans("original")}</label>&nbsp;
-						<INPUT type="checkbox" id="copy" name="copy" checked> <label for="copy">{trans("copy")}</label>
+						 <label>
+							<INPUT type="checkbox" id="original" name="original"{if preg_match('/original/i', $default_printpage)} checked{/if}>
+							{trans("original")}
+						</label>
+						<label>
+							<INPUT type="checkbox" id="copy" name="copy"{if preg_match('/copy/i', $default_printpage)} checked{/if}>
+							{trans("copy")}
+						</label>
 					</TD>
 					<TD class="text-right nobr">
-						<label for="allbox">{trans("Check All")}</label><INPUT TYPE="checkbox" NAME="allbox" id="allbox" onchange="CheckAll('page', this, ['original', 'copy'])" VALUE="1">
+						<label>
+							{trans("Check All")}
+							<INPUT TYPE="checkbox" NAME="allbox" class="lms-ui-multi-check-all" VALUE="1">
+						</label>
 					</TD>
 				</TR>
 			</TABLE>

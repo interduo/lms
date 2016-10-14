@@ -550,8 +550,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		} else {
 			/* title */
 			$this->backend->SetFont('arial', 'B', 10);
-			$tmp = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
-			$this->backend->Text(120, 264, trans('Payment for invoice No. $a', $tmp));
+			$this->backend->Text(120, 264, trans('Payment for invoice No. $a', $barcode));
 		}
 
 		/* deadline */
@@ -699,10 +698,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		global $LMS;
 
 		$this->backend->SetFont('arial', '', 7);
-		$this->backend->writeHTMLCell(0, 0, '', '', trans('Your balance on date of invoice issue:') . ' ' . moneyf($LMS->GetCustomerBalance($this->data['customerid'], $this->data['cdate'])), 0, 1, 0, true, 'L');
+		$this->backend->writeHTMLCell(0, 0, '', '', trans('Your balance before invoice issue:') . ' ' . moneyf($LMS->GetCustomerBalance($this->data['customerid'], $this->data['cdate'])), 0, 1, 0, true, 'L');
 	}
 
 	protected function invoice_dates() {
+		$y = $this->backend->GetY();
+
 		$paytype = $this->data['paytype'];
 		$this->backend->SetFont('arial', '', 8);
 		$this->backend->Ln();
@@ -712,6 +713,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		}
 		$payment = trans('Payment type:') . ' <b>' . $this->data['paytypename'] . '</b>';
 		$this->backend->writeHTMLCell(0, 0, '', '', $payment, 0, 1, 0, true, 'L');
+
+		$y = $this->backend->SetY($y);
 	}
 
 	protected function invoice_expositor() {
@@ -737,7 +740,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 			$this->backend->SetFont('arial', '', 8);
 			$h = $this->backend->getStringHeight(0, $tmp);
 			$tmp = mb_ereg_replace('\r?\n', '<br>', $tmp);
-			$this->backend->writeHTMLCell(0, 0, '', $this->backend->GetY() - $h, $tmp, 0, 1, 0, true, 'C');
+			$this->backend->writeHTMLCell(0, 0, '', '', $tmp, 0, 1, 0, true, 'C');
 		}
 	}
 
@@ -748,7 +751,47 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->writeHTMLCell(40, 0, 15, 6, '<img src="' . $image_path . '">');
 	}
 
+	public function invoice_cancelled() {
+		if ($this->data['cancelled']) {
+			$x = $this->backend->GetX();
+			$y = $this->backend->GetY();
+
+			$this->backend->setTextColorArray(array(128, 128, 128));
+			$this->backend->StartTransform();
+			$this->backend->SetFont('arial', '', 40);
+			$this->backend->Rotate(45, 10, 210);
+			$this->backend->Translate(30, 0);
+			$this->backend->SetXY(10, 210);
+			$this->backend->Write(0, trans('CANCELLED'), '', 0, 'C', true, 0, false, false, 0);
+			$this->backend->StopTransform();
+			$this->backend->setTextColorArray(array(0, 0, 0));
+
+			$this->backend->SetXY($x, $y);
+		}
+	}
+
+	public function invoice_no_accountant() {
+		if ($this->data['dontpublish'] && !$this->data['cancelled']) {
+			$x = $this->backend->GetX();
+			$y = $this->backend->GetY();
+
+			$this->backend->setTextColorArray(array(128, 128, 128));
+			$this->backend->StartTransform();
+			$this->backend->SetFont('arial', '', 40);
+			$this->backend->Rotate(45, 10, 210);
+			$this->backend->Translate(30, 0);
+			$this->backend->SetXY(10, 210);
+			$this->backend->Write(0, trans('NO ACCOUNTANT DOCUMENT'), '', 0, 'C', true, 0, false, false, 0);
+			$this->backend->StopTransform();
+			$this->backend->setTextColorArray(array(0, 0, 0));
+
+			$this->backend->SetXY($x, $y);
+		}
+	}
+
 	public function invoice_body_standard() {
+		$this->invoice_cancelled();
+		$this->invoice_no_accountant();
 		$this->invoice_header_image();
 		$this->invoice_date();
 		$this->invoice_title();
@@ -761,6 +804,7 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->invoice_dates();
 		$this->invoice_expositor();
 		$this->invoice_footnote();
+
 		$docnumber = docnumber($this->data['number'], $this->data['template'], $this->data['cdate']);
 		$this->backend->SetTitle(trans('Invoice No. $a', $docnumber));
 		$this->backend->SetAuthor($this->data['division_name']);
@@ -788,6 +832,8 @@ class LMSTcpdfInvoice extends LMSInvoice {
 	}
 
 	public function invoice_body_ft0100() {
+		$this->invoice_cancelled();
+		$this->invoice_no_accountant();
 		$this->invoice_header_image();
 		$this->invoice_date();
 		$this->invoice_title();

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2015 LMS Developers
+ *  (C) Copyright 2001-2016 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -969,4 +969,142 @@ function generate_random_string($length = 10, $characters = '0123456789abcdefghi
 	return $randomString;
 }
 
-?>
+function trans()
+{
+	global $_LANG;
+
+	$args = func_get_args();
+	$content = array_shift($args);
+
+	if (is_array($content)) {
+		$args = array_values($content);
+		$content = array_shift($args);
+	}
+
+	if (isset($_LANG[$content]))
+		$content = trim($_LANG[$content]);
+
+	for ($i = 1, $len = count($args); $i <= $len; $i++) {
+		$content = str_replace('$'.chr(97+$i-1), $args[$i-1], $content);
+	}
+
+	$content = preg_replace('/<![^>]+>/', '', $content);
+	return $content;
+}
+        
+function check_url($url) {
+	$components = parse_url($url);
+	if ($components === false)
+		return false;
+	if (!isset($components['host']) || !isset($components['scheme']))
+		return false;
+	return true;
+}
+
+function handle_file_uploads($elemid, &$error) {
+	$tmpdir = $tmppath = '';
+	$fileupload = array();
+	if (isset($_POST['fileupload'])) {
+		$fileupload = $_POST['fileupload'];
+		$tmpdir = $fileupload[$elemid . '-tmpdir'];
+		if (empty($tmpdir)) {
+			$tmpdir = uniqid('lms-fileupload-');
+			$tmppath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $tmpdir;
+			if (is_dir($tmppath) || !@mkdir($tmppath))
+				$tmpdir = '';
+		} elseif (preg_match('/^lms-fileupload-[0-9a-f]+$/', $tmpdir)) {
+			$tmppath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $tmpdir;
+			if (!file_exists($tmppath))
+				@mkdir($tmppath);
+		} else
+			$tmpdir = '';
+
+		if (isset($_GET['ajax'])) {
+			$files = array();
+			if (isset($_FILES[$elemid]))
+				foreach ($_FILES[$elemid]['name'] as $fileidx => $filename) {
+					if (preg_match('/(\.\.|\/)/', $filename))
+						continue;
+					if (!empty($filename)) {
+						if (is_uploaded_file($_FILES[$elemid]['tmp_name'][$fileidx]) && $_FILES[$elemid]['size'][$fileidx]) {
+							$files[] = array(
+								'name' => $filename,
+								'tmp_name' => $_FILES[$elemid]['tmp_name'][$fileidx],
+								'type' => $_FILES[$elemid]['type'][$fileidx],
+								'size' => $_FILES[$elemid]['size'][$fileidx],
+							);
+						} else { // upload errors
+							if (isset($error[$elemid]))
+								$error[$elemid] .= "\n";
+							else
+								$error[$elemid] = '';
+							switch ($_FILES[$elemid]['error'][$fileidx]) {
+								case 1:
+								case 2: $error[$elemid] .= trans('File is too large: $a', $filename); break;
+								case 3: $error[$elemid] .= trans('File upload has finished prematurely: $a', $filename); break;
+								case 4: $error[$elemid] .= trans('Path to file was not specified: $a', $filename); break;
+								default: $error[$elemid] .= trans('Problem during file upload: $a', $filename); break;
+							}
+						}
+					}
+				}
+
+			if ($error && isset($error[$elemid]))
+				$result = array(
+					'error' => $error[$elemid],
+				);
+			else {
+				if (isset($fileupload) && !empty($tmpdir)) {
+					$files2 = array();
+					foreach ($files as &$file) {
+						unset($file2);
+						if (isset($fileupload[$elemid]))
+							foreach ($fileupload[$elemid] as &$file2)
+								if ($file['name'] == $file2['name'])
+									continue 2;
+						if (!file_exists($tmppath . DIRECTORY_SEPARATOR . $file['name'])) {
+							@move_uploaded_file($file['tmp_name'], $tmppath . DIRECTORY_SEPARATOR . $file['name']);
+							unset($file['tmp_name']);
+						}
+						$files2[] = $file;
+					}
+					unset($file);
+					$files = $files2;
+					unset($files2, $file2);
+				}
+				$result = array(
+					'error' => '',
+					'tmpdir' => $tmpdir,
+					'files' => $files,
+				);
+			}
+			header('Content-type: application/json');
+			print json_encode($result);
+			die;
+		} elseif (isset($fileupload[$elemid])) {
+			foreach ($fileupload[$elemid] as &$file) {
+				list ($size, $unit) = setunits($file['size']);
+				$file['sizestr'] = sprintf("%.02f", $size) . ' ' . $unit;
+			}
+			unset($file);
+			$$elemid = $fileupload[$elemid];
+		}
+	}
+	return compact('fileupload', 'tmppath', $elemid);
+}
+
+function check_gg($im) {
+	return preg_match('/^[0-9]{0,32}$/', $im);
+}
+
+function check_skype($im) {
+	return preg_match('/^[-_.a-z0-9]{0,32}$/i', $im);
+}
+
+function check_yahoo($im) {
+	return preg_match('/^[-_.a-z0-9]{0,32}$/i', $im);
+}
+
+function check_facebook($im) {
+	return preg_match('/^[.a-z0-9]{5,}$/i', $im);
+}

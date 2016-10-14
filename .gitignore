@@ -5,6 +5,9 @@ lib/Smarty/*
 nbproject/private
 lms.ini
 backups/*
+bin/voip/cache/*
+bin/voip/templates_c/*
+voipcalls/*
 documents/*
 !documents/templates
 cache/*

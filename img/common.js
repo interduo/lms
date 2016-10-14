@@ -1,4 +1,4 @@
-// $Id: common.js,v 1.2 2003/04/12 22:31:06 lukasz Exp $
+// $Id$
 
 function confirmLink(theLink, message)
 {
@@ -103,11 +103,6 @@ function customerchoosewin(formfield)
 	return openSelectWindow('?m=choosecustomer','choosecustomer',450,250,'true',formfield);
 }
 
-function nodechoosewin(formfield, customerid)
-{
-	return openSelectWindow('?m=choosenode&id='+customerid,'choosenode',350,200,'true',formfield);
-}
-
 function locationchoosewin(varname, formname, city, street, default_city)
 {
         if(city == '' && default_city) city = default_city;
@@ -131,8 +126,19 @@ function netdevfrommapchoosewin(netdevid)
 
 function netlinkpropertieschoosewin(id, devid, isnetlink)
 {
-	return openSelectWindow('?m=netlinkproperties&id=' + id + '&devid=' + devid + '&isnetlink=' + (isnetlink ? 1 : 0),
-		'netlinkproperties', 350, 100, 'true');
+	return openSelectWindow('?m=netlinkproperties&id=' + id + '&devid=' + devid + '&isnetlink=' + (isnetlink ? 1 : 0), 'netlinkproperties', 350, 100, 'true');
+}
+
+function netDevChooseWin(formfield, netdevid) {
+	return openSelectWindow('?m=choosenetdevice' + (netdevid !== undefined ? '&netdevid=' + netdevid : ''), 'choosenetdevice', 600, 250, 'true', formfield);
+}
+
+function nodeChooseWin(formfield) {
+	return openSelectWindow('?m=choosenodedevice', 'choosenodedevice', 600, 250, 'true', formfield);
+}
+
+function netDevForNetNodeChooseWin(netnodeid) {
+	return openSelectWindow('?m=choosenetdevfornetnode&id=' + netnodeid, 'choosenetdevfornetnode', 600, 250, 'true', netnodeid);
 }
 
 function sendvalue(targetfield, value)
@@ -262,154 +268,166 @@ function CheckAll(form, elem, excl)
     }
 }
 
-function get_object_pos(obj)
-{
+function get_object_pos(obj) {
 	// get old element size/position
-	var x = (document.layers) ? obj.x : obj.offsetLeft;
-	var y = (document.layers) ? obj.y : obj.offsetTop;
+	var x = obj.offsetLeft;
+	var y = obj.offsetTop;
 
 	// calculate element position
 	var elm = obj.offsetParent;
-	while (elm) {
-	    x += elm.offsetLeft;
+	while (elm && window.getComputedStyle(elm).position != 'relative') {
+		x += elm.offsetLeft;
 		y += elm.offsetTop;
 		elm = elm.offsetParent;
 	}
 
-	return {x:x, y:y};
+	return { x: x, y: y };
 }
 
-function multiselect(formid, elemid, def, selected)
-{
-	var old_element = document.getElementById(elemid);
-	var form = document.getElementById(formid);
+function multiselect(options) {
+	var elemid = options.id;
+	var def = options.defaultValue !== undefined ? options.defaultValue : '';
+	var tiny = options.type !== undefined && options.type == 'tiny';
+	var icon = options.icon !== undefined ? options.icon : 'img/settings.gif';
+	var label = options.label !== undefined ? options.label : '';
 
-	if (!old_element || !form) {
+	var old_element = $('#' + elemid);
+	var form = old_element.closest('form');
+
+	if (!old_element.length || !form.length)
 		return 0;
-	}
-
-	var selected_elements = null;
-	if (selected)
-		selected_elements = '|' + selected.join('|') + '|';
 
 	// create new multiselect div
-	var new_element = document.createElement('DIV');
-	new_element.className = 'multiselect';
-	new_element.id = elemid;
+	var new_element = $('<div/>', {
+		class: 'lms-ui-multiselect' + (tiny ? '-tiny' : ''),
+		id: elemid,
+		// save title for tooltips
+		title: old_element.attr('title')
+	});
+	if (tiny)
+		new_element.html('<img src="' + icon + '">&nbsp' + label);
 
 	var elem = [];
-	for (var i = 0; i < old_element.options.length; i++)
-		if (old_element.options[i].selected)
-			elem[old_element.options[i].text.replace(' ', '&nbsp;')] = 1;
-		else
-			elem[old_element.options[i].text.replace(' ', '&nbsp;')] = 0;
+	$('option', old_element).each(function(index) {
+		elem[$(this).text().replace(' ', '&nbsp;')] =
+			$(this).prop('selected') ? 1 : 0;
+	});
 
-	new_element.innerHTML =  generateSelectedString(elem);
+	var old_selected = new_selected = generateSelectedString(elem);
+	if (!tiny)
+		new_element.html(old_selected);
 
-	if (old_element.style.cssText)
-		new_element.style.cssText = old_element.style.cssText;
-
-	// save (overlib) popups
-	new_element.onmouseover = old_element.onmouseover;
-	new_element.onmouseout = old_element.onmouseout;
+	new_element.data('data-multiselect-object', this)
+		.prop('style', old_element.prop('style'));
+	// save onchange event handler
+	if (typeof(onchange = old_element.prop('onchange')) == 'function')
+		new_element.on('change', onchange);
+	// save onitemclick event handler
+	if (typeof(itemclick = old_element.prop('onitemclick')) == 'function')
+		new_element.on('itemclick', onchange);
 
 	// replace select with multiselect
-	old_element.parentNode.replaceChild(new_element, old_element);
+	old_element.replaceWith(new_element);
 
 	// create multiselect list div (hidden)
-	var div = document.createElement('DIV');
-	var ul = document.createElement('UL');
+	var div = $('<div/>', {
+		class: 'lms-ui-multiselectlayer',
+		id: elemid + '-layer'
+	}).hide().appendTo(form);
+	var ul = $('<ul/>').appendTo(div);
 
-	div.className = 'multiselectlayer';
-	div.id = elemid + '-layer';
-	div.style.display = 'none';
+	$('option', old_element).each(function(i) {
+		var li = $('<li/>').appendTo(ul);
 
-	for (var i=0, len=old_element.options.length; i<len; ++i)
-	{
-		var li = document.createElement('LI');
+		// add elements
+		var box = $('<input/>', {
+			type: 'checkbox',
+			name: old_element.attr('name'),
+			value: $(this).val()
+		}).appendTo(li);
 
-		var box = document.createElement('INPUT');
-		box.type = 'checkbox';
-		box.name = old_element.name;
-		box.value = old_element.options[i].value;
+		var text = $(this).text().replace(' ', '&nbsp;');
+		var span = $('<span/>').html(text)
+			.appendTo(li);
 
-		var span = document.createElement('SPAN');
-		span.innerHTML = old_element.options[i].text.replace(' ', '&nbsp;');
-
-		if (elem[span.innerHTML]) {
-			box.checked = true;
-			addClass(li, 'selected');
+		if (elem[text]) {
+			box.prop('checked', true);
+			li.addClass('selected');
 		}
 
 		// add some mouse/key events handlers
-		li.onclick = function() {
-			var userName = '';
-			var box = this.childNodes[0];
-			var selected = this.className.match(/selected/);
-			box.checked = selected ? false : true;
+		li.click(function(e) {
+			if ($(e.target).is('input'))
+				return;
 
+			$(this).toggleClass('selected');
+			var box = $(':checkbox', this);
+			box.prop('checked', !box.prop('checked'));
+
+			var optionValue = '';
 			if (/<span>(.*?)<\/span>/i.exec(this.innerHTML) !== null)
-				userName = RegExp.$1;
+				optionValue = RegExp.$1;
 
-			if (selected) {
-				elem[userName] = 0; //mark user as unselected
+			if (box.is(':checked'))
+				elem[optionValue] = 1; //mark option as selected
+			else
+				elem[optionValue] = 0; //mark option as unselected
 
-				removeClass(this, 'selected');
-				if (def) {
-					var xlen = this.parentNode.childNodes.length;
+			new_selected = generateSelectedString(elem);
+			if (!tiny)
+				new_element.html(new_selected);
 
-					for (var x=0; x<xlen; ++x)
-						if (this.parentNode.childNodes[x].className.match(/selected/))
-							break;
-				}
-			} else {
-				elem[userName] = 1; //mark user as selected
-				addClass(this, 'selected');
-			}
-
-			new_element.innerHTML = generateSelectedString(elem);
-		};
+			new_element.triggerHandler('itemclick', {
+				index: $(this).index(),
+				value: box.val(),
+				checked: box.is(':checked')
+			});
+		});
 		// TODO: keyboard events
-
-		// add elements
-		li.appendChild(box);
-		li.appendChild(span);
-		ul.appendChild(li);
-	}
-
-	// add list
-	div.appendChild(ul);
-	form.appendChild(div);
+	});
 
 	// add some mouse/key event handlers
-	new_element.onclick = function() {
-		var list = document.getElementById(this.id + '-layer');
-
-		if(list.style.display == 'none') {
+	new_element.click(function() {
+		var list = $('#' + this.id + '-layer');
+		if (!list.is(':visible')) {
 			var pos = get_object_pos(this);
-
-			list.style.left = (pos.x + this.offsetWidth) + 'px';
-			list.style.top = pos.y + 'px';
-			list.style.display = 'block';
-			// IE max-height hack
-			if(document.all && list.childNodes[1].offsetHeight > 200) {
-				list.childNodes[1].style.height = '200px';
-			}
+			list.css('left', (pos.x + this.offsetWidth) + 'px')
+				.css('top', pos.y + 'px').show();
+/*
+			list.position({
+				my: 'left top',
+				at: 'right top',
+				of: new_element
+			});
+*/
 		} else {
-			list.style.display = 'none';
+			list.hide();
+			if (new_selected != old_selected)
+				new_element.triggerHandler('change');
+			old_selected = new_selected;
 		}
-	};
+	});
 
 	// hide combobox after click out of the window
-	document.onclick = function(e) {
-		if (div.style.display == 'none' || e.target.id == old_element.id)
-			return 0;
-		
-		var parent = e.target.parentNode.innerHTML.indexOf(old_element.name);
+	$(document).click(function(e) {
+		var elem = e.target;
+		if (tiny)
+			while (elem && (elem.nodeName != 'DIV' || elem.className.match(/^lms-ui-multiselect/) === null))
+				elem = elem.parentNode;
 
-		if (e.target.innerHTML.indexOf("<head>") > -1 || parent == -1 || (parent > -1 && e.target.nodeName != 'INPUT' && e.target.nodeName != 'LI' && e.target.nodeName != 'SPAN'))
-			div.style.display = 'none';
-	}
+		if (!$(div).is(':visible') || (elem && elem.id == old_element.attr('id')))
+			return 0;
+
+		var parent = $(e.target).parent().html().indexOf(old_element.attr('name'));
+
+		if ($(e.target).html().indexOf("<head>") > -1 || parent == -1
+			|| (parent > -1 && e.target.nodeName != 'INPUT' && e.target.nodeName != 'LI' && e.target.nodeName != 'SPAN')) {
+			$(div).hide();
+			if (new_selected != old_selected)
+				new_element.triggerHandler('change');
+			old_selected = new_selected;
+		}
+	});
 
 	// TODO: keyboard events
 
@@ -420,50 +438,49 @@ function multiselect(formid, elemid, def, selected)
 			if (objArray.hasOwnProperty(k) && objArray[k] == 1)
 				selected.push(k);
 
-		if (selected.length == 0)
+		if (!selected.length)
 			return def;
 
 		return selected.join(', ');
 	}
 
 	this.updateSelection = function(idArray) {
-		var elems = div.childNodes[0].getElementsByTagName('input');
 		var selected = [];
-		for (var i = 0; i < elems.length; i++) {
-			var text = elems[i].parentNode.getElementsByTagName('span')[0].innerHTML;
-			if (idArray == null || idArray.indexOf(elems[i].value) != -1) {
-				elems[i].checked = true;
-				elems[i].parentNode.className = 'selected';
+		$('input:checkbox', div).each(function() {
+			var text = $(this).siblings('span').html();
+			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
+				$(this).prop('checked', true).parent().addClass('selected');
 				selected.push(text);
 				elem[text] = 1;
 			} else {
-				elems[i].checked = false;
-				elems[i].parentNode.className = '';
+				$(this).prop('checked', false).parent().removeClass('selected');
 				elem[text] = 0;
 			}
-		}
-		new_element.innerHTML = selected.join(', ');
+		});
+		new_selected = selected.join(', ');
+		if (!tiny)
+			new_element.html(new_selected);
 	}
 
 	this.filterSelection = function(idArray) {
-		var elems = div.childNodes[0].getElementsByTagName('input');
 		var selected = [];
-		for (var i = 0; i < elems.length; i++) {
-			var text = elems[i].parentNode.getElementsByTagName('span')[0].innerHTML;
-			if (idArray == null || idArray.indexOf(elems[i].value) != -1) {
-				elems[i].parentNode.style.display = '';
-				if (elems[i].checked) {
+		$('input:checkbox', div).each(function() {
+			var text = $(this).siblings('span').html();
+			if (idArray == null || idArray.indexOf($(this).val()) != -1) {
+				$(this).parent().show();
+				if ($(this).prop('checked')) {
 					elem[text] = 1;
 					selected.push(text);
 				}
 			} else {
-				elems[i].checked = false;
+				$(this).prop('checked', false).parent().hide();
 				elems[i].parentNode.className = '';
-				elems[i].parentNode.style.display = 'none';
 				elem[text] = 0;
 			}
-		}
-		new_element.innerHTML = selected.join(', ');
+		});
+		new_selected = selected.join(', ');
+		if (!tiny)
+			new_element.html(new_selected);
 	}
 }
 
@@ -586,60 +603,90 @@ function changeMacFormat(id)
 	elem.innerHTML = curmac;
 }
 
-function tinymce_init(ui_language) {
-	tinyMCE.init({
-		setup : function(ed) {
-			ed.onBeforeSetContent.add(function(ed, o) {
-				if (o.initial) {
-					o.content = o.content.replace(/\r?\n/g, '<br />');
-				}
-			});
-		},
-		mode: "none",
-		language: ui_language,
-		theme: "advanced",
-		plugins: "advimage,advlink,preview,autoresize,contextmenu,fullscreen,inlinepopups,searchreplace,style,table",
-		theme_advanced_buttons1_add: "|,forecolor,backcolor,|,styleprops",
-		theme_advanced_buttons2_add: "|,preview,fullscreen",
-		theme_advanced_buttons3_add: "|,search,replace,|,tablecontrols",
-		//theme_advanced_toolbar_location: "external",
-		theme_advanced_toolbar_align: "left",
-		//theme_advanced_statusbar_location: "bottom",
-		theme_advanced_statusbar_location: "none",
-		theme_advanced_resizing: true,
-		autoresize_max_height: 250,
-		dialog_type: "window",
-		skin: "lms",
-	});
-}
-
-function toggle_visual_editor(id) {
-	if (document.getElementById(id) == undefined)
-		return 0;
-	if (tinymce.get(id))
-		tinyMCE.execCommand('mceToggleEditor', false, id);
-	else
-		tinyMCE.execCommand('mceAddControl', true, id);
-}
-
-function init_links() {
-	for (i in document.links) {
-		link = document.links[i];
-		if (link.rel && link.rel.indexOf('external') != -1) {
-			link.onclick = function() { window.open(this.href); return false; }
-			link.onkeypress = function() { window.open(this.href); return false; }
-		}
-	}
-}
-
 function reset_customer(form, elemname1, elemname2) {
 	if (document.forms[form].elements[elemname1].value)
 		document.forms[form].elements[elemname2].value = document.forms[form].elements[elemname1].value;
 }
 
-if (window.addEventListener) window.addEventListener("load", init_links, false);
-else if (window.attachEvent) window.attachEvent("onload", init_links);
+function generate_random_string(length, characters) {
+	if (length === undefined)
+		length = 10;
+	if (characters === undefined)
+		characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	charactersLength = characters.length;
+	randomString = '';
+	for (var i = 0; i < length; i++)
+		randomString += characters[Math.floor(Math.random() * charactersLength)];
+	return randomString;
+}
 
-function choosenetdevice(formfield){
-    return openSelectWindow('?m=choosenetdevice','choosenetdevice',600,250,'true',formfield);
+function get_size_unit(size) {
+	if (size > 10 * 1024 * 1024 * 1024)
+		return {
+			size: (size / 1024 * 1024 * 1024).toFixed(2),
+			unit: 'GiB'
+		};
+	else if (size > 10 * 1024 * 1024)
+		return {
+			size: (size / 1024 * 1024).toFixed(2),
+			unit: 'MiB'
+		};
+	else if (size > 10 * 1024)
+		return {
+			size: (size / 1024).toFixed(2),
+			unit: 'KiB'
+		};
+	else
+		return {
+			size: size,
+			unit: 'B'
+		};
+}
+
+function _getCustomerNames(ids, success) {
+	$.ajax('?m=customerinfo&ajax=1', {
+		async: true,
+		method: 'POST',
+		data: {
+			id: ids
+		},
+		dataType: 'json',
+		success: success
+	});
+}
+
+function getCustomerName(elem) {
+	_getCustomerNames([ $(elem).val() ], function(data, textStatus, jqXHR) {
+		$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ? ''
+			: data.customernames[$(elem).val()]);
+	});
+}
+
+var customerinputs = [];
+
+function getCustomerNameDeferred(elem) {
+	customerinputs.push(elem);
+}
+
+if (typeof $ != 'undefined') {
+	$(function() {
+		var cids = [];
+		$.each(customerinputs, function(index, elem) {
+			cids.push($(elem).val());
+		});
+		_getCustomerNames(cids, function(data, textStatus, jqXHR) {
+			$.each(customerinputs, function(index, elem) {
+				$(elem).nextAll('span').html(data.customernames[$(elem).val()] === undefined ?
+					'' : data.customernames[$(elem).val()]);
+			});
+		});
+
+		for (i in document.links) {
+			link = document.links[i];
+			if (link.rel && link.rel.indexOf('external') != -1) {
+				link.onclick = function() { window.open(this.href); return false; }
+				link.onkeypress = function() { window.open(this.href); return false; }
+			}
+		}
+	});
 }

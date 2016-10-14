@@ -83,7 +83,6 @@ if (file_exists($composer_autoload_path)) {
 // Do some checks and load config defaults
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'checkdirs.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'Smarty' . DIRECTORY_SEPARATOR . 'Smarty.class.php');
 
 // Init database
 
@@ -140,20 +139,14 @@ require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'unstrip.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'checkip.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'accesstable.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'SYSLOG.class.php');
 
-if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG')) {
-	$SYSLOG = new SYSLOG($DB);
-} else {
-	$SYSLOG = null;
-}
+$SYSLOG = SYSLOG::getInstance();
 
 // Initialize Session, Auth and LMS classes
 
-$SESSION = new Session($DB, ConfigHelper::getConfig('phpui.timeout'));
-$AUTH = new Auth($DB, $SESSION, $SYSLOG);
-if ($SYSLOG)
-	$SYSLOG->SetAuth($AUTH);
+$SESSION = new Session($DB, ConfigHelper::getConfig('phpui.timeout'),
+	ConfigHelper::getConfig('phpui.settings_timeout'));
+$AUTH = new Auth($DB, $SESSION);
 $LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
@@ -161,14 +154,6 @@ $LMS->lang = $_language;
 $plugin_manager = new LMSPluginManager();
 $LMS->setPluginManager($plugin_manager);
 $SMARTY->setPluginManager($plugin_manager);
-
-// Initialize Swekey class
-
-if (ConfigHelper::checkConfig('phpui.use_swekey')) {
-	require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'swekey' . DIRECTORY_SEPARATOR . 'lms_integration.php');
-	$LMS_SWEKEY = new LmsSwekeyIntegration($DB, $AUTH, $LMS);
-	$SMARTY->assign('lms_swekey', $LMS_SWEKEY->GetIntegrationScript($AUTH->id));
-}
 
 // Set some template and layout variables
 
@@ -229,6 +214,8 @@ $documents_dirs = $plugin_manager->executeHook('documents_dir_initialized', $doc
 
 // Check privileges and execute modules
 if ($AUTH->islogged) {
+	$SMARTY->assign('main_menu_sortable_order', $SESSION->get_persistent_setting('main-menu-order'));
+
 	// Load plugin files and register hook callbacks
 	$plugins = $plugin_manager->getAllPluginInfo(LMSPluginManager::OLD_STYLE);
 	if (!empty($plugins))
@@ -284,11 +271,22 @@ if ($AUTH->islogged) {
 			$layout['module'] = $module;
 			$LMS->InitUI();
 			$LMS->executeHook($module.'_on_load');
-			include($module_dir . DIRECTORY_SEPARATOR . $module . '.php');
+
+			try {
+				include($module_dir . DIRECTORY_SEPARATOR . $module . '.php');
+			} catch (Exception $e) {
+				$SMARTY->display('header.html');
+				echo '<div class="bold">' . $e->getFile() . '[' . $e->getLine() . ']: <span class="red">'
+					. str_replace("\n", '<br>', $e->getMessage())
+					. '</span></div>';
+				$SMARTY->display('footer.html');
+				die;
+			}
+
 		} else {
 			if ($SYSLOG)
-				$SYSLOG->AddMessage(SYSLOG_RES_USER, SYSLOG_OPER_USERNOACCESS,
-					array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER] => $AUTH->id), array($SYSLOG_RESOURCE_KEYS[SYSLOG_RES_USER]));
+				$SYSLOG->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_USERNOACCESS,
+					array(SYSLOG::RES_USER => $AUTH->id));
 			$SMARTY->display('noaccess.html');
 		}
 	}

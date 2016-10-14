@@ -121,10 +121,10 @@ try {
 
 // Include required files (including sequence is important)
 
+require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'unstrip.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'SYSLOG.class.php');
 
 if (ConfigHelper::checkConfig('phpui.logging') && class_exists('SYSLOG'))
@@ -441,6 +441,7 @@ $posts = imap_search($ih, ConfigHelper::checkValue(ConfigHelper::getConfig('cash
 if (!empty($posts))
 	foreach ($posts as $postid) {
 		$post = imap_fetchstructure($ih, $postid);
+		//print_r($post);
 		if ($post->type == 1) {
 			$parts = $post->parts;
 			//print_r($parts);

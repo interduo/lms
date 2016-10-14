@@ -27,7 +27,7 @@
 $menu = array(
 		'admin' => array(
 			'name' => trans('Administration'),
-			'img' =>'users.gif',
+			'css' => 'lms-ui-icon-administration',
 			'link' =>'?m=welcome',
 			'tip' => trans('System information and management'),
 			'accesskey' =>'i',
@@ -81,7 +81,7 @@ $menu = array(
 
 		'customers' => array(
 			'name' => trans('Customers'),
-			'img' =>'customer.gif',
+			'css' => 'lms-ui-icon-customer',
 			'link' =>'?m=customerlist',
 			'tip' => trans('Customers Management'),
 			'accesskey' =>'u',
@@ -129,12 +129,12 @@ $menu = array(
 					'tip' => trans('Lists and reports printing'),
 					'prio' => 70,
 				),
-			),		 
+			),
 		),
 
 		'nodes' => array(
 			'name' => trans('Nodes'),
-			'img' =>'node.gif',
+			'css' => 'lms-ui-icon-node',
 			'link' =>'?m=nodelist',
 			'tip' => trans('Nodes Management'),
 			'accesskey' =>'k',
@@ -193,35 +193,65 @@ $menu = array(
 
 		'VoIP' => array(
 			'name' => trans('VoIP'),
-			'img' =>'voip.gif',
+			'css' => 'lms-ui-icon-voip',
 			'tip' => trans('VoIP Management'),
 			'accesskey' =>'v',
 			'prio' => 11,
 			'submenu' => array(
 				array(
-					'name' => trans('List'),
-					'link' => '?m=voipaccountlist',
-					'tip' => trans('List of Accounts'),
-					'prio' => 10,
-				),
-				array(
 					'name' => trans('New Account'),
 					'link' => '?m=voipaccountadd',
 					'tip' => trans('Allows you to add the new VoIP account'),
+					'prio' => 10,
+				),
+				array(
+					'name' => trans('Accounts List'),
+					'link' => '?m=voipaccountlist',
+					'tip' => trans('List of Accounts'),
 					'prio' => 20,
+				),
+				array(
+					'name' => trans('Billing list'),
+					'link' => '?m=voipaccountbillinglist',
+					'tip' => trans('Allows you to view billing list'),
+					'prio' => 30,
+				),
+				array(
+					'name' => trans('Subscription List'),
+					'link' => '?m=tarifflist&t=' . TARIFF_PHONE,
+					'tip' => trans('Phone tariff list'),
+					'prio' => 40,
+				),
+				array(
+					'name' => trans('Tariff rules'),
+					'link' => '?m=voiptariffrules',
+					'tip' => trans('Promotions/special rules for tariffs'),
+					'prio' => 50,
+				),
+				array(
+					'name' => trans('Price lists'),
+					'link' => '?m=voippricelist',
+					'tip' => trans('Edit price lists assigned to VoIP tariffs'),
+					'prio' => 60,
+				),
+				array(
+					'name' => trans('Pool numbers'),
+					'link' => '?m=voippoolnumberlist',
+					'tip' => trans('Number pools management'),
+					'prio' => 70,
 				),
 				array(
 					'name' => trans('Search'),
 					'link' => '?m=voipaccountsearch',
 					'tip' => trans('Allows you to search VoIP account'),
-					'prio' => 30,
+					'prio' => 80,
 				),
 			),
 		),
 
 		'netdevices' => array(
 			'name' => trans('Net Devices'),
-			'img' =>'netdev.gif',
+			'css' => 'lms-ui-icon-netdevice',
 			'link' =>'?m=netdevlist',
 			'tip' => trans('Network Devices Management'),
 			'accesskey' =>'o',
@@ -280,7 +310,7 @@ $menu = array(
 
 		'networks' => array(
 			'name' => trans('IP Networks'),
-			'img' =>'network.gif',
+			'css' => 'lms-ui-icon-network',
 			'link' =>'?m=netlist',
 			'tip' => trans('IP Address Pools Management'),
 			'accesskey' =>'t',
@@ -309,7 +339,7 @@ $menu = array(
 
 		'finances' => array(
 			'name' => trans('Finances'),
-			'img' =>'money.gif',
+			'css' => 'lms-ui-icon-finances',
 			'link' =>'?m=tarifflist',
 			'tip' => trans('Subscriptions and Network Finances Management'),
 			'accesskey' =>'f',
@@ -374,7 +404,7 @@ $menu = array(
 					'link' => '?m=noteadd&action=init',
 					'tip' => trans('Generate debit note'),
 					'prio' => 85,
-				), 
+				),
 				array(
 					'name' => trans('Cash Registry'),
 					'link' => '?m=cashreglist',
@@ -405,12 +435,24 @@ $menu = array(
 					'tip' => trans('Lists and reports printing'),
 					'prio' => 130,
 				),
+				array(
+					'name' => trans('New tag'),
+					'link' => '?m=tarifftagadd',
+					'tip' => trans('Allows you to add new tag'),
+					'prio' => 140,
+				),
+				array(
+					'name' => trans('Tags list'),
+					'link' => '?m=tarifftaglist',
+					'tip' => trans('Tags list'),
+					'prio' => 150,
+				),
 			),
 		),
 
 		'documents' => array(
 			'name' => trans('Documents'),
-			'img' =>'docum.gif',
+			'css' => 'lms-ui-icon-document',
 			'link' =>'?m=documentlist',
 			'tip' => trans('Documents Management'),
 			'accesskey' => '',
@@ -451,7 +493,7 @@ $menu = array(
 
 		'hosting' => array(
 			'name' => trans('Hosting'),
-			'img' =>'account.gif',
+			'css' => 'lms-ui-icon-hosting',
 			'link' =>'?m=accountlist',
 			'tip' => trans('Hosting Services Management'),
 			'accesskey' =>'a',
@@ -504,7 +546,7 @@ $menu = array(
 
 		'messages' => array(
 			'name' => trans('Messages'),
-			'img' =>'mailsms.gif',
+			'css' => 'lms-ui-icon-message',
 			'link' =>'?m=messageadd',
 			'tip' => trans('Customers Messaging'),
 			'accesskey' =>'m',
@@ -527,7 +569,7 @@ $menu = array(
 
 		'reload' => array(
 			'name' => trans('Reload'),
-			'img' =>'reload.gif',
+			'css' => 'lms-ui-icon-reload',
 			'link' =>'?m=reload',
 			'tip' => trans(''),
 			'accesskey' =>'r',
@@ -536,7 +578,7 @@ $menu = array(
 
 		'stats' => array(
 			'name' => trans('Stats'),
-			'img' =>'traffic.gif',
+			'css' => 'lms-ui-icon-stats',
 			'link' =>'?m=traffic',
 			'tip' => trans('Statistics of Internet Link Usage'),
 			'accesskey' =>'x',
@@ -589,7 +631,7 @@ $menu = array(
 
 		'helpdesk' => array(
 			'name' => trans('Helpdesk'),
-			'img' =>'ticket.gif',
+			'css' => 'lms-ui-icon-helpdesk',
 			'link' =>'?m=rtqueuelist',
 			'tip' => trans('Requests Tracking'),
 			'accesskey' =>'h',
@@ -642,7 +684,7 @@ $menu = array(
 
 		'timetable' => array(
 			'name' => trans('Timetable'),
-			'img' =>'calendar.gif',
+			'css' => 'lms-ui-icon-timetable',
 			'link' =>'?m=eventlist',
 			'tip' => trans('Events Tracking'),
 			'accesskey' =>'v',
@@ -671,7 +713,7 @@ $menu = array(
 
 		'password' => array(
 			'name' => trans('Password'),
-			'img' => 'pass.gif',
+			'css' => 'lms-ui-icon-password',
 			'link' => '?m=chpasswd',
 			'tip' => trans('Allows you to change your password'),
 			'accesskey' => 'p',
@@ -680,7 +722,7 @@ $menu = array(
 
 		'config' => array(
 			'name' => trans('Configuration'),
-			'img' =>'settings.gif',
+			'css' => 'lms-ui-icon-configuration',
 			'link' =>'?m=configlist',
 			'tip' => trans('System Configuration'),
 			'accesskey' =>'o',
@@ -757,7 +799,7 @@ $menu = array(
 
 		'documentation' => array(
 			'name' => trans('Documentation'),
-			'img' => 'doc.gif',
+			'css' => 'lms-ui-icon-documentation',
 			'link' => (is_dir('doc' . DIRECTORY_SEPARATOR . 'html' . DIRECTORY_SEPARATOR . $LMS->ui_lang)
 				? 'doc' . DIRECTORY_SEPARATOR . 'html' . DIRECTORY_SEPARATOR . $LMS->ui_lang . DIRECTORY_SEPARATOR
 				: 'doc' . DIRECTORY_SEPARATOR . 'html' . DIRECTORY_SEPARATOR . 'en' . DIRECTORY_SEPARATOR),
@@ -788,7 +830,7 @@ if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.ewx_support', false)
 if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.logging', false))) {
 	$menu['log'] = array(
 		'name' => trans('Transaction Log'),
-		'img' => 'recover.gif',
+		'css' => 'lms-ui-icon-log',
 		'link' => '?m=archiveview',
 		'tip' => trans('Transaction Log Management'),
 		'accesskey' => 't',
@@ -847,5 +889,7 @@ foreach($menu as $idx => $item)
 		uasort($menu[$idx]['submenu'],'menu_cmp');
 
 uasort($menu,'menu_cmp');
+
+
 
 ?>
