@@ -3494,4 +3494,6 @@ $_LANG['IM uid is required!'] = 'Identyfikator użytkownika jest wymagany!';
 
 $_LANG['Facebook'] = 'Facebook';
 
+$_LANG['Selected network is already assigned to customer $a ($b)!'] = 'Wybrana sieć jest już przypisana do klienta $a ($b)!';
+
 ?>
