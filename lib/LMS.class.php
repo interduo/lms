@@ -2960,6 +2960,10 @@ class LMS
 		if (!empty($sender_name))
 			$from = "$sender_name <$from>";
 
+		if (!isset($which) || empty($which))
+			$which = array(trans('ORIGINAL'));
+		$count = count($which);
+
 		foreach ($docs as $doc) {
 			if ($doc['doctype'] == DOC_DNOTE) {
 				if ($dnote_filetype == 'pdf')
@@ -2975,8 +2979,14 @@ class LMS
 				$invoice = $this->GetInvoiceContent($doc['id']);
 			}
 
-			$invoice['type'] = trans('ORIGINAL');
-			$document->Draw($invoice);
+			$i = 0;
+			foreach ($which as $type) {
+				$i++;
+				$invoice['type'] = $type;
+				$document->Draw($invoice);
+				if ($i < $count)
+					$document->NewPage();
+			}
 			$res = $document->WriteToString();
 
 			$custemail = (!empty($debug_email) ? $debug_email : $doc['email']);
