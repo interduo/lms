@@ -280,7 +280,9 @@
 </FORM>
 <SCRIPT type="text/javascript">
 <!--
-	document.forms['editnode'].elements['nodeedit[name]'].focus();
+	$(function() {
+		$('form[name="editnode"] [name="nodeedit[name]"]').focus();
+	});
 
 	function GenPasswd() {
 		if(! confirm('{trans("Are you sure, you want to generate new password?")}'))
