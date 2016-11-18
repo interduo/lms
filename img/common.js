@@ -286,10 +286,10 @@ function get_object_pos(obj) {
 
 function multiselect(options) {
 	var elemid = options.id;
-	var def = options.defaultValue !== undefined ? options.defaultValue : '';
-	var tiny = options.type !== undefined && options.type == 'tiny';
-	var icon = options.icon !== undefined ? options.icon : 'img/settings.gif';
-	var label = options.label !== undefined ? options.label : '';
+	var def = typeof options.defaultValue !== 'undefined' ? options.defaultValue : '';
+	var tiny = typeof options.type !== 'undefined' && options.type == 'tiny';
+	var icon = typeof options.icon !== 'undefined' ? options.icon : 'img/settings.gif';
+	var label = typeof options.label !== 'undefined' ? options.label : '';
 
 	var old_element = $('#' + elemid);
 	var form = old_element.closest('form');
@@ -608,9 +608,9 @@ function reset_customer(form, elemname1, elemname2) {
 }
 
 function generate_random_string(length, characters) {
-	if (length === undefined)
+	if (typeof length === 'undefined')
 		length = 10;
-	if (characters === undefined)
+	if (typeof characters === 'undefined')
 		characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 	charactersLength = characters.length;
 	randomString = '';
@@ -670,7 +670,7 @@ function getCustomerNameDeferred(elem) {
 	customerinputs.push(elem);
 }
 
-if (typeof $ != 'undefined') {
+if (typeof $ !== 'undefined') {
 	$(function() {
 		var cids = [];
 		$.each(customerinputs, function(index, elem) {
