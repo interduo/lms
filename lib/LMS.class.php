@@ -2980,9 +2980,9 @@ class LMS
 			}
 
 			$i = 0;
-			foreach ($which as $type) {
+			foreach ($which as $doctype) {
 				$i++;
-				$invoice['type'] = $type;
+				$invoice['type'] = $doctype;
 				$document->Draw($invoice);
 				if ($i < $count)
 					$document->NewPage();
