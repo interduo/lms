@@ -1173,7 +1173,7 @@ if (!empty($intersect)) {
 							AND customerid IN (" . implode(',', $customers) . ")",
 						array(0, 1));
 					$DB->Execute("UPDATE customers SET status = ? WHERE id IN (" . implode(',', $customers) . ")",
-						array(CSTATUS_CONNECTED));
+						array(CSTATUS_DEBT_COLLECTION));
 					break;
 				case 'unblock':
 					$customers = $DB->GetCol("SELECT id FROM customers
@@ -1190,7 +1190,7 @@ if (!empty($intersect)) {
 							AND customerid IN (" . implode(',', $customers) . ")",
 						array(1, 0));
 					$DB->Execute("UPDATE customers SET status = ? WHERE id IN (" . implode(',', $customers) . ")",
-						array(CSTATUS_DEBT_COLLECTION));
+						array(CSTATUS_CONNECTED));
 					break;
 			}
 }
