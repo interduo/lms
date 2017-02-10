@@ -212,12 +212,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 			if (isset($docnumber))
 				$invoice['fullnumber'] = $docnumber;
 			else
-				$invoice['fullnumber'] = docnumber(array(
-					'number' => $invoice['number'],
-					'template' => $invoice['template'],
-					'cdate' => $invoice['cdate'],
-					'customerid' => $invoice['customerid'],
-				));
+				$invoice['fullnumber'] = docnumber($invoice['number'], $invoice['template'], $invoice['cdate'], $invoice['customerid']);
 			$invoices[$invoiceid] = $invoice;
 			$jpk_data .= "\t\t<P_2A>" . $invoice['fullnumber'] . "</P_2A>\n";
 			$jpk_data .= "\t\t<P_3A>" . str_replace('&', '&amp;', $invoice['name']) . "</P_3A>\n";
@@ -282,12 +277,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 			$jpk_data .= "\t\t<RodzajFaktury>" . (isset($invoice['invoice']) ? 'KOREKTA' : 'VAT') . "</RodzajFaktury>\n";
 			if (isset($invoice['invoice'])) {
 				$jpk_data .= "\t\t<PrzyczynaKorekty>" . $invoice['reason'] . "</PrzyczynaKorekty>\n";
-				$invoice['invoice']['fullnumber'] = docnumber(array(
-					'number' => $invoice['invoice']['number'],
-					'template' => $invoice['invoice']['template'],
-					'cdate' => $invoice['invoice']['cdate'],
-					'customerid' => $invoice['customerid'],
-				));
+				$invoice['invoice']['fullnumber'] = docnumber(
+					$invoice['invoice']['number'], $invoice['invoice']['template'], $invoice['invoice']['cdate'], $invoice['customerid']);
 				$jpk_data .= "\t\t<NrFaKorygowanej>" . $invoice['invoice']['fullnumber'] . "</NrFaKorygowanej>\n";
 				$jpk_data .= "\t\t<OkresFaKorygowanej>" . strftime('%Y-%m', $invoice['invoice']['sdate']) . "</OkresFaKorygowanej>\n";
 			}
