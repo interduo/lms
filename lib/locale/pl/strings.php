@@ -24,7 +24,8 @@
  *  $Id$
  */
 
-$_LANG['Export to JPK format'] = 'Eksport do formatu JPK';
+$_LANG['Export to JPK-FA format'] = 'Eksport do formatu JPK-FA';
+$_LANG['Export to JPK-VAT format'] = 'Eksport do formatu JPK-VAT';
 $_LANG['Division not selected!'] = 'Nie wybrano firmy!';
 
 $_LANG['billing'] = 'biling';
