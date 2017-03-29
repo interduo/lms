@@ -438,7 +438,7 @@ class LMSVoipAccountManager extends LMSManager implements LMSVoipAccountManagerI
             return TRUE;
         }
 
-        $this->RollbackTrans();
+        $this->db->RollbackTrans();
         return FALSE;
     }
 
