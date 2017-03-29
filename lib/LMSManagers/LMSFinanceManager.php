@@ -234,7 +234,8 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     $lid = 0;
                     if (!$period)
                         $period = $data['period'];
-                    $datefrom = $_datefrom ? $_datefrom : $datefrom;
+
+                    $datefrom  = !empty($_datefrom) ? $_datefrom : $datefrom;
                     $_datefrom = 0;
                     $at = $this->CalcAt($period, $datefrom);
                     $length = $data_schema[$idx - 1];
