@@ -135,9 +135,6 @@ CREATE INDEX assignments_tariffid_idx ON assignments (tariffid);
 CREATE INDEX assignments_customerid_idx ON assignments (customerid);
 CREATE INDEX assignments_numberplanid_idx ON assignments (numberplanid);
 
-/* -------------------------------------------------------- 
-  Structure of table "cash" 
--------------------------------------------------------- */
 DROP SEQUENCE IF EXISTS cash_id_seq;
 CREATE SEQUENCE cash_id_seq;
 DROP TABLE IF EXISTS cash CASCADE;
