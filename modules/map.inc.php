@@ -36,7 +36,7 @@ $devices = $DB->GetAllByKey('SELECT n.id, n.name, n.location, '.$DB->GroupConcat
 				LEFT JOIN netradiosectors rs ON rs.netdev = n.id
 				WHERE ((nn.latitude IS NULL AND n.latitude IS NOT NULL) OR nn.latitude IS NOT NULL)
 					AND ((nn.longitude IS NULL AND n.longitude IS NOT NULL) OR nn.latitude IS NOT NULL)
-				GROUP BY n.id, n.name, n.location, n.latitude, n.longitude, nn.latitude, nn.longitude', 'id');
+				GROUP BY n.id, n.name, n.location, n.latitude, n.longitude, nn.latitude, nn.longitude, n.ownerid, n.netnodeid', 'id');
 
 if ($devices) {
 	foreach ($devices as $devidx => $device) {
