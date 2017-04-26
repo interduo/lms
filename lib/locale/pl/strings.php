@@ -1306,6 +1306,7 @@ $_LANG['Select nodes'] = 'Wybierz komputery';
 $_LANG['Select nodes group'] = 'Wybierz grupę komputerów';
 $_LANG['Select node status'] = 'Wybierz status komputera';
 $_LANG['Select node, which you want to connect to device'] = 'Wybierz komputer który chcesz podłączyć do urządzenia';
+$_LANG['Select node location'] = 'Wybierz lokalizację komputera';
 $_LANG['Select owner or \'SYSTEM ACCOUNT\' if you don\'t want to assign it to any customer'] = 'Wybierz właściciela lub "KONTO SYSTEMOWE" jeżeli nie chcesz go przypisywać do żadnego klienta';
 $_LANG['Select queue'] = 'Wybierz kolejkę';
 $_LANG['Select recipients group'] = 'Wybierz grupę adresatów';
