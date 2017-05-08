@@ -273,23 +273,23 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     // ... if not found clone tariff
                     if (!$tariffid) {
                         $args = $this->db->GetRow('SELECT name, value, period,
-							' . SYSLOG::RES_TAX . ', type, upceil, downceil, uprate, downrate,
+							taxid, type, upceil, downceil, uprate, downrate,
 							prodid, plimit, climit, dlimit, upceil_n, downceil_n, uprate_n, downrate_n,
 							domain_limit, alias_limit, sh_limit, www_limit, ftp_limit, mail_limit, sql_limit,
 							quota_sh_limit, quota_www_limit, quota_ftp_limit, quota_mail_limit, quota_sql_limit
 							FROM tariffs WHERE id = ?', array($tariff['id']));
                         $args = array_merge($args, array(
-                            SYSLOG::RES_TAX => $args[SYSLOG::RES_TAX],
                             'name' => $tariff['name'],
                             'value' => str_replace(',', '.', $value),
                             'period' => $tariff['period']
                         ));
+                        $args[SYSLOG::RES_TAX] = $args['taxid'];
                         unset($args['taxid']);
                         $this->db->Execute('INSERT INTO tariffs (name, value, period,
-							taxid, type, upceil, downceil, uprate, downrate,
+							type, upceil, downceil, uprate, downrate,
 							prodid, plimit, climit, dlimit, upceil_n, downceil_n, uprate_n, downrate_n,
 							domain_limit, alias_limit, sh_limit, www_limit, ftp_limit, mail_limit, sql_limit,
-							quota_sh_limit, quota_www_limit, quota_ftp_limit, quota_mail_limit, quota_sql_limit)
+							quota_sh_limit, quota_www_limit, quota_ftp_limit, quota_mail_limit, quota_sql_limit, taxid)
 							VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
                         $tariffid = $this->db->GetLastInsertId('tariffs');
                         if ($this->syslog) {
