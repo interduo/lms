@@ -1088,14 +1088,14 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
         return $result;
     }
 
-    public function GetTariffs()
+    public function GetTariffs($forced_id = null)
     {
         return $this->db->GetAll('SELECT t.id, t.name, t.value, uprate, taxid, prodid,
 				downrate, upceil, downceil, climit, plimit, taxes.value AS taxvalue,
 				taxes.label AS tax, t.period, t.type AS tarifftype
 				FROM tariffs t
 				LEFT JOIN taxes ON t.taxid = taxes.id
-				WHERE t.disabled = 0
+				WHERE t.disabled = 0' . (empty($forced_id) ? '' : ' OR t.id = ' . intval($forced_id)) . '
 				ORDER BY t.name, t.value DESC');
     }
 

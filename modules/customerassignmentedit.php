@@ -451,7 +451,7 @@ $LMS->executeHook(
 );
 
 $SMARTY->assign('customernodes', $customernodes);
-$SMARTY->assign('tariffs', $LMS->GetTariffs());
+$SMARTY->assign('tariffs', $LMS->GetTariffs($a['tariffid']));
 $SMARTY->assign('taxeslist', $LMS->GetTaxes());
 $SMARTY->assign('expired', $expired);
 $SMARTY->assign('assignment', $a);
