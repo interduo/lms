@@ -192,22 +192,27 @@ switch (strtolower($options['action'])) {
             }
 
             if ($error) {
-                echo 'Failed loaded CDR records: ' . count($error['errors']) . PHP_EOL;
                 // do somethink with errors here
+                echo 'Failed loaded CDR records: ', count($error), PHP_EOL, PHP_EOL;
+                echo 'line | message', PHP_EOL;
+
+                foreach ( $error as $e ) {
+                    echo $e['line'], ' | ', $e['desc'], PHP_EOL;
+                }
             }
 
             fclose($fh);
         } else {
             try {
                 $cdr = array();
-                $cdr['caller']             = $options['caller'];
-                $cdr['callee']             = $options['callee'];
-                $cdr['call_start']         = $options['startcall'];
-                $cdr['time_start_to_end']  = $options['totaltime'];
-                $cdr['time_answer_to_end'] = $options['calltime'];
-                $cdr['call_status']        = $options['status'];
-                $cdr['call_type']          = $options['type'];
-                $cdr['uniqueid']           = $options['uniqueid'];
+                $cdr['caller']      = $options['caller'];
+                $cdr['callee']      = $options['callee'];
+                $cdr['call_start']  = $options['startcall'];
+                $cdr['totaltime']   = $options['totaltime'];
+                $cdr['billedtime']  = $options['calltime'];
+                $cdr['call_status'] = $options['status'];
+                $cdr['call_type']   = $options['type'];
+                $cdr['uniqueid']    = $options['uniqueid'];
 
                 $db_buffor->appendCdr($cdr);
             }

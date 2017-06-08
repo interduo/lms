@@ -47,7 +47,28 @@ $.ajax("img/jquery-datatables-i18n/" + lmsSettings.language + ".json", {
 $(function() {
 	var autocomplete = "off";
 
+	$.datepicker._gotoToday = function(id) {
+		var target = $(id);
+		var inst = this._getInst(target[0]);
+		if (this._get(inst, 'gotoCurrent') && inst.currentDay) {
+			inst.selectedDay = inst.currentDay;
+			inst.drawMonth = inst.selectedMonth = inst.currentMonth;
+			inst.drawYear = inst.selectedYear = inst.currentYear;
+		} else {
+			var date = new Date();
+			inst.selectedDay = date.getDate();
+			inst.drawMonth = inst.selectedMonth = date.getMonth();
+			inst.drawYear = inst.selectedYear = date.getFullYear();
+			// the below two lines are new
+			this._setDateDatepicker(target, date);
+			this._selectDate(id, this._getDateDatepicker(target));
+		}
+		this._notifyChange(inst);
+		this._adjustDate(target);
+	}
+
 	$('div.calendar input,input.calendar').datepicker({
+		showButtonPanel: true,
 		dateFormat: "yy/mm/dd",
 		changeYear: true,
 		beforeShow: function(input, inst) {
@@ -373,7 +394,7 @@ $(function() {
 								searchValue = searchColumns[index].search;
 							}
 						}
-						console.log(searchValue);
+						//console.log(searchValue);
 						api.column(index).search(searchValue, true).draw();
 					}
 					i++;
@@ -493,8 +514,24 @@ $(function() {
 			displayStart: init.displayStart,
 			searchCols: init.searchColumns,
 			stateSave: init.stateSave,
+			stateSaveProps: init.stateSaveProps,
 			ordering: init.ordering,
-			orderCellsTop: init.orderCellsTop
+			orderCellsTop: init.orderCellsTop,
+			stateSaveParams: function(settings, data) {
+				var api = new $.fn.dataTable.Api(settings);
+				var stateSaveProps = api.init().stateSaveProps;
+				if (!Array.isArray(stateSaveProps)) {
+					return;
+				}
+				for (var property in data) {
+					if (data.hasOwnProperty(property)) {
+						if (property == "time" || stateSaveProps.indexOf(property) >= 0) {
+							continue;
+						}
+						delete data[property];
+					}
+				}
+			}
 		})
 		.on('mouseenter', 'tbody > tr', function() {
 			$(this).siblings('tr').removeClass('highlight');
@@ -516,8 +553,13 @@ $(function() {
 			init.searchColumns = eval(init.searchColumns);
 		}
 		init.stateSave = $(this).attr('data-state-save');
+		init.stateSaveProps = true;
 		if (init.stateSave === undefined) {
 			init.stateSave = false;
+		} else if (init.stateSave.match(/^\[(.+)\]$/)) {
+			init.stateSaveProps = JSON.parse(RegExp.$1);
+		} else {
+			init.stateSave = true;
 		}
 		init.ordering = $(this).attr('data-ordering');
 		if (init.ordering === undefined) {
@@ -789,22 +831,12 @@ $(function() {
 			'?m=quicksearch&ajax=1&mode=' + $(input).attr('data-mode') + '&what=', lmsSettings.quickSearchAutoSubmit);
 	});
 
-	qs_inputs.prev().addClass('lms-ui-quick-search')
-		.on('mouseenter click', function(e) {
-		if (e.type == 'mouseenter') {
-			if (qs_timer != null) {
-				clearTimeout(qs_timer);
-			}
-			var qs_img = this;
-			qs_timer = setTimeout(function() {
-				('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
-				$(qs_img).next().addClass('lms-ui-quick-search-active').focus();
-				qs_timer = null;
-			}, 300);
-		} else {
-			('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
-			$(this).next().addClass('lms-ui-quick-search-active').focus();
-		}
+	qs_inputs.on('click', function(e) {
+		('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
+		$(this).addClass('lms-ui-quick-search-active').focus();
+	}).prev().on('click', function(e) {
+		('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
+		$(this).next().addClass('lms-ui-quick-search-active').focus();
 	});
 	qs_inputs.first().addClass('lms-ui-quick-search-active').focus();
 

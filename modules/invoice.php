@@ -112,7 +112,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	foreach ($ids as $idx => $invoiceid) {
 		$invoice = $LMS->GetInvoiceContent($invoiceid);
 		if (count($ids) == 1)
-			$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
+			$docnumber = docnumber(array(
+				'number' => $invoice['number'],
+				'template' => $invoice['template'],
+				'cdate' => $invoice['cdate'],
+				'customerid' => $invoice['customerid'],
+			));
 
 		$invoice['dontpublish'] = $dontpublish;
 		foreach ($which as $type) {
@@ -136,6 +141,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 				.(!empty($_GET['customerid']) ? ' AND d.customerid = '.intval($_GET['customerid']) : '')
 				.(!empty($_GET['numberplanid']) ? ' AND d.numberplanid = '.intval($_GET['numberplanid']) : '')
 				.(!empty($_GET['autoissued']) ? ' AND d.userid = 0' : '')
+				.(!empty($_GET['manualissued']) ? ' AND d.userid > 0' : '')
 				.(!empty($_GET['groupid']) ?
 				' AND '.(!empty($_GET['groupexclude']) ? 'NOT' : '').'
 					EXISTS (SELECT 1 FROM customerassignments a
@@ -168,6 +174,19 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		else
 			$jpk_data .= "<JPK xmlns=\"http://jpk.mf.gov.pl/wzor/2016/10/26/10261/\" xmlns:etd=\"http://crd.gov.pl/xml/schematy/dziedzinowe/mf/2016/01/25/eD/DefinicjeTypy/\">\n";
 
+		$divisionid = intval($_GET['divisionid']);
+		$division = $DB->GetRow("SELECT d.name, shortname, va.address, va.city,
+				va.zip, va.countryid, ten, regon,
+				account, inv_header, inv_footer, inv_author, inv_cplace, va.location_city,
+				va.location_street, tax_office_code,
+				lb.name AS borough, ld.name AS district, ls.name AS state FROM divisions d
+				JOIN vaddresses va ON va.id = d.address_id
+				LEFT JOIN location_cities lc ON lc.id = va.location_city
+				LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
+				LEFT JOIN location_districts ld ON ld.id = lb.districtid
+				LEFT JOIN location_states ls ON ls.id = ld.stateid
+				WHERE d.id = ?", array($divisionid));
+
 		// JPK header
 		$jpk_data .= "\t<Naglowek>\n";
 		if ($jpk_type == 'vat') {
@@ -184,13 +203,9 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		$jpk_data .= "\t\t<DataOd>" . strftime('%Y-%m-%d', $datefrom) . "</DataOd>\n";
 		$jpk_data .= "\t\t<DataDo>" . strftime('%Y-%m-%d', $dateto) . "</DataDo>\n";
 		$jpk_data .= "\t\t<DomyslnyKodWaluty>PLN</DomyslnyKodWaluty>\n";
-		$jpk_data .= "\t\t<KodUrzedu>" . ConfigHelper::getConfig('jpk.tax_office_code', '', true) . "</KodUrzedu>\n";
+		$jpk_data .= "\t\t<KodUrzedu>" . (!empty($division['tax_office_code']) ? $division['tax_office_code']
+			: ConfigHelper::getConfig('jpk.tax_office_code', '', true)) . "</KodUrzedu>\n";
 		$jpk_data .= "\t</Naglowek>\n";
-
-		$divisionid = intval($_GET['divisionid']);
-		$division = $DB->GetRow("SELECT name, shortname, address, city, zip, countryid, ten, regon,
-				account, inv_header, inv_footer, inv_author, inv_cplace
-				FROM divisions WHERE id = ?", array($divisionid));
 
 		$jpk_data .= "\t<Podmiot1>\n";
 		$jpk_data .= "\t\t<IdentyfikatorPodmiotu>\n";
@@ -200,9 +215,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 		$jpk_data .= "\t\t</IdentyfikatorPodmiotu>\n";
 		$jpk_data .= "\t\t<AdresPodmiotu>\n";
 		$jpk_data .= "\t\t\t<${tns}KodKraju>PL</${tns}KodKraju>\n";
-		$jpk_data .= "\t\t\t<${tns}Wojewodztwo>" . ConfigHelper::getConfig('jpk.division_state', '', true) . "</${tns}Wojewodztwo>\n";
-		$jpk_data .= "\t\t\t<${tns}Powiat>" . ConfigHelper::getConfig('jpk.division_district', '', true) . "</${tns}Powiat>\n";
-		$jpk_data .= "\t\t\t<${tns}Gmina>" . ConfigHelper::getConfig('jpk.division_borough', '', true) . "</${tns}Gmina>\n";
+		$jpk_data .= "\t\t\t<${tns}Wojewodztwo>" . (!empty($division['state']) ? $division['state']
+			: ConfigHelper::getConfig('jpk.division_state', '', true)) . "</${tns}Wojewodztwo>\n";
+		$jpk_data .= "\t\t\t<${tns}Powiat>" . (!empty($division['district']) ? $division['district']
+			: ConfigHelper::getConfig('jpk.division_district', '', true)) . "</${tns}Powiat>\n";
+		$jpk_data .= "\t\t\t<${tns}Gmina>" . (!empty($division['borough']) ? $division['borough']
+			: ConfigHelper::getConfig('jpk.division_borough', '', true)) . "</${tns}Gmina>\n";
 		$address = parse_address($division['address']);
 		$jpk_data .= "\t\t\t<${tns}Ulica>" . $address['street'] . "</${tns}Ulica>\n";
 		$jpk_data .= "\t\t\t<${tns}NrDomu>" . $address['house'] . "</${tns}NrDomu>\n";
@@ -221,14 +239,24 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	foreach ($ids as $idx => $invoiceid) {
 		$invoice = $LMS->GetInvoiceContent($invoiceid);
 		if (count($ids) == 1)
-			$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
+			$docnumber = docnumber(array(
+				'number' => $invoice['number'],
+				'template' => $invoice['template'],
+				'cdate' => $invoice['cdate'],
+				'customerid' => $invoice['customerid'],
+			));
 
 		$invoice['dontpublish'] = $dontpublish;
 		if ($jpk) {
 			if (isset($docnumber))
 				$invoice['fullnumber'] = $docnumber;
 			else
-				$invoice['fullnumber'] = docnumber($invoice['number'], $invoice['template'], $invoice['cdate'], $invoice['customerid']);
+				$invoice['fullnumber'] = docnumber(array(
+					'number' => $invoice['number'],
+					'template' => $invoice['template'],
+					'cdate' => $invoice['cdate'],
+					'customerid' => $invoice['customerid'],
+				));
 
 			if ($jpk_type == 'vat') {
 				// JPK body positions (sale)
@@ -239,8 +267,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 					$invoice['ten'] = 'brak';
 				$jpk_data .= "\t\t<NrKontrahenta>" . preg_replace('/[\s\-]/', '', $invoice['ten']) . "</NrKontrahenta>\n";
 				$jpk_data .= "\t\t<NazwaKontrahenta>" . str_replace('&', '&amp;', $invoice['name']) . "</NazwaKontrahenta>\n";
-				$jpk_data .= "\t\t<AdresKontrahenta>" . $invoice['address'] . ', '
-					. (empty($invoice['zip']) ? $invoice['city'] : $invoice['zip'] . ' ' . $invoice['city']) . "</AdresKontrahenta>\n";
+				$jpk_data .= "\t\t<AdresKontrahenta>" . ($invoice['postoffice'] && $invoice['postoffice'] != $invoice['city'] && $invoice['street'] ? $invoice['city'] . ', ' : '')
+					. $invoice['address'] . ', ' . (empty($invoice['zip']) ? '' : $invoice['zip'] . ' ') . ($invoice['postoffice'] ? $invoice['postoffice'] : $invoice['city']) . "</AdresKontrahenta>\n";
 				$jpk_data .= "\t\t<DowodSprzedazy>" . $invoice['fullnumber'] . "</DowodSprzedazy>\n";
 				$jpk_data .= "\t\t<DataWystawienia>" . strftime('%Y-%m-%d', $invoice['cdate']) . "</DataWystawienia>\n";
 				if ($invoice['cdate'] != $invoice['sdate'])
@@ -360,8 +388,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 				$invoices[$invoiceid] = $invoice;
 				$jpk_data .= "\t\t<P_2A>" . $invoice['fullnumber'] . "</P_2A>\n";
 				$jpk_data .= "\t\t<P_3A>" . str_replace('&', '&amp;', $invoice['name']) . "</P_3A>\n";
-				$jpk_data .= "\t\t<P_3B>" . $invoice['address'] . ', '
-					. (empty($invoice['zip']) ? $invoice['city'] : $invoice['zip'] . ' ' . $invoice['city']) . "</P_3B>\n";
+				$jpk_data .= "\t\t<P_3B>" . ($invoice['postoffice'] && $invoice['postoffice'] != $invoice['city'] && $invoice['street'] ? $invoice['city'] . ', ' : '')
+					. $invoice['address'] . ', ' . (empty($invoice['zip']) ? '' : $invoice['zip'] . ' ') . ($invoice['postoffice'] ? $invoice['postoffice'] : $invoice['city']) . "</P_3B>\n";
 				$jpk_data .= "\t\t<P_3C>" . str_replace('&', '&amp;', $invoice['division_name']) . "</P_3C>\n";
 				$jpk_data .= "\t\t<P_3D>" . $invoice['division_address'] . ', '
 					. (empty($invoice['division_zip']) ? $invoice['division_city'] : $invoice['division_zip'] . ' ' . $invoice['division_city']) . "</P_3D>\n";
@@ -455,8 +483,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 				$jpk_data .= "\t\t<RodzajFaktury>" . (isset($invoice['invoice']) ? 'KOREKTA' : 'VAT') . "</RodzajFaktury>\n";
 				if (isset($invoice['invoice'])) {
 					$jpk_data .= "\t\t<PrzyczynaKorekty>" . (empty($invoice['reason']) ? 'błędne wystawienie faktury' : $invoice['reason']) . "</PrzyczynaKorekty>\n";
-					$invoice['invoice']['fullnumber'] = docnumber(
-						$invoice['invoice']['number'], $invoice['invoice']['template'], $invoice['invoice']['cdate'], $invoice['customerid']);
+					$invoice['invoice']['fullnumber'] = docnumber(array(
+						'number' => $invoice['invoice']['number'],
+						'template' => $invoice['invoice']['template'],
+						'cdate' => $invoice['invoice']['cdate'],
+						'customerid' => $invoice['customerid'],
+					));
 					$jpk_data .= "\t\t<NrFaKorygowanej>" . $invoice['invoice']['fullnumber'] . "</NrFaKorygowanej>\n";
 					$jpk_data .= "\t\t<OkresFaKorygowanej>" . strftime('%Y-%m', $invoice['invoice']['sdate']) . "</OkresFaKorygowanej>\n";
 				}
@@ -534,7 +566,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 } elseif ($invoice = $LMS->GetInvoiceContent($_GET['id'])) {
 	$ids = array($_GET['id']);
 
-	$docnumber = docnumber($invoice['number'], $invoice['template'], $invoice['cdate']);
+	$docnumber = docnumber(array(
+		'number' => $invoice['number'],
+		'template' => $invoice['template'],
+		'cdate' => $invoice['cdate'],
+		'customerid' => $invoice['customerid'],
+	));
 	if(!isset($invoice['invoice']))
 		$layout['pagetitle'] = trans('Invoice No. $a', $docnumber);
 	else

@@ -41,7 +41,12 @@ if (isset($_GET['ajax'])) {
 			$customernames[$id] = $customername;
 	}
 	header('Content-Type: application/json');
-	echo json_encode(array('customernames' => $customernames));
+
+	if (empty($customernames))
+		echo json_encode(array('error' => trans("Not exists")));
+	else
+		echo json_encode(array('customernames' => $customernames));
+
 	die;
 }
 
@@ -50,6 +55,7 @@ $customerid = intval($_GET['id']);
 $LMS->InitXajax();
 
 if (!isset($_POST['xjxfun'])) {
+
 	include(MODULES_DIR.'/customer.inc.php');
 	require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
 
@@ -69,7 +75,6 @@ $hook_data = $LMS->executeHook(
 	)
 );
 $customerinfo = $hook_data['customerinfo'];
-
 $SMARTY->assign('xajax', $LMS->RunXajax());
 $SMARTY->assign('customerinfo_sortable_order', $SESSION->get_persistent_setting('customerinfo-sortable-order'));
 $SMARTY->display('customer/customerinfo.html');

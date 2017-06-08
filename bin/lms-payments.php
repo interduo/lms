@@ -320,7 +320,7 @@ if (!empty($groupsql))
 	$customergroups = preg_replace("/\%groups/", $groupsql, $customergroups);
 
 # let's go, fetch *ALL* assignments in given day
-$query = "SELECT a.tariffid, a.liabilityid, a.customerid, 
+$query = "SELECT a.tariffid, a.liabilityid, a.customerid, a.recipient_address_id,
 		a.period, a.at, a.suspended, a.settlement, a.datefrom, a.pdiscount, a.vdiscount, 
 		a.invoice, t.description AS description, a.id AS assignmentid, 
 		c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, a.attribute,
@@ -353,7 +353,7 @@ $query = "SELECT a.tariffid, a.liabilityid, a.customerid,
 			OR (a.period = ? AND at = ?))
 			AND a.datefrom <= ? AND (a.dateto > ? OR a.dateto = 0)))"
 		.(!empty($groupnames) ? $customergroups : "")
-	." ORDER BY a.customerid, a.invoice, a.paytype, a.numberplanid, value DESC";
+	." ORDER BY a.customerid, a.recipient_address_id, a.invoice,  a.paytype, a.numberplanid, value DESC";
 $assigns = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION,
 	DISPOSABLE, $today, DAILY, WEEKLY, $weekday, MONTHLY, $dom, QUARTERLY, $quarter, HALFYEARLY, $halfyear, YEARLY, $yearday,
 	$currtime, $currtime));
@@ -371,9 +371,11 @@ $query = 'SELECT
 		    ROUND((SELECT
 			          CASE WHEN sum(price) IS NULL THEN 0 ELSE sum(price) END
 			       FROM
-			          voip_cdr vc LEFT JOIN voipaccounts va ON vc.callervoipaccountid = va.id
+			          voip_cdr vc
+			       JOIN voipaccounts va ON vc.callervoipaccountid = va.id AND va.ownerid = a.customerid
+			       JOIN voip_numbers vn ON vn.voip_account_id = va.id AND vn.phone = vc.caller
+			       JOIN voip_number_assignments vna ON vna.number_id = vn.id AND vna.assignment_id = a.id
 			       WHERE
-			          va.ownerid = a.customerid AND
 			          vc.call_start_time >= (CASE a.period
 				                               WHEN " . YEARLY     . ' THEN ' . mktime(0, 0, 0, $month  , 1, $year-1) . '
 				                               WHEN ' . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month-6, 1, $year)   . '
@@ -433,6 +435,7 @@ if (empty($assigns))
 $suspended = 0;
 $invoices = array();
 $paytypes = array();
+$addresses = array();
 $numberplans = array();
 
 foreach ($assigns as $assign) {
@@ -524,7 +527,7 @@ foreach ($assigns as $assign) {
 			else
 				$plan = (array_key_exists($divid, $plans) ? $plans[$divid] : 0);
 
-			if ($invoices[$cid] == 0 || $paytypes[$cid] != $inv_paytype || $numberplans[$cid] != $plan)
+			if ($invoices[$cid] == 0 || $paytypes[$cid] != $inv_paytype || $numberplans[$cid] != $plan || $assign['recipient_address_id'] != $addresses[$cid])
 			{
 				if (!isset($numbers[$plan]))
 				{
@@ -538,43 +541,70 @@ foreach ($assigns as $assign) {
 				$itemid = 0;
 				$numbers[$plan]++;
 
-				$customer = $DB->GetRow("SELECT lastname, name, address, city, zip, ssn, ten, countryid, divisionid, paytime 
+				$customer = $DB->GetRow("SELECT lastname, name, address, city, zip, postoffice, ssn, ten, countryid, divisionid, paytime 
 						FROM customeraddressview WHERE id = $cid");
 
 				$division = $DB->GetRow("SELECT name, shortname, address, city, zip, countryid, ten, regon,
 						account, inv_header, inv_footer, inv_author, inv_cplace
-						FROM divisions WHERE id = ?", array($customer['divisionid']));
+						FROM vdivisions WHERE id = ?", array($customer['divisionid']));
 
 				$paytime = $customer['paytime'];
 				if ($paytime == -1) $paytime = $deadline;
 
-				$fullnumber = docnumber($numbers[$plan], $numbertemplates[$plan], $currtime);
+				$fullnumber = docnumber(array(
+					'number' => $numbers[$plan],
+					'template' => $numbertemplates[$plan],
+					'cdate' => $currtime,
+					'customerid' => $cid,
+				));
+
+				if ( $assign['recipient_address_id'] ) {
+					$addr = $DB->GetRow('SELECT * FROM addresses WHERE id = ?;', array($assign['recipient_address_id']));
+					unset($addr['id']);
+
+					$copy_address_query = "INSERT INTO addresses (" . implode(",", array_keys($addr)) . ") VALUES (" . implode(",", array_fill(0, count($addr), '?'))  . ")";
+					$DB->Execute( $copy_address_query, $addr );
+
+					$recipient_address_id = $DB->GetLastInsertID('addresses');
+				} else {
+					$recipient_address_id = null;
+				}
+
 				$DB->Execute("INSERT INTO documents (number, numberplanid, type, countryid, divisionid, 
 					customerid, name, address, zip, city, ten, ssn, cdate, sdate, paytime, paytype,
 					div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
-					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber) 
-					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-					array($numbers[$plan], $plan, $customer['countryid'], $customer['divisionid'], $cid,
-					$customer['lastname']." ".$customer['name'], $customer['address'], $customer['zip'],
-					$customer['city'], $customer['ten'], $customer['ssn'], $currtime, $saledate, $paytime, $inv_paytype,
+					div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber,
+					recipient_address_id)
+					VALUES(?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					array($numbers[$plan], $plan,
+					$customer['countryid'] ? $customer['countryid'] : 0,
+					$customer['divisionid'], $cid,
+					$customer['lastname']." ".$customer['name'],
+					($customer['postoffice'] && $customer['postoffice'] != $customer['city'] && $customer['street']
+						? $customer['city'] . ', ' : '') . $customer['address'],
+					$customer['zip'] ? $customer['zip'] : null,
+					$customer['postoffice'] ? $customer['postoffice'] : ($customer['city'] ? $customer['city'] : null),
+					$customer['ten'], $customer['ssn'], $currtime, $saledate, $paytime, $inv_paytype,
 					($division['name'] ? $division['name'] : ''),
 					($division['shortname'] ? $division['shortname'] : ''),
-					($division['address'] ? $division['address'] : ''), 
-					($division['city'] ? $division['city'] : ''), 
+					($division['address'] ? $division['address'] : ''),
+					($division['city'] ? $division['city'] : ''),
 					($division['zip'] ? $division['zip'] : ''),
 					($division['countryid'] ? $division['countryid'] : 0),
-					($division['ten'] ? $division['ten'] : ''), 
+					($division['ten'] ? $division['ten'] : ''),
 					($division['regon'] ? $division['regon'] : ''), 
 					($division['account'] ? $division['account'] : ''),
-					($division['inv_header'] ? $division['inv_header'] : ''), 
-					($division['inv_footer'] ? $division['inv_footer'] : ''), 
-					($division['inv_author'] ? $division['inv_author'] : ''), 
+					($division['inv_header'] ? $division['inv_header'] : ''),
+					($division['inv_footer'] ? $division['inv_footer'] : ''),
+					($division['inv_author'] ? $division['inv_author'] : ''),
 					($division['inv_cplace'] ? $division['inv_cplace'] : ''),
 					$fullnumber,
+					$recipient_address_id,
 					));
 
 				$invoices[$cid] = $DB->GetLastInsertID("documents");
 				$paytypes[$cid] = $inv_paytype;
+				$addresses[$cid] = $assign['recipient_address_id'];
 				$numberplans[$cid] = $plan;
 			}
 			if (($tmp_itemid = $DB->GetOne("SELECT itemid FROM invoicecontents 

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -218,6 +218,7 @@ if(isset($_POST['ticket']))
 							address, zip, city FROM customeraddressview WHERE id = ?', array($ticketedit['customerid']));
 				$info['contacts'] = $DB->GetAll('SELECT contact, name, type FROM customercontacts
 					WHERE customerid = ?', array($ticketedit['customerid']));
+				$info['locations'] = $LMS->GetUniqueNodeLocations($ticketedit['customerid']);
 
 				$emails = array();
 				$phones = array();
@@ -232,7 +233,8 @@ if(isset($_POST['ticket']))
 
 				$body .= "\n\n-- \n";
 				$body .= trans('Customer:').' '.$info['customername']."\n";
-				$body .= trans('Address:').' '.$info['address'].', '.$info['zip'].' '.$info['city']."\n";
+				$body .= trans('Address:') . ' ' . (empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
+						: implode(', ', $info['locations'])) . "\n";
 				if (!empty($phones))
 					$body .= trans('Phone:').' ' . implode(', ', $phones) . "\n";
 				if (!empty($emails))
@@ -241,7 +243,8 @@ if(isset($_POST['ticket']))
 				$sms_body .= "\n";
 				$sms_body .= trans('Customer:').' '.$info['customername'];
 				$sms_body .= ' '.sprintf('(%04d)', $ticket['customerid']).'. ';
-				$sms_body .= $info['address'].', '.$info['zip'].' '.$info['city'];
+				$sms_body .= (empty($info['locations']) ? $info['address'] . ', ' . $info['zip'] . ' ' . $info['city']
+					: implode(', ', $info['locations']));
 				if (!empty($phones))
 					$sms_body .= '. ' . trans('Phone:') . ' ' . preg_replace('/([0-9])[\s-]+([0-9])/', '\1\2', implode(',', $phones));
 			}

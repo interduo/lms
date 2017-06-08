@@ -50,6 +50,7 @@ class LMS
     protected $node_manager;
     protected $node_group_manager;
     protected $net_dev_manager;
+    protected $net_node_manager;
     protected $helpdesk_manager;
     protected $finance_manager;
     protected $event_manager;
@@ -95,7 +96,9 @@ class LMS
             require(LIB_DIR . DIRECTORY_SEPARATOR . 'xajax' . DIRECTORY_SEPARATOR . 'xajax_core' . DIRECTORY_SEPARATOR . 'xajax.inc.php');
             $this->xajax = new xajax();
             $this->xajax->configure('errorHandler', true);
-            $this->xajax->configure('javascript URI', 'img');
+            $this->xajax->configure('javascript Dir', SYS_DIR . DIRECTORY_SEPARATOR . 'img' . DIRECTORY_SEPARATOR . 'xajax_js');
+            $this->xajax->configure('javascript URI', 'img/xajax_js');
+            //$this->xajax->configure('deferScriptGeneration', false);
         }
     }
 
@@ -223,9 +226,16 @@ class LMS
 
             // Since we're using foreign keys, order of tables is important
             // Note: add all referenced tables to the list
-            $order = array('users', 'customers', 'customergroups', 'nodes', 'numberplans',
+            $order = array('users', 'customers', 'customergroups', 'hosts', 'networks',
+                'nodes', 'numberplans', 'tariffs', 'tarifftags', 'promotions', 'promotionschemas',
                 'assignments', 'rtqueues', 'rttickets', 'rtmessages', 'domains',
-                'cashsources', 'sourcefiles', 'ewx_channels', 'hosts');
+                'cashsources', 'sourcefiles', 'ewx_channels', 'location_states',
+                'location_boroughs', 'location_cities', 'location_street_types', 'location_streets',
+                'addresses', 'divisions', 'netdeviceproducers', 'netnodes', 'invprojects',
+                'netdevicemodels', 'netradiosectors', 'voip_rule_groups', 'voip_prefix_groups',
+                'voipaccounts', 'voip_rules', 'voip_tariffs', 'documents', 'rtattachments',
+                'rtcategories', 'netdevices', 'logtransactions', 'logmessages', 'usergroups',
+            );
 
             foreach ($tables as $idx => $table) {
                 if (in_array($table, $order)) {
@@ -409,7 +419,7 @@ class LMS
         $manager = $this->getCustomerManager();
         return $manager->DeleteCustomer($id);
     }
-    
+
     public function DeleteCustomerPermanent($id)
     {
         $manager = $this->getCustomerManager();
@@ -492,6 +502,18 @@ class LMS
         return $manager->getCustomerNodes($id, $count);
     }
 
+    public function getCustomerNetDevNodes($id, $count = null)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerNetDevNodes($id, $count);
+    }
+
+    public function GetCustomerNetDevs($customer_id)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->GetCustomerNetDevs($customer_id);
+    }
+
     public function GetCustomerNetworks($id, $count = null)
     {
         $manager = $this->getCustomerManager();
@@ -514,6 +536,30 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->customerStats();
+    }
+
+    public function checkCustomerAddress($a_id, $c_id)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->checkCustomerAddress($a_id, $c_id);
+    }
+
+    public function getCustomerAddresses($id, $hide_deleted = false)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerAddresses($id, $hide_deleted);
+    }
+
+    public function getAddressForCustomerStuff( $customer_id )
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getAddressForCustomerStuff( $customer_id );
+    }
+
+    public function getFullAddressForCustomerStuff( $customer_id )
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getFullAddressForCustomerStuff( $customer_id );
     }
 
     /*
@@ -835,6 +881,17 @@ class LMS
         return $manager->SetNodeLinkType($node, $link);
     }
 
+    public function updateNodeField($nodeid, $field, $value)
+    {
+        $manager = $this->getNodeManager();
+        return $manager->updateNodeField($nodeid, $field, $value);
+    }
+
+    public function GetUniqueNodeLocations($customerid) {
+        $manager = $this->getNodeManager();
+        return $manager->GetUniqueNodeLocations( $customerid );
+    }
+
     /*
      *  Tarrifs and finances
      */
@@ -1021,6 +1078,11 @@ class LMS
     {
         $manager = $this->getNetworkManager();
         return $manager->ScanNodes();
+    }
+    public function GetNetworkPageForIp($netid, $ip)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->GetNetworkPageForIp($netid, $ip);
     }
 
     /*
@@ -1247,6 +1309,42 @@ class LMS
         return $manager->NetDevUnLink($dev1, $dev2);
     }
 
+    public function GetNetNode($id)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->GetNetNode($id);
+    }
+
+    public function GetNetNodeList($search, $order)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->GetNetNodeList($search, $order);
+    }
+
+    public function NetNodeAdd($netnodedata)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->NetNodeAdd($netnodedata);
+    }
+
+    public function NetNodeExists($id)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->NetNodeExists($id);
+    }
+
+    public function NetNodeDelete($id)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->NetNodeDelete($id);
+    }
+
+    public function NetNodeUpdate($netnodedata)
+    {
+        $manager = $this->getNetNodeManager();
+        return $manager->NetNodeUpdate($netnodedata);
+    }
+
     public function GetUnlinkedNodes()
     {
         $manager = $this->getNetworkManager();
@@ -1303,6 +1401,12 @@ class LMS
     {
         $manager = $this->getHelpdeskManager();
         return $manager->GetQueueIdByName($id);
+    }
+
+    public function GetQueueNameByTicketId($id)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->GetQueueNameByTicketId($id);
     }
 
     public function GetQueueName($id)
@@ -1408,7 +1512,7 @@ class LMS
     }
 
     /*
-     * Konfiguracja LMS-UI
+     *  LMS-UI configuration
      */
 
     public function GetConfigOptionId($var, $section)
@@ -1596,10 +1700,6 @@ class LMS
 		$persist = is_null($persist) ? ConfigHelper::getConfig('mail.smtp_persist', true) : $persist;
 
 		if (ConfigHelper::getConfig('mail.backend') == 'pear') {
-			@include_once('Mail.php');
-			if (!class_exists('Mail'))
-				return trans('Can\'t send message. PEAR::Mail not found!');
-
 			if (!is_object($this->mail_object) || !$persist) {
 				$params['host'] = (!isset($smtp_options['host']) ? ConfigHelper::getConfig('mail.smtp_host') : $smtp_options['host']);
 				$params['port'] = (!isset($smtp_options['port']) ? ConfigHelper::getConfig('mail.smtp_port') : $smtp_options['port']);
@@ -1707,8 +1807,12 @@ class LMS
 			if (isset($_SERVER['HTTP_USER_AGENT']))
 				$this->mail_object->addCustomHeader('X-HTTP-User-Agent: '.$_SERVER['HTTP_USER_AGENT']);
 
-			if (isset($headers['X-LMS-Message-Item-Id']))
-				$this->mail_object->addCustomHeader('X-LMS-Message-Item-Id: ' . $headers['X-LMS-Message-Item-Id']);
+			foreach (array('X-LMS-Message-Item-id', 'References', 'In-Reply-To', 'Message-ID') as $header_name)
+				if (isset($headers[$header_name]))
+					if ($header_name == 'Message-ID')
+						$this->mail_object->MessageID = $headers[$header_name];
+					else
+						$this->mail_object->addCustomHeader($header_name . ': ' . $headers[$header_name]);
 
 			if (isset($headers['Disposition-Notification-To']))
 				$this->mail_object->ConfirmReadingTo = $headers['Disposition-Notification-To'];
@@ -2111,23 +2215,38 @@ class LMS
         return $manager->EventSearch($search, $order, $simple);
     }
 
-    public function GetNumberPlans($doctype = NULL, $cdate = NULL, $division = NULL, $next = true)
+    public function GetCustomerIdByTicketId($id)
     {
-        $manager = $this->getDocumentManager();
-        return $manager->GetNumberPlans($doctype, $cdate, $division, $next);
+        $manager = $this->getEventManager();
+        return $manager->GetCustomerIdByTicketId($id);
     }
 
-    public function GetNewDocumentNumber($doctype = NULL, $planid = NULL, $cdate = NULL)
+    public function GetEventsByTicketId($id)
+    {
+         $manager = $this->getHelpdeskManager();
+         return $manager->GetEventsByTicketId($id);
+    }
+    public function GetNumberPlans($properties)
     {
         $manager = $this->getDocumentManager();
-        return $manager->GetNewDocumentNumber($doctype, $planid, $cdate);
+        return $manager->GetNumberPlans($properties);
     }
 
-    public function DocumentExists($number, $doctype = NULL, $planid = 0, $cdate = NULL)
+    public function GetNewDocumentNumber($properties)
     {
         $manager = $this->getDocumentManager();
-        return $manager->DocumentExists($number, $doctype, $planid, $cdate);
+        return $manager->GetNewDocumentNumber($properties);
     }
+
+    public function DocumentExists($properties)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->DocumentExists($properties);
+    }
+
+    /*
+     *  Location
+     */
 
     public function GetCountryStates()
     {
@@ -2151,6 +2270,46 @@ class LMS
     {
         $manager = $this->getLocationManager();
         return $manager->UpdateCountryState($zip, $stateid);
+    }
+
+    public function DeleteAddress( $address_id ) {
+        $manager = $this->getLocationManager();
+        return $manager->DeleteAddress( $address_id );
+    }
+
+    public function InsertAddress( $args ) {
+        $manager = $this->getLocationManager();
+        return $manager->InsertAddress( $args );
+    }
+
+    public function InsertCustomerAddress( $customer_id, $args ) {
+        $manager = $this->getLocationManager();
+        return $manager->InsertCustomerAddress( $customer_id, $args );
+    }
+
+    public function UpdateAddress( $args ) {
+        $manager = $this->getLocationManager();
+        return $manager->UpdateAddress( $args );
+    }
+
+    public function UpdateCustomerAddress( $customer_id, $args ) {
+        $manager = $this->getLocationManager();
+        return $manager->UpdateCustomerAddress( $customer_id, $args );
+    }
+
+    public function ValidAddress( $args ) {
+        $manager = $this->getLocationManager();
+        return $manager->ValidAddress( $args );
+    }
+
+    public function CopyAddress( $address_id ) {
+        $manager = $this->getLocationManager();
+        return $manager->CopyAddress( $address_id );
+    }
+
+    public function GetAddress( $address_id ) {
+        $manager = $this->getLocationManager();
+        return $manager->GetAddress( $address_id );
     }
 
     public function GetNAStypes()
@@ -2440,6 +2599,19 @@ class LMS
             $this->net_dev_manager = new LMSNetDevManager($this->DB, $this->AUTH, $this->cache, $this->SYSLOG);
         }
         return $this->net_dev_manager;
+    }
+
+    /**
+     * Returns net node manager
+     * 
+     * @return LMSNetNodeManagerInterface Net node manager
+     */
+    protected function getNetNodeManager()
+    {
+        if (!isset($this->net_node_manager)) {
+            $this->net_node_manager = new LMSNetNodeManager($this->DB, $this->AUTH, $this->cache, $this->SYSLOG);
+        }
+        return $this->net_node_manager;
     }
 
     /**
@@ -3012,7 +3184,12 @@ class LMS
 					$body = $mail_body;
 			$subject = $mail_subject;
 
-			$invoice_number = docnumber($doc['number'], $invoice_number, $doc['cdate'] + date('Z'));
+			$invoice_number = docnumber(array(
+				'number' => $doc['number'],
+				'template' => $invoice_number,
+				'cdate' => $doc['cdate'] + date('Z'),
+				'customerid' => $doc['customerid'],
+			));
 			$body = preg_replace('/%invoice/', $invoice_number, $body);
 			$body = preg_replace('/%balance/', $this->GetCustomerBalance($doc['customerid']), $body);
 			$body = preg_replace('/%today/', $year . '-' . $month . '-' . $day, $body);
@@ -3042,6 +3219,9 @@ class LMS
 						break;
 					case DOC_INVOICE:
 						$msg = trans('Invoice No. $a for $b', $invoice_number, $mailto);
+						break;
+					case DOC_INVOICE_PRO:
+						$msg = trans('Pro Forma Invoice No. $a for $b', $invoice_number, $mailto);
 						break;
 				}
 				if ($type == 'frontend') {
@@ -3082,6 +3262,9 @@ class LMS
 
 				if (!empty($notify_email))
 					$headers['Cc'] = $notify_email;
+
+				if (isset($mail_format) && $mail_format == 'html')
+					$headers['X-LMS-Format'] = 'html';
 
 				if ($add_message) {
 					$this->DB->Execute('INSERT INTO messages (subject, body, cdate, type, userid)
