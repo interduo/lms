@@ -44,7 +44,7 @@ $this->Execute("
 		WHERE c.type < 2
 ");
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2017061900', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2017051202', 'dbversion'));
 
 $this->CommitTrans();
 
