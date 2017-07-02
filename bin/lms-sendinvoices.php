@@ -182,8 +182,6 @@ if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
 
 	$SMARTY->assignByRef('layout', $layout);
 	$SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
-	$SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
-	$SMARTY->assignByRef('_language', $LMS->lang);
 }
 
 // now it's time for script settings
@@ -268,6 +266,11 @@ $AUTH = null;
 $LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
+
+if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
+	$SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
+	$SMARTY->assignByRef('_language', $LMS->lang);
+}
 
 $test = array_key_exists('test', $options);
 if ($test)
