@@ -48,7 +48,7 @@ $eventlist            = $LMS->EventSearch(array('customerid' => $customerid), 'd
 $customernodes        = $LMS->GetCustomerNodes($customerid);
 $customernetworks     = $LMS->GetCustomerNetworks($customerid, 10);
 $customerstats = array(
-	'tickets' => $DB->GetRow('SELECT COUNT(*) AS all, SUM(CASE WHEN state < ? THEN 1 ELSE 0 END) AS notresolved
+	'tickets' => $DB->GetRow('SELECT COUNT(*) AS "all", SUM(CASE WHEN state < ? THEN 1 ELSE 0 END) AS notresolved
 		FROM rttickets WHERE customerid = ?', array(RT_RESOLVED, $customerid)),
 	'domains' => $DB->GetOne('SELECT COUNT(*) FROM domains WHERE ownerid = ?', array($customerid)),
 	'accounts' => $DB->GetOne('SELECT COUNT(*) FROM passwd WHERE ownerid = ?', array($customerid))
