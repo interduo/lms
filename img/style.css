@@ -592,7 +592,6 @@ div.lms-ui-multiselectlayer ul span {
   .phone_number:link {
     pointer-events: none;
     cursor: default;
-    color: black;
   }
 }
 @media print {
