@@ -143,6 +143,7 @@ $(function() {
                                                     {if $event.customerid != 0}
                                                         {$event.customername} ({$event.customerid})
                                                         <input type="hidden" name="event[customerid]" value="{$event.customerid}">
+                                                        <input type="hidden" name="event[custid]" value="{$event.customerid}">
                                                     {else}
                                                         {trans("Request not assigned to any customer.")}
                                                     {/if}
