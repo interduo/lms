@@ -79,6 +79,10 @@ if(isset($_POST['ticket']))
 		$ticket['tmppath'] = $tmppath;
 		$id = $LMS->TicketAdd($ticket, $files);
 
+		// deletes uploaded files
+		if (!empty($files))
+			rrmdir($tmppath);
+
 		if (ConfigHelper::checkConfig('phpui.newticket_notify')) {
 			$user = $LMS->GetUserInfo($AUTH->id);
 

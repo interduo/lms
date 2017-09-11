@@ -213,6 +213,10 @@ if(isset($_POST['message']))
 				MessageAdd($message, $headers, $files);
 		}
 
+		// deletes uploaded files
+		if (!empty($files))
+			rrmdir($tmppath);
+
 		// setting status and the ticket owner
 		if (isset($message['state']))
 			$message['state'] = RT_RESOLVED;
