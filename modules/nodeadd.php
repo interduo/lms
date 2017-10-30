@@ -250,9 +250,11 @@ if (isset($_POST['nodedata']))
 		);
 		$nodedata = $hook_data['nodeadd'];
 
-		if (!isset($nodedata['reuse'])) {
-			$SESSION->redirect('?m=nodeinfo&id='.$nodeid);
-		}
+		if (!isset($nodedata['reuse']))
+			if (isset($nodedata['wholenetwork']))
+				$SESSION->redirect('?m=netinfo&id=' . $nodedata['netid']);
+			else
+				$SESSION->redirect('?m=nodeinfo&id=' . $nodeid);
 
 		$ownerid = $nodedata['ownerid'];
 		unset($nodedata);
