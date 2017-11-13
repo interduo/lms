@@ -242,20 +242,20 @@ DROP SEQUENCE IF EXISTS addresses_id_seq;
 CREATE SEQUENCE addresses_id_seq;
 DROP TABLE IF EXISTS addresses CASCADE;
 CREATE TABLE addresses (
-    id         integer DEFAULT nextval('addresses_id_seq'::text) NOT NULL,
-    name       text NULL,
-    state      varchar(64) NULL,
-    state_id   integer REFERENCES location_states (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    city       varchar(32) NULL,
-    city_id    integer REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    postoffice varchar(32) DEFAULT NULL,
-    street     varchar(255) NULL,
-    street_id  integer REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    zip        varchar(10) NULL,
-    country_id integer REFERENCES countries (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    house      varchar(20) NULL,
-    flat       varchar(20) NULL,
-    PRIMARY KEY (id)
+	id         integer DEFAULT nextval('addresses_id_seq'::text) NOT NULL,
+	name       text NULL,
+	state      varchar(64) NULL,
+	state_id   integer REFERENCES location_states (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	city       varchar(100) NULL,
+	city_id    integer REFERENCES location_cities (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	postoffice varchar(32) DEFAULT NULL,
+	street     varchar(255) NULL,
+	street_id  integer REFERENCES location_streets (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	zip        varchar(10) NULL,
+	country_id integer REFERENCES countries (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	house      varchar(20) NULL,
+	flat       varchar(20) NULL,
+	PRIMARY KEY (id)
 );
 
 /* ---------------------------------------------------
