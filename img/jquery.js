@@ -103,7 +103,7 @@ $(function() {
 	.attr("autocomplete", autocomplete);
 
 	$('select.lms-ui-multiselect').each(function() {
-		multiselect({
+		new multiselect({
 			id: $(this).uniqueId().attr('id'),
 			defaultValue: $(this).attr('data-default-value'),
 			type: $(this).attr('data-type')
