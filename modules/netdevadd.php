@@ -156,7 +156,7 @@ if (isset($_POST['netdev'])) {
 
 $layout['pagetitle'] = trans('New Device');
 
-$SMARTY->assign('nastype', $LMS->GetNAStypes());
+$SMARTY->assign('nastypes', $LMS->GetNAStypes());
 
 $nprojects = $DB->GetAll("SELECT * FROM invprojects WHERE type<>? ORDER BY name", array(INV_PROJECT_SYSTEM));
 $SMARTY->assign('NNprojects',$nprojects);
