@@ -732,10 +732,12 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 				c.pin AS customerpin, c.divisionid AS current_divisionid,
 				c.street, c.building, c.apartment,
 				c.post_street, c.post_building, c.post_apartment,
-				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_postoffice, c.post_countryid
+				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_postoffice, c.post_countryid,
+				cp.name AS post_country
 				FROM documents d
 				JOIN customeraddressview c ON (c.id = d.customerid)
 				LEFT JOIN countries cn ON (cn.id = d.countryid)
+				LEFT JOIN countries cp ON cp.id = c.post_countryid
 				LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 				LEFT JOIN vaddresses a ON d.recipient_address_id = a.id
 				WHERE d.id = ? AND (d.type = ? OR d.type = ? OR d.type = ?)', array($invoiceid, DOC_INVOICE, DOC_CNOTE, DOC_INVOICE_PRO))) {
@@ -874,10 +876,12 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 				c.pin AS customerpin, c.divisionid AS current_divisionid,
 				c.street, c.building, c.apartment,
 				c.post_street, c.post_building, c.post_apartment,
-				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_postoffice, c.post_countryid
+				c.post_name, c.post_address, c.post_zip, c.post_city, c.post_postoffice, c.post_countryid,
+				cp.name AS post_country
 				FROM documents d
 				JOIN customeraddressview c ON (c.id = d.customerid)
 				LEFT JOIN countries cn ON (cn.id = d.countryid)
+				LEFT JOIN countries cp ON cp.id = c.post_countryid
 				LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 				WHERE d.id = ? AND d.type = ?', array($id, DOC_DNOTE))) {
 
