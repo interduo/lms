@@ -81,10 +81,14 @@ function RTSearch($search, $order='createtime,desc')
 	if(!empty($search['name']))
 		$where[] = '(UPPER(requestor) ?LIKE? UPPER('.$DB->Escape('%'.$search['name'].'%').') OR '
 			.$DB->Concat('UPPER(customers.lastname)',"' '",'UPPER(customers.name)').' ?LIKE? UPPER('.$DB->Escape('%'.$search['name'].'%').'))';
-	if(isset($search['queue']) && is_array($search['queue']))
-		$where[] = 'queueid IN ('.implode(',', $search['queue']).')';
-	elseif(!empty($search['queue']))
-		$where[] = 'queueid = '.intval($search['queue']);
+	if (isset($search['queue'])) {
+		if (is_array($search['queue']))
+			$where[] = 'queueid IN (' . implode(',', $search['queue']) . ')';
+		elseif (empty($search['queue']))
+			return null;
+		else
+			$where[] = 'queueid = '.intval($search['queue']);
+	}
 	if(isset($search['catids']))
 		$where[] = 'tc.categoryid IN ('.implode(',', $search['catids']).')';
 
@@ -164,8 +168,10 @@ if(isset($search) || isset($_GET['s']))
 	if(!isset($search['queue']) || $search['queue'] == 0)
 	{
 		// if user hasn't got rights for all queues...
-		$queues = $DB->GetCol('SELECT queueid FROM rtrights WHERE userid=?', array($AUTH->id));
-		if(sizeof($queues) != $DB->GetOne('SELECT COUNT(*) FROM rtqueues'))
+		$queues = $DB->GetCol('SELECT queueid FROM rtrights WHERE userid=?', array(Auth::GetCurrentUser()));
+		if (!count($queues))
+			$search['queue'] = 0;
+		elseif (count($queues) != $DB->GetOne('SELECT COUNT(*) FROM rtqueues'))
 			$search['queue'] = $queues;
 	}
 	else
