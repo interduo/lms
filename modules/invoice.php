@@ -508,7 +508,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<P_13_1>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_1>\n";
 						$tax = -$invoice['invoice']['taxest']['23.00']['tax'];
 						$jpk_data .= "\t\t<P_14_1>" . str_replace(',', '.', sprintf('%.2f', $tax)) . "</P_14_1>\n";
-					}
+					} else
+						$base = $tax = 0;
 					$totalvalue += $base + $tax;
 
 					if (isset($invoice['taxest']['22.00'])) {
@@ -521,7 +522,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<P_13_1>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_1>\n";
 						$tax = -$invoice['invoice']['taxest']['22.00']['tax'];
 						$jpk_data .= "\t\t<P_14_1>" . str_replace(',', '.', sprintf('%.2f', $tax)) . "</P_14_1>\n";
-					}
+					} else
+						$base = $tax = 0;
 					$totalvalue += $base + $tax;
 
 					if (isset($invoice['taxest']['8.00'])) {
@@ -534,7 +536,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<P_13_2>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_2>\n";
 						$tax = -$invoice['invoice']['taxest']['8.00']['tax'];
 						$jpk_data .= "\t\t<P_14_2>" . str_replace(',', '.', sprintf('%.2f', $tax)) . "</P_14_2>\n";
-					}
+					} else
+						$base = $tax = 0;
 					$totalvalue += $base + $tax;
 
 					if (isset($invoice['taxest']['7.00'])) {
@@ -547,7 +550,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<P_13_2>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_2>\n";
 						$tax = -$invoice['invoice']['taxest']['7.00']['tax'];
 						$jpk_data .= "\t\t<P_14_2>" . str_replace(',', '.', sprintf('%.2f', $tax)) . "</P_14_2>\n";
-					}
+					} else
+						$base = $tax = 0;
 					$totalvalue += $base + $tax;
 
 					if (isset($invoice['taxest']['5.00'])) {
@@ -560,7 +564,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<P_13_3>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_3>\n";
 						$tax = -$invoice['invoice']['taxest']['5.00']['tax'];
 						$jpk_data .= "\t\t<P_14_3>" . str_replace(',', '.', sprintf('%.2f', $tax)) . "</P_14_3>\n";
-					}
+					} else
+						$base = $tax = 0;
 					$totalvalue += $base + $tax;
 
 					if (isset($invoice['taxest']['0.00'])) {
@@ -569,7 +574,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 					} elseif (isset($invoice['invoice']['taxest']['0.00'])) {
 						$base = -$invoice['invoice']['taxest']['0.00']['base'];
 						$jpk_data .= "\t\t<P_13_6>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_6>\n";
-					}
+					} else
+						$base = 0;
 					$totalvalue += $base;
 
 					if (isset($invoice['taxest']['-1'])) {
@@ -578,7 +584,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 					} elseif (isset($invoice['invoice']['taxest']['-1'])) {
 						$base = -$invoice['invoice']['taxest']['-1']['base'];
 						$jpk_data .= "\t\t<P_13_7>" . str_replace(',', '.', sprintf('%.2f', $base)) . "</P_13_7>\n";
-					}
+					} else
+						$base = 0;
 					$totalvalue += $base;
 
 					$jpk_data .= "\t\t<P_15>" . str_replace(',', '.', sprintf("%.2f", $invoice['total'] - $invoice['invoice']['total'])) . "</P_15>\n";
