@@ -880,6 +880,7 @@ $_LANG['This is a seller data. A new line replacement is "\n" sign, e.g. SuperNe
 $_LANG['It scans for free ports in selected device!'] = 'Brak wolnych portów w wybranym urządzeniu!';
 $_LANG['It scans for ports in destination device!'] = 'Brak wolnych portów w urządzeniu docelowym!';
 $_LANG['It scans for ports in source device!'] = 'Brak wolnych portów w urządzeniu źródłowym!';
+$_LANG['JPK format:'] = 'Format JPK:';
 $_LANG['Last:'] = 'Ostatni:';
 $_LANG['last $a transactions'] = 'ostatnie $a transakcji';
 $_LANG['Last 30 Days'] = 'Ostatnie 30 dni';
