@@ -470,20 +470,7 @@ function check_email( $email )
 }
 
 function get_producer($mac) {
-	$mac = strtoupper(str_replace(':', '-', substr($mac, 0, 8)));
-
-	if (!$mac)
-		return '';
-
-	$maclines = @file(LIB_DIR . DIRECTORY_SEPARATOR . 'ethercodes.txt', FILE_SKIP_EMPTY_LINES | FILE_IGNORE_NEW_LINES);
-	if (!empty($maclines))
-		foreach ($maclines as $line) {
-			list ($prefix, $producer) = explode(':', $line);
-			if ($mac == $prefix)
-				return $producer;
-		}
-
-	return '';
+	return EtherCodes::GetProducer($mac);
 }
 
 function setunits($data)  // for traffic data
@@ -857,7 +844,7 @@ function register_plugin($handle, $plugin)
         $PLUGINS[$handle][] = $plugin;
 }
 
-function html2pdf($content, $subject=NULL, $title=NULL, $type=NULL, $id=NULL, $orientation='P', $margins=array(5, 10, 5, 10), $save=false, $copy=false, $md5sum = '')
+function html2pdf($content, $subject=NULL, $title=NULL, $type=NULL, $id=NULL, $orientation='P', $margins=array(5, 10, 5, 10), $dest = 'I', $copy=false, $md5sum = '')
 {
 	global $layout, $DB;
 
@@ -956,20 +943,33 @@ function html2pdf($content, $subject=NULL, $title=NULL, $type=NULL, $id=NULL, $o
 		}
 	}
 
-	$html2pdf->pdf->SetProtection(array('modify', 'annot-forms', 'fill-forms', 'extract', 'assemble'), '', PASSWORD_CHANGEME, '1');
+	$password = ConfigHelper::getConfig('phpui.document_password', '', true);
+	if (!empty($password))
+		$html2pdf->pdf->SetProtection(array('modify', 'annot-forms', 'fill-forms', 'extract', 'assemble'), '', $password, '1');
 
-        // cache pdf file
-	if($md5sum)
+	// cache pdf file
+	if ($md5sum)
 		$html2pdf->Output(DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum,0,2) . DIRECTORY_SEPARATOR . $md5sum.'.pdf', 'F');
 
-	if ($save) {
-		if (function_exists('mb_convert_encoding'))
-			$filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
-		else
-			$filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
-		$html2pdf->Output($filename.'.pdf', 'D');
-	} else {
-		$html2pdf->Output();
+	if ($dest === true)
+		$dest = 'D';
+	elseif ($dest === false)
+		$dest = 'I';
+
+	switch ($dest) {
+		case 'D':
+			if (function_exists('mb_convert_encoding'))
+				$filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
+			else
+				$filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
+			$html2pdf->Output($filename.'.pdf', 'D');
+			break;
+		case 'S':
+			return $html2pdf->Output('', 'S');
+			break;
+		default:
+			$html2pdf->Output();
+			break;
 	}
 }
 
@@ -992,6 +992,22 @@ function access_denied() {
 
 function check_date($date) {
 	return preg_match('/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/', $date);
+}
+
+function date_to_timestamp($date) {
+	if (!preg_match('/^(?<year>[0-9]{4})\/(?<month>[0-9]{2})\/(?<day>[0-9]{2})$/', $date, $m)
+		|| !checkdate($m['month'], $m['day'], $m['year']))
+		return null;
+	return mktime(0, 0, 0, $m['month'], $m['day'], $m['year']);
+}
+
+function datetime_to_timestamp($datetime) {
+	if (!preg_match('/^(?<year>[0-9]{4})\/(?<month>[0-9]{2})\/(?<day>[0-9]{2})\s+(?<hour>[0-9]{2}):(?<minute>[0-9]{2})(?::(?<second>[0-9]{2}))?$/', $datetime, $m)
+		|| !checkdate($m['month'], $m['day'], $m['year']) || $m['hour'] > 23 || $m['minute'] > 59 || (isset($m['second']) && $m['second'] > 59))
+		return null;
+	if (!isset($m['second']))
+		$m['second'] = 0;
+	return mktime($m['hour'], $m['minute'], $m['second'], $m['month'], $m['day'], $m['year']);
 }
 
 function getdir($pwd = './', $pattern = '^.*$') {
@@ -1051,6 +1067,14 @@ function generate_random_string($length = 10, $characters = '0123456789abcdefghi
 	for ($i = 0; $i < $length; $i++)
 		$randomString .= $characters[rand(0, $charactersLength - 1)];
 	return $randomString;
+}
+
+function validate_random_string($string, $min_size, $max_size, $characters) {
+	if (strlen($string) < $min_size || strlen($string) > $max_size)
+		return false;
+	for ($i = 0; $i < strlen($characters); $i++)
+		$string = str_replace($characters[$i], '', $string);
+	return !strlen($string);
 }
 
 function trans()
@@ -1124,11 +1148,28 @@ function handle_file_uploads($elemid, &$error) {
 							else
 								$error[$elemid] = '';
 							switch ($_FILES[$elemid]['error'][$fileidx]) {
-								case 1:
-								case 2: $error[$elemid] .= trans('File is too large: $a', $filename); break;
-								case 3: $error[$elemid] .= trans('File upload has finished prematurely: $a', $filename); break;
-								case 4: $error[$elemid] .= trans('Path to file was not specified: $a', $filename); break;
-								default: $error[$elemid] .= trans('Problem during file upload: $a', $filename); break;
+								case UPLOAD_ERR_INI_SIZE:
+								case UPLOAD_ERR_FORM_SIZE:
+									$error[$elemid] .= trans('File is too large: $a', $filename);
+									break;
+								case UPLOAD_ERR_PARTIAL:
+									$error[$elemid] .= trans('File upload has finished prematurely: $a', $filename);
+									break;
+								case UPLOAD_ERR_NO_FILE:
+									$error[$elemid] .= trans('Path to file was not specified: $a', $filename);
+									break;
+								case UPLOAD_ERR_NO_TMP_DIR:
+									$error[$elemid] .= trans('No temporary directory for file: $a', $filename);
+									break;
+								case UPLOAD_ERR_CANT_WRITE:
+									$error[$elemid] .= trans('Unable to write file: $a', $filename);
+									break;
+								case UPLOAD_ERR_EXTENSION:
+									$error[$elemid] .= trans('File upload has finished unexpectedly: $a', $filename);
+									break;
+								default:
+									$error[$elemid] .= trans('Problem during file upload: $a', $filename);
+									break;
 							}
 						}
 					}

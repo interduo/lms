@@ -44,30 +44,61 @@ $.ajax("img/jquery-datatables-i18n/" + lmsSettings.language + ".json", {
 	}
 });
 
-$(function() {
-	var autocomplete = "off";
+jQuery.cachedScript = function(url, options) {
+	options = $.extend( options || {}, {
+		dataType: "script",
+		cache: true,
+		url: url
+	});
+	return jQuery.ajax(options);
+}
 
-	$.datepicker._gotoToday = function(id) {
-		var target = $(id);
-		var inst = this._getInst(target[0]);
-		if (this._get(inst, 'gotoCurrent') && inst.currentDay) {
-			inst.selectedDay = inst.currentDay;
-			inst.drawMonth = inst.selectedMonth = inst.currentMonth;
-			inst.drawYear = inst.selectedYear = inst.currentYear;
-		} else {
-			var date = new Date();
-			inst.selectedDay = date.getDate();
-			inst.drawMonth = inst.selectedMonth = date.getMonth();
-			inst.drawYear = inst.selectedYear = date.getFullYear();
-			// the below two lines are new
-			this._setDateDatepicker(target, date);
-			this._selectDate(id, this._getDateDatepicker(target));
-		}
-		this._notifyChange(inst);
-		this._adjustDate(target);
+function show_pagecontent() {
+	$('div#lms-ui-spinner').hide();
+	$('div#pagecontent').show();
+	if (location.hash.length && $(location.hash).length) {
+		$(location.hash)[0].scrollIntoView();
 	}
+}
 
-	$('div.calendar input,input.calendar').datepicker({
+$.datepicker._gotoToday = function(id) {
+	var target = $(id);
+	var inst = this._getInst(target[0]);
+	if (this._get(inst, 'gotoCurrent') && inst.currentDay) {
+		inst.selectedDay = inst.currentDay;
+		inst.drawMonth = inst.selectedMonth = inst.currentMonth;
+		inst.drawYear = inst.selectedYear = inst.currentYear;
+	} else {
+		var date = new Date();
+		inst.selectedDay = date.getDate();
+		inst.drawMonth = inst.selectedMonth = date.getMonth();
+		inst.drawYear = inst.selectedYear = date.getFullYear();
+		// the below two lines are new
+		this._setDateDatepicker(target, date);
+		this._selectDate(id, this._getDateDatepicker(target));
+	}
+	this._notifyChange(inst);
+	this._adjustDate(target);
+}
+
+function init_multiselects(selector) {
+	var multiselects = $(selector);
+	if (multiselects.length) {
+		multiselects.each(function() {
+			new multiselect({
+				id: $(this).uniqueId().attr('id'),
+				defaultValue: $(this).attr('data-default-value'),
+				type: $(this).attr('data-type'),
+				separator: $(this).attr('data-separator')
+			});
+		});
+	}
+}
+
+function init_datepickers(selector) {
+	var autocomplete = "off";
+	var elems = $(selector);
+	elems.datepicker({
 		showButtonPanel: true,
 		dateFormat: "yy/mm/dd",
 		changeYear: true,
@@ -76,39 +107,102 @@ $(function() {
 				$(input).tooltip('disable');
 				$(this).data('tooltip', input);
 			}
+			setTimeout(function() {
+				var btnHtml = '<button type="button" class="ui-datepicker-current ui-state-default ui-priority-secondary '
+					+ 'ui-corner-all lms-ui-datepicker-clear">' + lmsMessages.datePickerClear + '</button>';
+				var target = $(input);
+				var widget = target.datepicker("widget");
+				var buttonPane = widget.find(".ui-datepicker-buttonpane");
+				if (buttonPane.find('.lms-ui-datepicker-clear').length) {
+					return;
+				}
+				var btn = $(btnHtml);
+				btn.appendTo(buttonPane);
+
+				function click() {
+					target.datepicker("setDate", '');
+					setTimeout(function() {
+						var buttonPane = widget.find(".ui-datepicker-buttonpane");
+						if (buttonPane.find('.lms-ui-datepicker-clear').length) {
+							return;
+						}
+						var btn = $(btnHtml);
+						btn.appendTo(buttonPane);
+						btn.click(click);
+					}, 1);
+				}
+
+				btn.click(click);
+			}, 1);
+		},
+		onChangeMonthYear: function(year, month, instance) {
+			var input = this;
+			setTimeout(function() {
+				var target = $(input);
+				var widget = target.datepicker("widget");
+				var buttonPane = widget.find(".ui-datepicker-buttonpane");
+				if (buttonPane.find('.lms-ui-datepicker-clear').length) {
+					return;
+				}
+				var btnHtml = '<button type="button" class="ui-datepicker-current ui-state-default ui-priority-secondary '
+					+ 'ui-corner-all lms-ui-datepicker-clear">' + lmsMessages.datePickerClear + '</button>';
+				var btn = $(btnHtml);
+				btn.appendTo(buttonPane);
+
+				function click() {
+					target.datepicker("setDate", '');
+					setTimeout(function() {
+						var buttonPane = widget.find(".ui-datepicker-buttonpane");
+						if (buttonPane.find('.lms-ui-datepicker-clear').length) {
+							return;
+						}
+						var btn = $(btnHtml);
+						btn.appendTo(buttonPane);
+						btn.click(click);
+					}, 1);
+				}
+
+				btn.click(click);
+			}, 1);
 		},
 		onClose: function(dateText, inst) {
 			if ($(this).data('tooltip') !== undefined) {
 				$(this).tooltip('enable');
 			}
 		}
-	})
-	.attr("autocomplete", autocomplete);
+	}).attr("autocomplete", autocomplete);
+}
+
+$(function() {
+	var autocomplete = "off";
+	var elementsToInitiate = 0;
+
+	init_datepickers('div.calendar input,input.calendar');
 
 	$.datetimepicker.setLocale(lmsSettings.language);
-	$('div.calendar-time input,input.calendar-time').datetimepicker({
+	var datetimepickeroptions = {
 		step: 30,
 		closeOnDateSelect: true,
-		onShow: function(current_time, input) {
+		onShow: function (current_time, input) {
 			if ($(input).is('[data-tooltip]')) {
 				$(input).tooltip('disable');
 			}
 		},
-		onClose: function(current_time, input) {
+		onClose: function (current_time, input) {
 			if ($(input).is('[data-tooltip]')) {
 				$(input).tooltip('enable');
 			}
 		}
-	})
-	.attr("autocomplete", autocomplete);
-
-	$('select.lms-ui-multiselect').each(function() {
-		new multiselect({
-			id: $(this).uniqueId().attr('id'),
-			defaultValue: $(this).attr('data-default-value'),
-			type: $(this).attr('data-type')
-		});
+	};
+	$('div.calendar-time input,input.calendar-time').each(function() {
+		$(this).datetimepicker(Object.assign(datetimepickeroptions,
+			$(this).hasClass('calendar-time-seconds') ? {
+				format: "Y/m/d H:i:s"
+			} : datetimepickeroptions))
+		.attr("autocomplete", autocomplete);
 	});
+
+	init_multiselects('select.lms-ui-multiselect');
 
 	$('[title]').each(function() {
 		$(this).one('mouseenter', function() {
@@ -201,6 +295,12 @@ $(function() {
 			var videoelem = dialog.find('video').get(0);
 			videoelem.currentTime = 0;
 			videoelem.play();
+		} else if ($(this).hasClass('documentview-pdf')) {
+			window.open(url, '_blank', 'left=' + (window.screen.availWidth * 0.1)
+				+ ',top=' + (window.screen.availHeight * 0.1)
+				+ ',width=' + (window.screen.availWidth * 0.8)
+				+ ',height=' + (window.screen.availHeight * 0.8));
+			return false;
 		}
 		dialog.dialog('open');
 		return false;
@@ -260,7 +360,7 @@ $(function() {
 		if (checkall.length) {
 			checkall.parent().addClass('lms-ui-multi-check-all');
 			checkall.click(function(e) {
-				allcheckboxes.each(function(index, elem) {
+				allcheckboxes.filter(':visible').each(function(index, elem) {
 					this.checked = checkall.checked;
 				});
 			});
@@ -269,8 +369,13 @@ $(function() {
 			checkall = null;
 		}
 
+		elem.updateCheckAll = function() {
+			allcheckboxes.filter(':not(:visible)').prop('checked', false);
+			updateCheckAll();
+		}
+
 		function checkElements(checkbox) {
-			var i = allcheckboxes.index(allcheckboxes.filter('[data-prev-checked]')),
+			var i = allcheckboxes.index(allcheckboxes.filter('[data-prev-checked]:visible')),
 				j = allcheckboxes.index(checkbox);
 			if (i > -1) {
 				var checked = $(allcheckboxes[i]).attr('data-prev-checked') == 'true' ? true : false;
@@ -285,9 +390,9 @@ $(function() {
 
 		function updateCheckAll() {
 			if (checkall) {
-				if (allcheckboxes.filter(':checked').length == allcheckboxes.length) {
+				if (allcheckboxes.filter(':visible:checked').length == allcheckboxes.filter(':visible').length) {
 					checkall.checked = true;
-				} else if (allcheckboxes.filter(':not(:checked)').length) {
+				} else {
 					checkall.checked = false;
 				}
 			}
@@ -299,7 +404,7 @@ $(function() {
 			row.click(function(e) {
 				if (e.shiftKey) {
 					checkElements(checkbox);
-			} 	else {
+				} else {
 					checkbox.checked = !checkbox.checked;
 					allcheckboxes.filter('[data-prev-checked]').removeAttr('data-prev-checked');
 					$(checkbox).attr('data-prev-checked', checkbox.checked);
@@ -323,7 +428,6 @@ $(function() {
 	});
 
 	var dataTables = $('.lms-ui-datatable');
-	var elementsToInitiate = 0;
 	dataTables.each(function() {
 		var trStyle = $(this).closest('tr').attr('style');
 		if (trStyle === undefined || !trStyle.match(/display:\s*none/)) {
@@ -484,8 +588,7 @@ $(function() {
 			if (elementsToInitiate > 0) {
 				elementsToInitiate--;
 				if (!elementsToInitiate) {
-					$('div#lms-ui-spinner').hide();
-					$('div#pagecontent').show();
+					show_pagecontent();
 				}
 			}
 		}).on('column-visibility.dt', function(e, settings, column, visible) {
@@ -763,8 +866,7 @@ $(function() {
 					if (elementsToInitiate > 0) {
 						elementsToInitiate--;
 						if (!elementsToInitiate) {
-							$('div#lms-ui-spinner').hide();
-							$('div#pagecontent').show();
+							show_pagecontent();
 						}
 					}
 				});
@@ -828,8 +930,7 @@ $(function() {
 	}
 
 	if (!elementsToInitiate) {
-		$('div#lms-ui-spinner').hide();
-		$('div#pagecontent').show();
+		show_pagecontent();
 	}
 
 	// quick search input auto show/hide support
@@ -848,7 +949,9 @@ $(function() {
 		('input.lms-ui-quick-search-active', qs_inputs).removeClass('lms-ui-quick-search-active');
 		$(this).next().addClass('lms-ui-quick-search-active').focus();
 	});
-	qs_inputs.first().addClass('lms-ui-quick-search-active').focus();
+	if (!location.hash.length) {
+		qs_inputs.first().addClass('lms-ui-quick-search-active').focus();
+	}
 
 	$(document).keydown(function(e) {
 		if (e.keyCode != 9)
