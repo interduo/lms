@@ -455,8 +455,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->Text(7, 209, $this->data['division_zip'] . ' ' . $this->data['division_city']);
 
 		/* account */
-		$this->backend->SetFont('arial', 'B', 9);
-		$this->backend->Text(7, 219, bankaccount($this->data['customerid'], $this->data['account']));
+		$this->backend->SetFont('arial', 'B', 8);
+		if (count($this->data['bankaccounts']) == 1)
+			$account = $this->data['bankaccounts'][0];
+		else
+			$account = bankaccount($this->data['customerid'], $this->data['account']);
+		$this->backend->Text(7, 219, $account);
 
 		/* customer name */
 		$this->backend->SetFont('arial', '', 9);
@@ -501,8 +505,12 @@ class LMSTcpdfInvoice extends LMSInvoice {
 		$this->backend->Text(67, 206, $this->data['division_address'] . ', ' . $this->data['division_zip'] . ' ' . $this->data['division_city']);
 
 		/* account */
-		$this->backend->SetFont('arial', 'B', 9);
-		$this->backend->Text(67, 215, format_bankaccount(bankaccount($this->data['customerid'], $this->data['account'])));
+		$this->backend->SetFont('arial', 'B', 8);
+		if (count($this->data['bankaccounts']) == 1)
+			$account = $this->data['bankaccounts'][0];
+		else
+			$account = bankaccount($this->data['customerid'], $this->data['account']);
+		$this->backend->Text(67, 215, format_bankaccount($account));
 
 		/* currency */
 		$this->backend->SetFont('arial', 'B', 10);
