@@ -136,7 +136,7 @@ if(isset($_POST['event']))
 					$event['status'],
 					intval($event['custid']),
 					$event['type'],
-					$id,
+					$event['nodeid'],
 					empty($event['ticketid']) ? null : $event['ticketid'],
 					));
 
