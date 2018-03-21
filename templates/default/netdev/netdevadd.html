@@ -263,11 +263,8 @@
 
 </form>
 
-<script type="text/javascript" src="img/lms-ui-iconselectmenu.js"></script>
 <script type="text/javascript">
 <!--
-    var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
-
     document.forms['netdevadd'].elements['netdev[name]'].focus();
     setNNProject();
 
@@ -327,6 +324,8 @@
         }
     }
 
+    var customer_addresses = new LmsUiIconSelectMenu( "#customer_addresses" );
+
     /*!
      * \brief Update customer addresses list on input change.
      */
@@ -335,20 +334,21 @@
 
         updateLocationBoxesDisplay( id );
 
-        if ( id != 'undefined' && id > 0 ) {
-            customer_addresses.setAddressList( getCustomerAddresses(id) );
-        }
+        getCustomerAddresses(id, function(addresses) {
+            customer_addresses.setAddressList( addresses );
+        });
     };
 
     updateLocationBoxesDisplay( {intval($netdev.ownerid)} );
 
-    {if $netdev.address_id && $netdev.ownerid}
-        customer_addresses.setAddressList( getCustomerAddresses( {intval($netdev.ownerid)} ) );
+    getCustomerAddresses( {intval($netdev.ownerid)}, function(addresses) {
+        customer_addresses.setAddressList( addresses );
+        {if $netdev.address_id && $netdev.ownerid}
         $( '#customer_addresses' ).val( {$netdev.address_id} );
-    {/if}
-
-    customer_addresses.init();
-    customer_addresses.refresh();
+        {/if}
+        customer_addresses.init();
+        customer_addresses.refresh();
+    });
 //-->
 </script>
 {/block}

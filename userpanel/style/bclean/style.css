@@ -28,3 +28,17 @@ TEXTAREA.alert,
 TEXTAREA.alert:focus {
 	background-color: #FF9B9B;
 }
+
+div.g-recaptcha > div {
+    margin: 0 auto 20px;
+    display: table;
+}
+
+li.list-group-item > strong {
+    margin-right: 10px;
+}
+
+div.form-group.row > label.col-form-label {
+    margin-left: 10px;
+    margin-right: 10px;
+}

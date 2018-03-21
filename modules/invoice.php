@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2017 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -160,8 +160,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 				.(!empty($_GET['divisionid']) ? ' AND d.divisionid = ' . intval($_GET['divisionid']) : '')
 				.(!empty($_GET['customerid']) ? ' AND d.customerid = '.intval($_GET['customerid']) : '')
 				.(!empty($_GET['numberplanid']) ? ' AND d.numberplanid = '.intval($_GET['numberplanid']) : '')
-				.(!empty($_GET['autoissued']) ? ' AND d.userid = 0' : '')
-				.(!empty($_GET['manualissued']) ? ' AND d.userid > 0' : '')
+				.(!empty($_GET['autoissued']) ? ' AND d.userid IS NULL' : '')
+				.(!empty($_GET['manualissued']) ? ' AND d.userid IS NOT NULL' : '')
 				.(!empty($_GET['groupid']) ?
 				' AND '.(!empty($_GET['groupexclude']) ? 'NOT' : '').'
 					EXISTS (SELECT 1 FROM customerassignments a
@@ -468,6 +468,9 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .= "\t\t<K_20>" . str_replace(',', '.', sprintf('%.2f', $invoice['taxest']['23.00']['tax'])) . "</K_20>\n";
 					}
 
+					if (isset($invoice['taxest']['-2']))
+						$jpk_data .= "\t\t<K_31>" . str_replace(',', '.', sprintf('%.2f', $invoice['taxest']['-2']['base'])) . "</K_31>\n";
+
 					$totaltax += $invoice['totaltax'];
 				}
 
@@ -506,6 +509,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						}
 					} else
 						$jpk_data .= "\t\t<P_5B>" . preg_replace('/[\s\-]/', '', $invoice['ten']) . "</P_5B>\n";
+				elseif ($jpk_type != 'fa')
+					$jpk_data .= "\t\t<P_5B>brak</P_5B>\n";
 
 				if (isset($invoice['invoice'])) {
 					if (isset($invoice['taxest']['23.00'])) {
@@ -635,7 +640,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 				}
 				$jpk_data .= "\t\t<P_16>false</P_16>\n";
 				$jpk_data .= "\t\t<P_17>false</P_17>\n";
-				$jpk_data .= "\t\t<P_18>false</P_18>\n";
+				$jpk_data .= "\t\t<P_18>" . (isset($invoice['taxest']['-2']['base']) ? 'true' : 'false') . "</P_18>\n";
 				$jpk_data .= "\t\t<P_19>false</P_19>\n";
 				$jpk_data .= "\t\t<P_20>false</P_20>\n";
 				$jpk_data .= "\t\t<P_21>false</P_21>\n";
@@ -712,8 +717,12 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 						$jpk_data .="\t\t<P_11>" . str_replace(',', '.', sprintf('%.2f', $position['totalbase'])) . "</P_11>\n";
 						$jpk_data .="\t\t<P_11A>" . str_replace(',', '.', sprintf('%.2f', $position['total'])) . "</P_11A>\n";
 					}
-					$jpk_data .="\t\t<P_12>" . ($position['taxvalue'] == -1 ? 'zw' : str_replace(',', '.', round($position['taxvalue'])))
-						. "</P_12>\n";
+					if ($position['taxvalue'] >= 0)
+						$jpk_data .= "\t\t<P_12>" . str_replace(',', '.', round($position['taxvalue'])) . "</P_12>\n";
+					elseif ($position['taxvalue'] == -1)
+						$jpk_data .= "\t\t<P_12>zw</P_12>\n";
+					else
+						$jpk_data .= "\t\t<P_12>0</P_12>\n";
 					$jpk_data .="\t</FakturaWiersz>\n";
 					$positions++;
 				}
