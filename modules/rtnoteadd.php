@@ -194,7 +194,7 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 $SMARTY->assign('note', $note);
 $SMARTY->assign('ticket', $LMS->GetTicketContents($note['ticketid']));
 $SMARTY->assign('userlist', $LMS->GetUserNames());
-$SMARTY->assign('queuelist', $LMS->GetQueueNames());
+$SMARTY->assign('queuelist', $LMS->GetQueueListByUser(Auth::GetCurrentUser(), false));
 $SMARTY->assign('error', $error);
 $SMARTY->display('rt/rtnoteadd.html');
 

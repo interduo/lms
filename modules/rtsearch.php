@@ -261,7 +261,7 @@ else
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$SMARTY->assign('queuelist', $LMS->GetQueueNames());
+$SMARTY->assign('queuelist', $LMS->GetQueueListByUser(Auth::GetCurrentUser(), false));
 $SMARTY->assign('categories', $categories);
 $SMARTY->assign('netnodelist', $netnodelist);
 $SMARTY->assign('userlist', $LMS->GetUserNames());

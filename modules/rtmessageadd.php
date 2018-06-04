@@ -377,7 +377,7 @@ $SMARTY->assign('message', $message);
 $SMARTY->assign('error', $error);
 $SMARTY->assign('ticket', $LMS->GetTicketContents($message['ticketid']));
 $SMARTY->assign('userlist', $LMS->GetUserNames());
-$SMARTY->assign('queuelist', $LMS->GetQueueList(false));
+$SMARTY->assign('queuelist', $LMS->GetQueueListByUser(Auth::GetCurrentUser(), false));
 $SMARTY->display('rt/rtmessageadd.html');
 
 ?>
