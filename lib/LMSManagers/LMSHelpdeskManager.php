@@ -87,10 +87,14 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				break;
 		}
 
-		if (isset($state) && is_array($state))
-			$statefilter = ' AND t.state IN (' . implode(',', $state) . ')';
-		elseif (empty($state))
+		if (empty($state)) {
 			$statefilter = '';
+		} elseif (is_array($state)) {
+			$statefilter = ' AND t.state IN (' . implode(',', $state) . ')';
+		} elseif ($state == -1)
+			$statefilter = ' AND t.state <> ' . RT_RESOLVED;
+		else
+			$statefilter = ' AND t.state = '.$state;
 
 		if (isset($priority) && is_array($priority))
 			$priorityfilter = ' AND t.priority IN (' . implode(',', $priority) . ')';
@@ -118,10 +122,10 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				$ownerfilter = '';
 				break;
 			case '0':
-				$ownerfilter = ' AND t.owner = 0';
+				$ownerfilter = ' AND t.owner IS NULL';
 				break;
 			case '-2':
-				$ownerfilter = ' AND t.owner != 0';
+				$ownerfilter = ' AND t.owner IS NOT NULL';
 				break;
 			default:
 				$ownerfilter = ' AND t.owner = ' . intval($owner) . ' ';
