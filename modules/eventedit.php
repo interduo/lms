@@ -115,7 +115,7 @@ if(isset($_POST['event']))
 
 		$event['date'] = $date;
 		$event['enddate'] = $enddate;
-		$event['helpdesk'] = isset($event['helpdesk']) && !empty($event['helpdeskid']) ? $event['helpdeskid'] : null;
+		$event['helpdesk'] = isset($event['helpdesk']) && !empty($event['ticketid']) ? $event['ticketid'] : null;
 		$LMS->EventUpdate($event);
 
 		$SESSION->redirect('?m=eventlist');
