@@ -356,7 +356,9 @@ function start_login_timeout(sec)
 {
     if (!sec) sec = 600;
     lms_login_timeout_value = sec;
-    lms_login_timeout = window.setTimeout('window.location.reload(true)', (sec + 5) * 1000);
+    lms_login_timeout = window.setTimeout(function() {
+            window.location.assign(window.location.href);
+        }, (sec + 5) * 1000);
 }
 
 function reset_login_timeout()
