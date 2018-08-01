@@ -85,7 +85,7 @@ function GetInvoicesList($search=NULL, $cat=NULL, $group=NULL, $hideclosed=NULL,
 				$where = ' AND UPPER(d.address) ?LIKE? UPPER('.$DB->Escape('%'.$search.'%').')';
 			break;
 			case 'value':
-				$having = ' HAVING CASE d.reference WHEN 0 THEN
+				$having = ' HAVING CASE WHEN d.reference IS NULL THEN
 					    SUM(a.value*a.count) 
 					    ELSE
 					    SUM((a.value+b.value)*(a.count+b.count)) - SUM(b.value*b.count)
