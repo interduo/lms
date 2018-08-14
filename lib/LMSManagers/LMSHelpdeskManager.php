@@ -422,9 +422,11 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				    FROM rtcategories c
 				    LEFT JOIN rtticketcategories tc ON c.id = tc.categoryid
 				    LEFT JOIN rttickets t ON t.id = tc.ticketid
-				    WHERE c.id IN (' . implode(',', $catids) . ')
+				    LEFT JOIN rtrights r ON r.queueid = t.queueid AND r.userid = ?
+				    WHERE c.id IN (' . implode(',', $catids) . ') AND r.rights > 0
 				    GROUP BY c.id, c.name
-				    ORDER BY c.name');
+				    ORDER BY c.name',
+			array($userid));
     }
 
     public function GetQueueByTicketId($id)
