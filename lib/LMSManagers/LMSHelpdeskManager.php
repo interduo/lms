@@ -408,7 +408,8 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 
     public function RTStats()
     {
-        $categories = $this->GetCategoryListByUser(Auth::GetCurrentUser());
+		$userid = Auth::GetCurrentUser();
+        $categories = $this->GetCategoryListByUser($userid);
         if (empty($categories))
             return NULL;
         foreach ($categories as $category)
