@@ -2996,7 +2996,7 @@ URL: %url
 ('userpanel', 'show_last_years', '5', '', 0),
 ('directories','userpanel_dir','userpanel','',0);
 
-INSERT INTO invprojects (name, type) VALUES ('inherited', 1)
+INSERT INTO invprojects (name, type) VALUES ('inherited', 1);
 
 INSERT INTO netdeviceproducers (id, name) VALUES
 (1, 'Mikrotik'),
