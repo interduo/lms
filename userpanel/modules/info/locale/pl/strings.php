@@ -114,4 +114,6 @@ $_LANG['Enter customer data change rejection mail subject'] = 'Wprowadź temat l
 $_LANG['Rejection mail body:'] = 'Treść listu z odmową:';
 $_LANG['Enter customer data change rejection mail body'] = 'Wprowadź treść listu z odmową zmiany danych klienta';
 
+$_LANG['Show transactions from last selected years:'] = 'Pokaż transakcje z ostatnich wybranych lat:'
+
 ?>
