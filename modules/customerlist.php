@@ -66,7 +66,7 @@ if ($api) {
 	if (!isset($_GET['g']))
 		$SESSION->restore('clg', $customergroup);
 	else
-		$customergroup = array_filter($_GET['g'], 'intval');
+		$customergroup = Utils::filterIntegers($_GET['g']);
 	$SESSION->save('clg', $customergroup);
 
 	if (!isset($_GET['ng']))

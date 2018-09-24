@@ -26,9 +26,9 @@
 
 if (isset($_GET['id'])) {
 	if (is_array($_GET['id']))
-		$queuedata['id'] = array_filter($_GET['id'], 'intval');
+		$queuedata['id'] = Utils::filterIntegers($_GET['id']);
 	elseif (intval($_GET['id']))
-		$queuedata['id'] = array(intval($_GET['id']));
+		$queuedata['id'] = Utils::filterIntegers(array($_GET['id']));
 	if (!isset($queuedata['id']) || empty($queuedata['id']))
 		$SESSION->redirect('?m=rtqueuelist');
 	if (isset($queuedata['id']))
@@ -37,9 +37,9 @@ if (isset($_GET['id'])) {
 
 if (isset($_GET['catid'])) {
 	if (is_array($_GET['catid']))
-		$queuedata['catid'] = array_filter($_GET['catid'], 'intval');
+		$queuedata['catid'] = Utils::filterIntegers($_GET['catid']);
 	elseif (intval($_GET['catid']))
-		$queuedata['catid'] = array(intval($_GET['catid']));
+		$queuedata['catid'] = Utils::filterIntegers(array($_GET['catid']));
 }
 
 if (!empty($queuedata['id'])) {
@@ -117,7 +117,7 @@ if (isset($_GET['s'])) {
 	elseif ($_GET['s'] == -1)
 		$s = null;
 	else
-		$s = array(intval($_GET['s']));
+		$s = Utils::filterIntegers(array($_GET['s']));
 } elseif ($SESSION->is_set('rts'))
 	$SESSION->restore('rts', $s);
 else {
@@ -132,11 +132,11 @@ $SESSION->save('rts', $s);
 
 if (isset($_GET['priority'])) {
 	if (is_array($_GET['priority']))
-		$priority = $_GET['priority'];
+		$priority = Utils::filterIntegers($_GET['priority']);
 	elseif ($_GET['priority'] == 'all')
 		$priority = null;
 	else
-		$priority = array(intval($_GET['priority']));
+		$priority = Utils::filterIntegers(array($_GET['priority']));
 } elseif ($SESSION->is_set('rtprio'))
 	$SESSION->restore('rtprio', $priority);
 else {
