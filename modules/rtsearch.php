@@ -69,7 +69,7 @@ function RTSearch($search, $order='createtime,desc')
 		$where[] = 't.customerid = '.intval($search['custid']);
 	if(!empty($search['subject']))
 		$where[] = 't.subject ?LIKE? '.$DB->Escape('%'.$search['subject'].'%');
-	if(!empty($search['state']))
+	if (isset($search['state']) && strlen($search['state']))
 	{
 		if($search['state'] == '-1')
 			$where[] = 'state != '.RT_RESOLVED;
