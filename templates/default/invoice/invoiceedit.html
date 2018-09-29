@@ -307,6 +307,7 @@
 	<FORM METHOD="POST" ACTION="?m=invoiceedit&action=additem" NAME="additem">
 	<INPUT type="submit" class="hiddenbtn">
 	<INPUT TYPE="HIDDEN" NAME="tariffid" VALUE="0">
+	{block name="invoiceedit-additem"}
 	{if !$invoice.closed}
 	<TR>
 		<TD WIDTH="1%" NOWRAP>
@@ -354,6 +355,7 @@
 		</TD>
 	</TR>
 	{/if}
+	{/block}
 	<TR>
 		<TD COLSPAN="9" ALIGN="RIGHT">
 			<INPUT type="checkbox" name="original"{if preg_match('/original/i', $default_printpage)} checked{/if}> <A HREF="javascript:setType('original');">{trans("original")}</A>

@@ -356,6 +356,7 @@ window.open('?m=invoice&id={$newinvoice.invoice}&original={$newinvoice.original}
 	{/if}
 	</TBODY>
 	<TFOOT>
+	{block name="invoicenew-additem"}
 	<TR>
 		<TD class="bold nobr">
 			<INPUT type="submit" class="hiddenbtn">
@@ -405,6 +406,7 @@ window.open('?m=invoice&id={$newinvoice.invoice}&original={$newinvoice.original}
 			<A href="javascript:document.additem.submit(); "><IMG src="img/save.gif" alt="" {tip text="Add item"}></A>
 		</TD>
 	</TR>
+	{/block}
 	<TR>
 		<TD colspan="9" class="text-right nobr">
 			<TABLE width="100%">
