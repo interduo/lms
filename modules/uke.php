@@ -1061,8 +1061,8 @@ foreach ($netnodes as $netnodename => &$netnode) {
 	$ranges = $DB->GetAll("SELECT n.linktype, n.linktechnology,
 			a.city_id as location_city, a.street_id as location_street, a.house as location_house
 		FROM nodes n
-			LEFT JOIN addresses a ON n.address_id = a.id
-		WHERE n.ownerid IS NOT NULL AND a.city_id <> 0 AND n.netdev IN (" . implode(',', $netnode['netdevices']) . ")
+		LEFT JOIN addresses a ON n.address_id = a.id
+		WHERE n.ownerid IS NOT NULL AND a.city_id IS NOT NULL AND n.netdev IN (" . implode(',', $netnode['netdevices']) . ")
 		GROUP BY n.linktype, n.linktechnology, a.street_id, a.city_id, a.house");
 	if (empty($ranges))
 		continue;
