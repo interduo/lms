@@ -87,23 +87,6 @@ if(isset($_POST['event']))
 	if ($enddate && $date > $enddate)
 		$error['enddate'] = trans('End time must not precede start time!');
 
-	if (ConfigHelper::checkConfig('phpui.event_overlap_warning')
-		&& !$error && empty($event['overlapwarned']) && ($users = $LMS->EventOverlaps(array(
-			'begindate' => $date,
-			'begintime' => $event['begintime'],
-			'enddate' => $enddate,
-			'endtime' => $event['endtime'],
-			'users' => $event['userlist'],
-		)))) {
-		$users = array_map(function($userid) use ($userlist) {
-			return $userlist[$userid]['rname'];
-		}, $users);
-		$error['date'] = $error['enddate'] = $error['begintime'] = $error['endtime'] =
-			trans('Event is assigned to users which already have assigned an event in the same time: $a!',
-				implode(', ', $users));
-		$event['overlapwarned'] = 1;
-	}
-
 	if (!isset($event['customerid']))
 		$event['customerid'] = $event['custid'];
 
