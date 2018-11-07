@@ -126,7 +126,7 @@ function GetEventList($year=NULL, $month=NULL, $day=NULL, $forward=0, $customeri
 if ($edate = $SESSION->get('edate'))
 	list ($year, $month, $day) = explode('/', $SESSION->get('edate'));
 
-if (!empty($_POST)) {
+if (!isset($_POST['loginform']) && !empty($_POST)) {
 	$a = $_POST['a'];
 	$u = $_POST['u'];
 
