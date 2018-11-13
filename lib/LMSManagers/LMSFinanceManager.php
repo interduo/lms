@@ -1932,7 +1932,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                 $paymentlist[$idx] = $row;
             }
 
-        $paymentlist['total'] = sizeof($paymentlist);
+        $paymentlist['total'] = empty($paymentlist) ? 0 : count($paymentlist);
 
         return $paymentlist;
     }
