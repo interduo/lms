@@ -612,7 +612,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
         if ($network['hostid'])
             $network['hostname'] = $this->db->GetOne('SELECT name FROM hosts WHERE id=?', array($network['hostid']));
         $network['size'] = pow(2, 32 - $network['prefix']);
-        $network['assigned'] = sizeof($nodes);
+        $network['assigned'] = empty($nodes) ? 0 : count($nodes);
         $network['free'] = $network['size'] - $network['assigned'] - 2;
         if ($network['dhcpstart'])
             $network['free'] = $network['free'] - (ip_long($network['dhcpend']) - ip_long($network['dhcpstart']) + 1);

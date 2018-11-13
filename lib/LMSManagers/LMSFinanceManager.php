@@ -1639,7 +1639,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 			WHERE tariffid = ? AND commited = 1', array($id));
 
         // count of all customers with that tariff
-        $result['customerscount'] = sizeof($result['customers']);
+        $result['customerscount'] = empty($result['customers']) ? 0 : count($result['customers']);
         // count of all assignments
         $result['count'] = $all['count'];
         // count of 'active' assignments

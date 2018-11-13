@@ -827,7 +827,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 }
             }
 
-            $customerlist['total'] = sizeof($customerlist);
+            $customerlist['total'] = empty($customerlist) ? 0 : count($customerlist);
             $customerlist['state'] = $state;
             $customerlist['order'] = $order;
             $customerlist['direction'] = $direction;

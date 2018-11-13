@@ -140,7 +140,7 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             }
         }
 
-        $userlist['total'] = sizeof($userlist);
+        $userlist['total'] = empty($userlist) ? 0 : count($userlist);
         return $userlist;
     }
 
