@@ -3854,4 +3854,6 @@ $_LANG['<!settlement>- none -'] = '- brak -';
 $_LANG['<!settlement>next period'] = 'następny okres';
 $_LANG['<!settlement>current period'] = 'bieżący okres';
 
+$_LANG['Inexistent owner selected!'] = 'Wybrano nieistniejącego właściciela!';
+
 ?>
