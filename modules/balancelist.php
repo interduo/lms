@@ -83,15 +83,9 @@ function GetBalanceList($search=NULL, $cat=NULL, $group=NULL, $pagelimit=100, $p
 				documents.published, '
 				.$DB->Concat('UPPER(c.lastname)',"' '",'c.name').' AS customername
 				FROM cash
-				LEFT JOIN customers c ON (cash.customerid = c.id)
+				LEFT JOIN customerview c ON (cash.customerid = c.id)
 				LEFT JOIN documents ON (documents.id = docid)
-				LEFT JOIN (
-				        SELECT DISTINCT a.customerid
-					FROM customerassignments a
-					JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
-					WHERE e.userid = lms_current_user()
-				) e ON (e.customerid = cash.customerid)
-				WHERE e.customerid IS NULL'
+				WHERE 1=1 '
 				.$where
 				.(!empty($group['group']) ? 
 					' AND '.(!empty($group['exclude']) ? 'NOT' : '').' EXISTS (
