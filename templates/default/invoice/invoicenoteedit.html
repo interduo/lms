@@ -15,6 +15,11 @@
 		document.save.action = "?m=invoicenoteedit&action=save&print=1" + add;
 		document.save.submit();
 	}
+
+	$(document).on('change', '[name="cnote[numberplanid]"]', function() {
+		$('[name="cnote[number]"]').val('');
+	});
+
 //-->
 </script>
 <FORM NAME="setheader" METHOD="POST" ACTION="?m=invoicenoteedit&action=setheader">
