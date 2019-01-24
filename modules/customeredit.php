@@ -196,7 +196,7 @@ elseif (!$exists)
 	                        'customerdata' => $customerdata,
 	                    )
 	                );
-	                $customeradd = $hook_data['customeradd'];
+	                $customerdata = $hook_data['customerdata'];
 	                $id = $hook_data['id'];
 
 			if ($SYSLOG) {
