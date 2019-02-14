@@ -260,6 +260,25 @@ function getIdents( $city = null, $street = null, $only_unique_city_matches = fa
 		return array();
 }
 
+function getNamesWithSubcities($subcities, $street_id) {
+	$DB = LMSDB::getInstance();
+
+	$street_name_sql = "(CASE WHEN s.name2 IS NULL THEN s.name ELSE "
+		. $DB->Concat('s.name2', "' '", 's.name') . " END)";
+
+	return array(
+		'city' => $DB->GetOne("SELECT name FROM location_cities WHERE id = ?",
+			array($subcities['cityid'])),
+		'street' => $DB->GetOne("SELECT (CASE WHEN t.id IS NULL THEN " . $street_name_sql . " ELSE "
+			. $DB->Concat('t.name', "' '", $street_name_sql) . " END) AS street
+			JOIN location_streets s ON s.cityid = c.id
+			JOIN location_street_types t ON t.id = s.typeid
+			WHERE s.cityid IN (" . $subcities['cities'] . ")
+				AND s.id = ?",
+			array($street_id)),
+	);
+}
+
 function getNames($city_id, $street_id) {
 	$DB = LMSDB::getInstance();
 
@@ -277,7 +296,7 @@ function getNames($city_id, $street_id) {
 					. $DB->Concat('t.name', "' '", $street_name_sql) . " END) AS street
 			FROM location_cities c
 			JOIN location_streets s ON s.cityid = c.id
-			LEFT JOIN location_street_types t ON t.id = s.typeid
+			JOIN location_street_types t ON t.id = s.typeid
 			WHERE c.id = ? AND s.id = ?",
 			array($city_id, $street_id));
 	}
