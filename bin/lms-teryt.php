@@ -1275,6 +1275,84 @@ if ( isset($options['merge']) ) {
 }
 
 //==============================================================================
+// Reverse TERYT identifiers to textual representation with LMS database.
+//
+// -r --reverse
+//==============================================================================
+
+if ( isset($options['reverse']) ) {
+	if (!$quiet)
+		echo 'Reverse TERYT identifiers to textual representation with LMS database...' . PHP_EOL;
+	$updated = 0;
+
+	$addresses = $DB->GetAll("
+		(
+			SELECT a.id, a.city_id, a.street_id
+			FROM addresses a
+			JOIN customer_addresses ca ON ca.address_id = a.id
+			WHERE a.city_id IS NOT NULL
+		) UNION (
+			SELECT a.id, a.city_id, a.street_id
+			FROM addresses a
+			JOIN netdevices nd ON nd.address_id = a.id
+			WHERE a.city_id IS NOT NULL
+		) UNION (
+			SELECT a.id, a.city_id, a.street_id
+			FROM addresses a
+			JOIN netnodes nn ON nn.address_id = a.id
+			WHERE a.city_id IS NOT NULL
+		)
+	");
+
+	if ( !$addresses ) {
+		$addresses = array();
+	}
+
+	$location_cache = array();
+
+	$cities_with_sections = $LMS->GetCitiesWithSections();
+	$cities_with_sections_by_cityid = array();
+	foreach ($cities_with_sections as $city => $city_with_section)
+		$cities_with_sections_by_cityid[$city_with_section['cityid']] = $city_with_section;
+	unset($cities_with_sections);
+
+	foreach ( $addresses as $a ) {
+		$city_id = $a['city_id'];
+		$street_id = empty($a['street_id']) ? '-' : $a['street_id'];
+
+		if (!$quiet)
+			printf("City ID: '%s', Street ID: '%s' ", $city_id, $street_id);
+
+		$key = $city_id . ':' . $street_id;
+
+		if ( isset($location_cache[$key]) ) {
+			$names = $location_cache[$key];
+		} else {
+			if (isset($cities_with_sections_by_cityid[$city_id]) && $city_id != '-' && $street_id != '-')
+				$names = getNamesWithSubcities($cities_with_sections_by_cityid[$city_id], $street_id);
+			else
+				$names = getNames($city_id, $street_id == '-' ? null : $street_id);
+			$location_cache[$key] = $names;
+		}
+
+		if (!$quiet)
+			printf("=> City '%s', Street: '%s'" . PHP_EOL, $names['city'], empty($names['street']) ? '-' : $names['street']);
+
+		if (preg_match('/^rynek\s+rynek/i', $names['street']))
+			$names['street'] = preg_replace('/^rynek\s+/i', '', $names['street']);
+
+		$DB->Execute("UPDATE addresses SET city = ?, street = ? WHERE id = ?",
+			array($names['city'], $names['street'], $a['id']));
+
+		$updated++;
+	}
+
+	if (!$quiet)
+		echo 'Reversed TERYT identifiers: ' . $updated . PHP_EOL;
+	unset( $addresses, $updated, $location_cache );
+}
+
+//==============================================================================
 // Determine explicit node TERYT locations
 //
 // -e --explicit-node-locations
