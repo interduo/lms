@@ -31,8 +31,8 @@
 					<TD class="fbt nobr" style="width: 11%;">{trans("Downloaded:")}</TD>
 					<TD class="frightu nobr" style="width: 12%;">{trans("Uploaded:")}</TD>
 				</TR>
-				{section loop=$nodesessions name=session}
 				{cycle name=sessionclass values="light,lucid" print=false}
+				{section loop=$nodesessions name=session}
 				<TR class="{cycle name=sessionclass}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')">
 					<TD class="bold nobr">{$nodesessions[session].ipaddr}</TD>
 					<TD class="nobr">{$nodesessions[session].mac}</TD>
