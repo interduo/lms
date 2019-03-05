@@ -152,7 +152,7 @@ function RTSearch($search, $order='createtime,desc')
 
 $categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
 
-$netnodelist = $LMS->GetNetNodeList(array(),name);
+$netnodelist = $LMS->GetNetNodeList(array(), 'name');
 unset($netnodelist['total']);
 unset($netnodelist['order']);
 unset($netnodelist['direction']);
