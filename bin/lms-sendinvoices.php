@@ -201,6 +201,9 @@ if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
 	$SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
 }
 
+$invoice_filename = ConfigHelper::getConfig('sendinvoices.invoice_filename', 'invoice_%docid');
+$dnote_filename = ConfigHelper::getConfig('sendinvoices.debitnote_filename', 'dnote_%docid');
+
 if ($backup)
 	$count_limit = 0;
 else {
@@ -222,8 +225,6 @@ else {
 	$mail_subject = ConfigHelper::getConfig('sendinvoices.mail_subject', 'Invoice No. %invoice');
 	$mail_body = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
 	$mail_format = ConfigHelper::getConfig('sendinvoices.mail_format', 'text');
-	$invoice_filename = ConfigHelper::getConfig('sendinvoices.invoice_filename', 'invoice_%docid');
-	$dnote_filename = ConfigHelper::getConfig('sendinvoices.debitnote_filename', 'dnote_%docid');
 	$notify_email = ConfigHelper::getConfig('sendinvoices.notify_email', '', true);
 	$reply_email = ConfigHelper::getConfig('sendinvoices.reply_email', '', true);
 	$add_message = ConfigHelper::checkConfig('sendinvoices.add_message');
@@ -329,6 +330,8 @@ $docs = $DB->GetAll($query, $args);
 if (!empty($docs)) {
 	if ($backup) {
 		foreach ($docs as $doc) {
+			$doc['invoice_filename'] = $invoice_filename;
+			$doc['dnote_filename'] = $dnote_filename;
 			$document = $LMS->GetFinancialDocument($doc, $SMARTY);
 			if (!$quiet)
 				echo "Document " . $document['filename'] . " backed up." . PHP_EOL;
