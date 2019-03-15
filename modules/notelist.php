@@ -113,7 +113,7 @@ function GetNotesList($search=NULL, $cat=NULL, $group=NULL, $hideclosed=NULL, $o
 			            ' AND '.(!empty($group['exclude']) ? 'NOT' : '').' EXISTS (
 			            SELECT 1 FROM customerassignments WHERE customergroupid = '.intval($group['group']).'
 			            AND customerid = d.customerid)' : '')
-			.' GROUP BY d.id, number, cdate, d.customerid, 
+			.' GROUP BY d.id, number, cdate, cancelled, d.customerid, 
 			d.name, address, zip, city, numberplans.template, closed, published, c.name '
 			.(isset($having) ? $having : '')
 			.$sqlord.' '.$direction))
