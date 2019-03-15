@@ -406,6 +406,11 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                         . ' ORDER BY name');
     }
 
+    public function GetCategoryName($id)
+    {
+        return $this->db->GetOne('SELECT name FROM rtcategories WHERE id=?', array($id));
+    }
+
     public function RTStats()
     {
 		$userid = Auth::GetCurrentUser();

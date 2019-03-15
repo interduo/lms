@@ -1519,6 +1519,12 @@ class LMS
         return $manager->GetCategory($id);
     }
 
+    public function GetCategoryName($id)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->GetCategoryName($id);
+    }
+
     public function GetUserRightsToCategory($user, $category, $ticket = NULL)
     {
         $manager = $this->getHelpdeskManager();
