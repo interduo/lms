@@ -67,6 +67,8 @@ interface LMSHelpdeskManagerInterface
 
     public function GetCategoryListByUser($userid = NULL);
 
+    public function GetCategoryName($id);
+
     public function RTStats();
 
     public function GetQueueByTicketId($id);
