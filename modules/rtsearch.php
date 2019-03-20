@@ -123,6 +123,7 @@ function RTSearch($search, $order='createtime,desc')
 			(CASE WHEN m.lastmodified IS NULL THEN 0 ELSE m.lastmodified END) AS lastmodified, t.deleted, t.deltime,
 			t.priority
 			FROM rttickets t
+			JOIN rtrights r ON r.queueid = t.queueid AND r.userid = ' . Auth::GetCurrentUser() . '
 			LEFT JOIN (SELECT MAX(createtime) AS lastmodified, ticketid FROM rtmessages GROUP BY ticketid) m ON m.ticketid = t.id
 			LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
 			LEFT JOIN rtqueues ON (rtqueues.id = t.queueid)
@@ -190,29 +191,19 @@ $SESSION->save('rto', $o);
 if ($SESSION->is_set('rtp') && !isset($_GET['page']) && !isset($search))
 	$SESSION->restore('rtp', $_GET['page']);
 
-if(isset($search) || isset($_GET['s']))
-{
-	if(!isset($search['queue']) || $search['queue'] == 0)
-	{
-		// if user hasn't got rights for all queues...
-		$queues = $DB->GetCol('SELECT queueid FROM rtrights WHERE userid=?', array(Auth::GetCurrentUser()));
-		if (!count($queues))
-			$search['queue'] = 0;
-		elseif (count($queues) != $DB->GetOne('SELECT COUNT(*) FROM rtqueues'))
-			$search['queue'] = $queues;
-	}
-	else
+if(isset($search) || isset($_GET['s'])) {
+	if (isset($search['queue']) && !empty($search['queue']))
 		if (is_array($search['queue']))
-			foreach($search['queue'] as $queue)
-			{
-				if(!$LMS->GetUserRightsRT(Auth::GetCurrentUser(), $queue))
+			foreach ($search['queue'] as $queue)
+				if (!$LMS->GetUserRightsRT(Auth::GetCurrentUser(), $queue))
 					$error['queue'] = trans('You have no privileges to review this queue!');
-			}
 		else
-			if(!$LMS->GetUserRightsRT(Auth::GetCurrentUser(), $search['queue']))
+			if (!$LMS->GetUserRightsRT(Auth::GetCurrentUser(), $search['queue']))
 				$error['queue'] = trans('You have no privileges to review this queue!');
+	else
+		$search['queue'] = null;
 
-	if(!isset($search['categories']))
+	if (!isset($search['categories']))
 		$search['catids'] = NULL;
 	else
 		foreach($search['categories'] as $catid => $val)
