@@ -47,6 +47,7 @@ if(isset($_GET['id']) && ($action == 'edit' || $action == 'convert'))
 	$SESSION->remove('invoicecontents');
 	$SESSION->remove('invoice');
 	$SESSION->remove('invoicecustomer');
+	$SESSION->remove('invoiceediterror');
 
 	$i = 0;
 	$invoicecontents = array();
