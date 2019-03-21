@@ -417,7 +417,8 @@ function module_main() {
 			$SMARTY->assign('helpdesk', $helpdesk);
 			$_GET['op'] = 'message';
 		}
-	}
+	} else
+		$SMARTY->assign('helpdesk', array());
 
 	if (isset($_GET['op']) && $_GET['op'] == 'view') {
 		if ($LMS->TicketExists($_GET['id'])) {
