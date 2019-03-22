@@ -5,13 +5,13 @@
 <div class="card">
 	<div class="card-header">
 		{if $userinfo.type == 0}
-			{trans("Personal data")}
+			<strong>{trans("Personal data")}</strong>
 		{else}
-			{trans("Company data")}
+			<strong>{trans("Company data")}</strong>
 		{/if}
 		{if $rights.info.edit_addr || $rights.info.edit_addr_ack || $rights.info.edit_contact || $rights.info.edit_contact_ack}
 			{if $rights.info.edit_addr || $rights.info.edit_addr_ack || $rights.info.edit_contact || $rights.info.edit_contact_ack}
-				<button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#updateuserinfobox" accesskey="A">
+				<button id="updatedatabtn" type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#updateuserinfobox" accesskey="A">
 					{trans("Actualize data")}
 				</button>
 			{/if}
@@ -34,7 +34,7 @@
 		</li>
 		{if $userinfo.emails}
 			<li class="list-group-item">
-				<strong>{trans("E-mail:")}</strong>
+				<strong>{trans("E-mail:")}</strong><BR />
 				{foreach $userinfo.emails as $email}
 				    {$emailid='email'|cat:$email.id}
 				    {if isset($fields_changed[$emailid])}
@@ -44,10 +44,10 @@
 				    {/if}
 				    {if !$email@last}<br>{/if}
 				{/foreach}
-			</li>
+		</li>
 		{/if}
 		<li class="list-group-item">
-			<strong>{trans("Address:")}</strong>
+			<strong>{trans("Address:")}</strong><BR />
 			{if isset($fields_changed.street) || isset($fields_changed.building) || isset($fields_changed.apartment)}
 			    <del>{$userinfo.address}</del>&rarr;
 			    {if isset($fields_changed.street) && $fields_changed.street.fieldvalue != $userinfo.street}<mark>{$fields_changed.street.fieldvalue}</mark>{else}{$userinfo.street}{/if}
@@ -66,13 +66,13 @@
 		</li>
 		{if $userinfo.serviceaddr}
 			<li class="list-group-item">
-				<strong>{trans("Postal address:")}</strong>
+				<strong>{trans("Postal address:")}</strong><BR />
 				{$userinfo.serviceaddr}
 			</li>
 		{/if}
 		{if $userinfo.contacts}
 			<li class="list-group-item">
-				<strong>{trans("Phones:")}</strong>
+				<strong>{trans("Phones:")}</strong><BR />
 				{foreach $userinfo.contacts as $item}
 				    {$phoneid='phone'|cat:$item.id}
 				    {if isset($fields_changed[$phoneid])}
@@ -97,7 +97,7 @@
 					{elseif $item.type & $smarty.const.CONTACT_IM_FACEBOOK}
 						{trans("Facebook")}
 					{/if}
-				</strong>
+				</strong><BR />
 				{$item.uid}
 				{$imid='im'|cat:$item.id}
 				{if isset($fields_changed[$imid])}
@@ -134,7 +134,7 @@
 	</li>
 	{if $userinfo.bankaccount || $userinfo.accounts}
 		<li class="list-group-item">
-			<strong>{trans("Bank accounts:")}</strong>
+			<strong>{trans("Bank accounts:")}</strong><BR />
 			{if $userinfo.bankaccount}
 				{format_bankaccount($userinfo.bankaccount)|replace:" ":"&nbsp;"}
 			{/if}
@@ -147,17 +147,17 @@
 	{/if}
 </ul>
 </div>
-
 {/box}
+
 <!-- Modal -->
 <div class="modal fade" id="updateuserinfobox" tabindex="-1" role="dialog" aria-labelledby="updateuserinfobox" aria-hidden="true">
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
+				<h4 class="modal-title">{trans("Information about the subscriber")}</h4>
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
-				<h4 class="modal-title">{trans("Information about the subscriber")}</h4>
 			</div>
 			<div class="modal-body">
 				{if $error.ssn}
@@ -169,12 +169,12 @@
 				<form name="useredit" method="post" action="?m=info&f=updateusersave">
 					{if $rights.info.edit_addr || $rights.info.edit_addr_ack}
 						<div class="form-group">
-							<label for="lastname">{if $userinfo.type == 0}{trans("First and last name")}{else}{trans("Company name")}{/if}:</label>
+							<label for="lastname">{if $userinfo.type == $smarty.const.CTYPES_PRIVATE}{trans("Last name:")}{else}{trans("Company name:")}{/if}</label>
 							<input id="lastname" class="form-control" type="text" name="userdata[lastname]" value="{$userinfo.lastname|escape}" placeholder="{trans("Enter lastname")}">
 						</div>
-						{if $userinfo.type == 0}
+						{if $userinfo.type == $smarty.const.CTYPES_PRIVATE}
 							<div class="form-group">
-								<label for="firstname">{trans("First Name")}:</label>
+								<label for="firstname">{trans("First name:")}</label>
 								<input id="firstname" class="form-control" type="text" name="userdata[name]" value="{$userinfo.name|escape}" placeholder="{trans("Enter first name")}">
 							</div>
 						{/if}
@@ -183,33 +183,24 @@
 					{/if}
 
 					{if $rights.info.edit_addr || $rights.info.edit_addr_ack}
-						<div class="form-group row">
-							<label for="inputEmail3" class="col-xs-2 col-form-label">{trans("Street:")}</label>
-							<div class="col-xs-7">
-								<INPUT class="form-control" TYPE="TEXT" NAME="userdata[street]" VALUE="{$userinfo.street}" placeholder="{trans("Enter street name")}">
-							</div>
+						<div class="form-group">
+							<label for="inputEmail3" class="col-form-label">{trans("Street:")}</label>
+							<INPUT class="form-control" TYPE="TEXT" NAME="userdata[street]" VALUE="{$userinfo.street}" placeholder="{trans("Enter street name")}">
 						</div>
 						<div class="form-group row">
-							<label for="inputEmail3" class="col-xs-2 col-form-label">{trans("Building:")}</label>
-							<div class="col-xs-2">
-								<INPUT class="form-control" TYPE="TEXT" NAME="userdata[building]" VALUE="{$userinfo.building}" placeholder="{trans("Enter building number")}">
-							</div>
+							<label for="building" class="col-form-label">{trans("Building:")}</label>
+							<INPUT class="col-lg-2 form-control" id="building" TYPE="TEXT" NAME="userdata[building]" VALUE="{$userinfo.building}" placeholder="{trans("Enter building number")}">
 
-							<label for="inputEmail3" class="col-xs-2 col-form-label">{trans("Apartment:")}</label>
-							<div class="col-xs-2">
-								<INPUT class="form-control" TYPE="TEXT" NAME="userdata[apartment]" VALUE="{$userinfo.apartment}" placeholder="{trans("Enter apartment number")}">
-							</div>
+							<label for="apartment" class="col-form-label">{trans("Apartment:")}</label>
+							<INPUT class="col-lg-2 form-control" id="apartment" TYPE="TEXT" NAME="userdata[apartment]" VALUE="{$userinfo.apartment}" placeholder="{trans("Enter apartment number")}">
 						</div>
 
 						<div class="form-group row">
-							<label for="inputEmail3" class="col-xs-2 col-form-label">{trans("Zip:")}</label>
-							<div class="col-xs-3">
-								<INPUT class="form-control" TYPE="TEXT" NAME="userdata[zip]" VALUE="{$userinfo.zip}" placeholder="{trans("Enter zip code")}">
-							</div>
-							<label for="inputEmail3" class="col-xs-2 col-form-label">{trans("City:")}</label>
-							<div class="col-xs-5">
-								<INPUT class="form-control" TYPE="TEXT" NAME="userdata[city]" VALUE="{$userinfo.city}" placeholder="{trans("Enter city name")}">
-							</div>
+							<label for="zip" class="col-form-label">{trans("Zip:")}</label>
+							<INPUT class="col-lg-2 form-control" id="zip" TYPE="TEXT" NAME="userdata[zip]" VALUE="{$userinfo.zip}" placeholder="{trans("Enter zip code")}">
+
+							<label for="city" class="col-form-label">{trans("City:")}</label>
+							<INPUT class="col-lg-5 form-control" id="city" TYPE="TEXT" NAME="userdata[city]" VALUE="{$userinfo.city}" placeholder="{trans("Enter city name")}">
 						</div>
 					{else}
 						{$userinfo.address}, {$userinfo.zip} {$userinfo.city}
