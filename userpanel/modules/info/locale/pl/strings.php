@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-$_LANG['Actualize data'] = 'Aktualizuj dane';
+$_LANG['Actualize'] = 'Aktualizuj';
 $_LANG['Add computer'] = 'Dodaj komputer';
 $_LANG['Balance:'] = 'Bilans:';
 $_LANG['city'] = 'miasto';
