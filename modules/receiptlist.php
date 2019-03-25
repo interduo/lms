@@ -174,7 +174,7 @@ if (isset($_POST['from'])) {
 } elseif ($SESSION->is_set('rlf'))
 	$SESSION->restore('rlf', $from);
 else
-	$from = 0;
+	$from = mktime(0, 0, 0);
 
 if (isset($_POST['to'])) {
 	if (!empty($_POST['to'])) {
@@ -187,7 +187,7 @@ if (isset($_POST['to'])) {
 } elseif ($SESSION->is_set('rlt'))
 	$SESSION->restore('rlt', $to);
 else
-	$to = 0;
+	$to = mktime(23, 59, 59);
 
 if ($from && $to && $from > $to) {
 	$error['datefrom'] = trans('Incorrect date range!');
