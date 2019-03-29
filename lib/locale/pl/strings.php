@@ -3856,4 +3856,6 @@ $_LANG['<!settlement>current period'] = 'bieżący okres';
 
 $_LANG['Inexistent owner selected!'] = 'Wybrano nieistniejącego właściciela!';
 
+$_LANG['shorter than minute'] = 'krócej niż minutę';
+
 ?>
