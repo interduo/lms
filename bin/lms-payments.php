@@ -365,8 +365,8 @@ $assigns = $DB->GetAll("SELECT * FROM payments WHERE value <> 0
 if (!empty($assigns))
 	foreach ($assigns as $assign) {
 		$DB->Execute("INSERT INTO cash (time, type, value, customerid, comment) 
-			VALUES (?, 1, ? * -1, 0, ?)",
-			array($currtime, $assign['value'], $assign['name']."/".$assign['creditor']));
+			VALUES (?, ?, ?, ?, ?)",
+			array($currtime, 1, $assign['value'] * -1, null, $assign['name']."/".$assign['creditor']));
 		if (!$quiet) print "CID:0\tVAL:".$assign['value']."\tDESC:".$assign['name']."/".$assign['creditor'] . PHP_EOL;
 	}
 
