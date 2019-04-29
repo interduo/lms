@@ -263,23 +263,21 @@ switch($action)
 
 			if ($contents[$idx]['valuenetto'] != $item['valuenetto'])
 				$contents[$idx]['valuebrutto'] = $contents[$idx]['valuenetto'] * ($taxvalue / 100 + 1);
-			elseif (f_round($contents[$idx]['valuebrutto']) == f_round($item['valuebrutto']))
-				$contents[$idx]['valuebrutto'] = $item['valuebrutto'];
 
 			if ((isset($item['deleted']) && $item['deleted']) || empty($contents[$idx]['count'])) {
 				$contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']);
 				$contents[$idx]['cash'] = f_round($invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
 				$contents[$idx]['count'] = f_round(-1 * $invoicecontents[$idx]['count'], 3);
-			} elseif ($contents[$idx]['count'] != $item['count']
-				|| $contents[$idx]['valuebrutto'] != $item['valuebrutto']) {
+			} elseif ($contents[$idx]['count'] == $item['count']) {
+				$contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']), 2);
+				$contents[$idx]['valuebrutto'] = f_round(($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']) / $contents[$idx]['count']);
+				$contents[$idx]['count'] = 0;
+			} elseif (($contents[$idx]['valuenetto'] != $item[$idx]['valuenetto'])
+					|| ($contents[$idx]['valuebrutto'] != $item[$idx]['valuebrutto'])) {
+				$contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] * $contents[$idx]['count']
+					- $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']), 2);
 				$contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
 				$contents[$idx]['count'] = f_round($contents[$idx]['count'] - $invoicecontents[$idx]['count'], 3);
-				if (empty($contents[$idx]['count']))
-					$contents[$idx]['cash'] = f_round(-1 * $contents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
-				elseif (empty($contents[$idx]['valuebrutto']))
-					$contents[$idx]['cash'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto'] * $contents[$idx]['count'], 2);
-				else
-					$contents[$idx]['cash'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
 			} else {
 				$contents[$idx]['cash'] = 0;
 				$contents[$idx]['valuebrutto'] = 0;
