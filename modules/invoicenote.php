@@ -265,7 +265,7 @@ switch($action)
 				$contents[$idx]['valuebrutto'] = $contents[$idx]['valuenetto'] * ($taxvalue / 100 + 1);
 
 			if ((isset($item['deleted']) && $item['deleted']) || empty($contents[$idx]['count'])) {
-				$contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']);
+				$contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto']);
 				$contents[$idx]['cash'] = f_round($invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
 				$contents[$idx]['count'] = f_round(-1 * $invoicecontents[$idx]['count'], 3);
 			} elseif ($contents[$idx]['count'] == $item['count']) {
