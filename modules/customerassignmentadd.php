@@ -79,12 +79,8 @@ if (isset($_POST['assignment'])) {
 			$tariffid = $LMS->AddAssignment($a);
 		}
 
-        if ($a['tarifftype'] == TARIFF_PHONE && !empty($a['phones'])) {
+        if ($a['tarifftype'] == TARIFF_PHONE && !empty($a['phones']))
             $tariffid = $tariffid[0];
-
-            foreach($a['phones'] as $p)
-                $DB->Execute('INSERT INTO voip_number_assignments (number_id, assignment_id) VALUES (?,?)', array($p, $tariffid));
-        }
 
 		$DB->CommitTrans();
 
