@@ -774,7 +774,7 @@ if (empty($types) || in_array('reminder', $types)) {
 			LEFT JOIN divisions ON divisions.id = c.divisionid
 			WHERE (cash.docid IS NULL AND ((cash.type <> 0 AND cash.time < $dayend)
 				OR (cash.type = 0 AND cash.time + ((CASE c.paytime WHEN -1 THEN
-				(CASE WHEN divisions.inv_paytime IS NULL THEN $deadline ELSE divisions.inv_paytime END) ELSE c.paytime END) + ?) * 86400 < $dayend)))
+				(CASE WHEN divisions.inv_paytime IS NULL THEN $deadline ELSE divisions.inv_paytime END) ELSE c.paytime END) - ?) * 86400 < $dayend)))
 				OR (cash.docid IS NOT NULL AND ((documents.type IN (?, ?) AND cash.time < $dayend)
 					OR (documents.type IN (?, ?) AND ((documents.cdate / 86400) + documents.paytime - ?) * 86400 < $dayend)))
 			GROUP BY cash.customerid
@@ -787,7 +787,7 @@ if (empty($types) || in_array('reminder', $types)) {
 			CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS,
 			CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
 			CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
-			$days, DOC_RECEIPT, DOC_CNOTE, DOC_INVOICE, DOC_DNOTE, $days, $days, $days));
+			$days < 0 ? $days : 0, DOC_RECEIPT, DOC_CNOTE, DOC_INVOICE, DOC_DNOTE, $days < 0 ? $days : 0, $days, $days));
 	if (!empty($documents)) {
 		$notifications['reminder']['customers'] = array();
 		foreach ($documents as $row) {
