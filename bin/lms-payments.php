@@ -490,7 +490,7 @@ if ($billings) {
 	$billing_count = count($billings);
 	foreach ($services as $service_idx => &$service) {
 		$assigns[] = $service;
-		if ($billing_idx == $billing_count || $service['tarifftype'] != SERVICE_PHONE)
+		if ($billing_idx == $billing_count || $service['tarifftype'] != TARIFF_PHONE)
 			continue;
 
 		$service_customerid = $service['customerid'];
