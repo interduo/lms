@@ -87,6 +87,8 @@ interface LMSHelpdeskManagerInterface
 
 	public function GetLastMessageID();
 
+	public function LimitQueuesToUserpanelEnabled($queuelist, $queueid);
+
     public function GetTicketContents($id);
 
     public function GetMessage($id);
