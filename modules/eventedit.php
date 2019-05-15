@@ -166,10 +166,6 @@ if (isset($_POST['event'])) {
         }
     }
 
-    if (!isset($event['customerid'])) {
-        $event['customerid'] = $event['custid'];
-    }
-
     if (!$error) {
         $event['private'] = isset($event['private']) ? 1 : 0;
 

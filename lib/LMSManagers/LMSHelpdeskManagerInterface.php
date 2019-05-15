@@ -39,8 +39,6 @@ interface LMSHelpdeskManagerInterface
 
     public function GetQueueList(array $params);
 
-    public function GetQueueListByUser($userid, $stats = true);
-
     public function GetQueueNames();
 
     public function GetMyQueues();

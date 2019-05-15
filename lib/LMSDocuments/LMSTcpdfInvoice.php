@@ -705,10 +705,6 @@ class LMSTcpdfInvoice extends LMSInvoice
             $tmp .= "\n" . trans('Bank account:') . "\n" . '<B>' . $account_text . '<B>';
         }
 
-        if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_bankaccount', true))) {
-            $tmp .= "\n" . trans('Bank account:') . "\n" . '<B>' . implode("\n", $accounts) . '<B>';
-        }
-
         $tmp = preg_split('/\r?\n/', $tmp);
         foreach ($tmp as $line) {
             $seller .= $line . '<br>';

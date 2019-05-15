@@ -390,38 +390,6 @@ switch ($action) {
             }
         }
 
-        if (!$cnote['number']) {
-            $cnote['number'] = $LMS->GetNewDocumentNumber(array(
-                'doctype' => DOC_CNOTE,
-                'planid' => $cnote['numberplanid'],
-                'cdate' => $cnote['cdate'],
-                'customerid' => $customer['id'],
-            ));
-        } else {
-            if (!preg_match('/^[0-9]+$/', $cnote['number'])) {
-                $error['number'] = trans('Credit note number must be integer!');
-            } elseif (($cnote['cdate'] != $cnote['oldcdate'] || $cnote['number'] != $cnote['oldnumber']
-                || $cnote['numberplanid'] != $cnote['oldnumberplanid']) && ($docid = $LMS->DocumentExists(array(
-                    'number' => $cnote['number'],
-                    'doctype' => DOC_CNOTE,
-                    'planid' => $cnote['numberplanid'],
-                    'cdate' => $cnote['cdate'],
-                    'customerid' => $customer['id'],
-                ))) > 0 && $docid != $iid) {
-                $error['number'] = trans('Credit note number $a already exists!', $cnote['number']);
-            }
-
-            if ($error) {
-                $cnote['number'] = $LMS->GetNewDocumentNumber(array(
-                    'doctype' => DOC_CNOTE,
-                    'planid' => $cnote['numberplanid'],
-                    'cdate' => $cnote['cdate'],
-                    'customerid' => $customer['id'],
-                ));
-                $error = null;
-            }
-        }
-
         $args = array(
             'cdate' => $cdate,
             'sdate' => $sdate,

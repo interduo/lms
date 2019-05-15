@@ -227,10 +227,6 @@ class LMSEzpdfInvoice extends LMSInvoice
             $tmp .= "\n" . trans('Bank account:') . "\n" . '<b>' . $account_text . '</b>';
         }
 
-        if (ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_bankaccount', true))) {
-            $tmp .= "\n" . trans('Bank account:') . "\n" . '<b>' . implode("\n", $accounts) . '</b>';
-        }
-
         $tmp = preg_split('/\r?\n/', $tmp);
         foreach ($tmp as $line) {
             $y = $y - $this->backend->text_align_left($x, $y, $font_size, $line);

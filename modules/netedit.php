@@ -157,7 +157,7 @@ if (isset($_POST['networkdata'])) {
             $error['gateway'] =  trans('Specified gateway address does not match with network address!');
         }
     }
-    
+
     if ($networkdata['dhcpstart']!='') {
         if (!check_ip($networkdata['dhcpstart'])) {
             $error['dhcpstart'] = trans('Incorrect IP address for DHCP range start!');
@@ -173,7 +173,7 @@ if (isset($_POST['networkdata'])) {
             $error['dhcpend'] = trans('IP address for DHCP range end does not match with network address!');
         }
     }
-    
+
     if (!isset($error['dhcpstart']) && !isset($error['dhcpend'])) {
         if (($networkdata['dhcpstart']!='' && $networkdata['dhcpend']=='')||($networkdata['dhcpstart']=='' && $networkdata['dhcpend']!='')) {
             $error['dhcpend'] = trans('Both IP addresses for DHCP range are required!');

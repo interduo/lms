@@ -1663,12 +1663,6 @@ class LMS
         return $manager->GetQueueList($params);
     }
 
-    public function GetQueueListByUser($userid, $stats = true)
-    {
-        $manager = $this->getHelpdeskManager();
-        return $manager->GetQueueListByUser($userid, $stats);
-    }
-
     public function GetQueueNames()
     {
         $manager = $this->getHelpdeskManager();

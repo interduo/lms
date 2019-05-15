@@ -122,11 +122,6 @@ if (isset($_GET['ticketid'])) {
             rrmdir($tmppath);
         }
 
-        // deletes uploaded files
-        if (!empty($files)) {
-            rrmdir($tmppath);
-        }
-
         // setting status and the ticket owner
         $props = array(
             'queueid' => $note['queueid'],
