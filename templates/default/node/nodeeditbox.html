@@ -1,14 +1,15 @@
 <!--// $Id$ //-->
 
 <style>
-    .tab-beautify td { padding: 3px; }
-    .tab-beautify tr td:nth-child(2) {
-        font-weight: bold;
-        white-space: nowrap;
-    }
+
+	.tab-beautify td { padding: 3px; }
+	.tab-beautify tr td:nth-child(2) {
+		font-weight: bold;
+		white-space: nowrap;
+	}
+
 </style>
 
-<script type="text/javascript" src="img/netnodehelper.js"></script>
 {include file="google-maps.html"}
 <FORM name="editnode" ID="editnode" METHOD="POST" ACTION="?m=nodeedit&amp;id={$nodeinfo.id}">
 <input type="submit" class="hiddenbtn">
@@ -47,10 +48,10 @@
 										{trans("Network:")}
 									</td>
 									<td>
-										<select size="1" name="nodeeditnetid" {tip text="Choose network" trigger="netid"}>
+										<select size="1" name="nodeedit[netid]" {tip text="Choose network" trigger="netid"}>
 											<option value="0">{trans("- automatic selection -")}</option>
 											{foreach $networks as $net}
-												<option value="{$net.id}" {if $net.id == $nodeinfo.netid} selected{/if}{if $net.disabled == 1} class="alert"{/if}>{$net.name|truncate:20:"":true}: {$net.address}/{$net.prefix}</option>
+												<option value="{$net.id}" {if $net.id == $nodeinfo.netid} selected{/if}{if $net.disabled == 1} class="lms-ui-error"{/if}>{$net.name|truncate:20:"":true}: {$net.address}/{$net.prefix}</option>
 											{/foreach}
 										</select>
 										<label><input type="checkbox" name="nodeedit[wholenetwork]" value="1" onchange="change_wholenetwork()"{if $nodeinfo.wholenetwork} checked{/if}>&nbsp;{trans("the whole network")}</label>
@@ -65,12 +66,12 @@
 										{trans("IP address:")}
 									</td>
 									<td>
-										<input type="text" name="nodeeditipaddr" value="{$nodeinfo.ip}" required {tip text="Enter IP address" trigger="ipaddr"}>
+										<input type="text" name="nodeedit[ipaddr]" value="{$nodeinfo.ipaddr}" required {tip text="Enter IP address" trigger="ipaddr"}>
 										<a href="javascript: void(0);" onClick="return ipchoosewin({
-												ipelem: document.editnode.nodeeditipaddr,
-												netelem: document.editnode.nodeeditnetid,
-												ip: document.editnode.nodeeditipaddr.value,
-												netid: document.editnode.nodeeditnetid.value
+												ipelem: document.editnode['nodeedit[ipaddr]'],
+												ip: document.editnode['nodeedit[ipaddr]'].value,
+												netelem: document.editnode['nodeedit[netid]'],
+												netid: document.editnode['nodeedit[netid]'].value
 											});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 										<br>
 										<a href="#" id="selectfirstfreeaddress">{trans("Select first free address")}</a>
@@ -80,10 +81,10 @@
 								<!--
 									$(function() {
 										$('#selectfirstfreeaddress').click(function() {
-											var netid = $('[name="nodeeditnetid"]').val();
+											var netid = $('[name="nodeedit[netid]"]').val();
 											if (netid == 0)
 												return;
-											xajax_getFirstFreeAddress(netid, $('[name="nodeeditipaddr"]').uniqueId().attr('id'));
+											xajax_getFirstFreeAddress(netid, $('[name="nodeedit[ipaddr]"]').uniqueId().attr('id'));
 										});
 									});
 								//-->
@@ -98,11 +99,14 @@
 										{trans("Pub. IP address:")}
 									</td>
 									<td>
-										<input type="text" name="nodeeditipaddrpub" {if $nodeinfo.ip_pub != "0.0.0.0"}value="{$nodeinfo.ip_pub}"{/if} {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}>
+										<input type="hidden" name="nodeedit[pubnetid]" value="{if $nodeinfo.pubnetid}{$nodeinfo.pubnetid}{else}0{/if}">
+										<input type="text" name="nodeedit[ipaddr_pub]" {if $nodeinfo.ipaddr_pub != "0.0.0.0"}value="{$nodeinfo.ipaddr_pub}"{/if} {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}>
 										<a href="javascript: void(0);" onClick="return ipchoosewin({
-												ipelem: document.editnode.nodeeditipaddrpub,
-												netelem: null,
-												netid: {if $nodeinfo.netpubid}{$nodeinfo.netpubid}{else}0{/if}
+												ipelem: document.editnode['nodeedit[ipaddr_pub]'],
+												ip: document.editnode['nodeedit[ipaddr_pub]'].value,
+												netelem: document.editnode['nodeedit[pubnetid]'],
+												netid: document.editnode['nodeedit[pubnetid]'].value,
+												privnetid: document.editnode['nodeedit[netid]'].value
 											});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 									</td>
 								</tr>
@@ -115,18 +119,8 @@
 									<td>
 										{trans("MAC address:")}
 									</td>
-									<td class="nobr">
-										<table style="width: 100%;" cellpadding="1" cellspacing="0">
-										{foreach from=$nodeinfo.macs item=item key=key}
-											<tr id="mac{$key}">
-												<td style="width: 100%;">
-													<input type="text" name="nodeedit[macs][{$key}]" value="{$item}" required {tip text="Enter MAC address" trigger="mac`$key`"}> <a href="javascript: void(0);" onClick="return macchoosewin(document.editnode.elements['nodeedit[macs][{$key}]']);" {tip text="Click to select MAC from the list"}>&raquo;&raquo;&raquo;</a>
-												</td>
-											</tr>
-										{/foreach}
-										</table>
-										<input type="hidden" id="macscount" value="{$item@total}">
-										<A href="javascript: newmac()">{trans("Add MAC address")} &raquo;&raquo;&raquo;</A>
+									<td class="lms-ui-mac-address-selection nobr">
+										{mac_address_selection form="nodeedit" macs=$nodeinfo.macs}
 									</td>
 								</tr>
 
@@ -201,7 +195,7 @@
 										{trans("Investment project:")}
 									</td>
 									<td>
-										<select name="nodeedit[invprojectid]" ID="NNproject" value="{$nodeinfo.invprojectid}" {tip text="Select project"} onchange="setNNProject();">
+										<select name="nodeedit[invprojectid]" ID="project" value="{$nodeinfo.invprojectid}" {tip text="Select project"}>
 											<option value="-2" {if ($nodeinfo.invprojectid == '-2' ) } selected="selected" {/if} >- {trans("none")} -</option>
 											<option value="-1" {if ($nodeinfo.invprojectid == '-1' ) } selected="selected" {/if}>{trans("New project")}</option>
 											<option value="1" {if ($nodeinfo.invprojectid == '1' ) } selected="selected" {/if}>{trans("From root device")}</option>
@@ -209,7 +203,7 @@
 											<option value="{$project.id}"{if ($nodeinfo.invprojectid == $project.id)} selected{/if}>{$project.name}</option>
 											{/foreach}
 										</select>
-										<input type="text" name="nodeedit[projectname]" value="{$nodeinfo.projectname}" {tip text="Enter new project name" trigger="projectname" } ID="NNprojectname"/>
+										<input type="text" name="nodeedit[projectname]" value="{$nodeinfo.projectname}" {tip text="Enter new project name" trigger="projectname" } ID="projectname">
 									</td>
 								</tr>
 
@@ -398,10 +392,18 @@
 </table>
 </form>
 
-<script type="text/javascript">
-<!--
+<script>
+
 	$(function() {
 		$('form[name="editnode"] [name="nodeedit[name]"]').focus();
+
+		$('#project').change(function() {
+			if ($(this).val() == -1) {
+				$('#projectname').show();
+			} else {
+				$('#projectname').hide();
+			}
+		});
 	});
 
 	// ---------------------
@@ -456,24 +458,6 @@
 		event.preventDefault();
 	});
 
-	function newmac() {
-		var macscountelem = document.getElementById('macscount');
-		var nr = macscountelem.value;
-		var lastmacelem = document.getElementById('mac' + (nr - 1));
-		var newrow = lastmacelem.parentNode.insertRow(lastmacelem.rowIndex + 1);
-		newrow.id = 'mac' + nr;
-		var newcell = newrow.insertCell(0);
-		newcell.style.width = '100%';
-		newcell.innerHTML = '<input type="TEXT" name="nodeedit[macs][' + nr + ']" value=""'
-			+ ' title="{trans("Enter MAC address")}">'
-			+ '<a href="javascript: void(0);" onClick="return macchoosewin(document.editnode.elements[\'nodeedit[macs][' + nr + ']\']);"'
-			+ ' title="{trans("Click to select MAC from the list")}">&nbsp;&raquo;&raquo;&raquo;</A>';
-		$(newcell).children("[title]").tooltip({
-			position: { my: "left top" }
-		});
-		macscountelem.value = parseInt(nr) + 1;
-	}
-
 	function change_netdevice(id) {
 		if (xjx.$('linktype').value == 1) {
 			xjx.$('linktype').disabled = true;
@@ -488,8 +472,8 @@
 		var wholenetwork = document.forms['editnode'].elements['nodeedit[wholenetwork]'];
 		var display = wholenetwork.checked ? 'none' : 'table-row';
 
-		document.getElementsByName("nodeeditipaddr")[0].parentNode.parentNode.style.display = display;
-		var ipaddr_pub = document.getElementsByName("nodeeditipaddrpub");
+		$('[name="nodeedit[ipaddr]"]').get(0).parentNode.parentNode.style.display = display;
+		var ipaddr_pub = $('[name="nodeedit[ipaddr_pub]"]');
 		if (ipaddr_pub.length)
 			ipaddr_pub[0].parentNode.parentNode.style.display = display;
 	}
@@ -564,8 +548,6 @@
 
 	xajax_getRadioSectors({$nodeinfo.netdev}, {$nodeinfo.linktechnology});
 
-	setNNProject();
-
     /*
      * \brief Update address location update. Require google API key.
      */
@@ -573,7 +555,7 @@
 		if ($('#customer_addresses').val()) {
 			xajax_get_gps_coordinates({
 					address_id: $('#customer_addresses').val()
-				}, 'latitude', 'longitude');
+				}, '#latitude', '#longitude');
 		}
 	});
 
@@ -595,6 +577,5 @@
         {/if}
         customer_addresses.init();
     });
-//-->
-</SCRIPT>
 
+</script>

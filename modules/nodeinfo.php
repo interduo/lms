@@ -28,7 +28,7 @@ if (isset($_GET['nodegroups'])) {
 	$nodegroups = $LMS->GetNodeGroupNamesByNode(intval($_GET['id']));
 
 	$SMARTY->assign('nodegroups', $nodegroups);
-	$SMARTY->assign('total', sizeof($nodegroups));
+	$SMARTY->assign('total', count($nodegroups));
 	$SMARTY->display('node/nodegrouplistshort.html');
 	die;
 }
@@ -134,6 +134,7 @@ $SMARTY->assign('netdevices', $netdevices);
 $SMARTY->assign('nodeauthtype', $nodeauthtype);
 $SMARTY->assign('nodegroups', $nodegroups);
 $SMARTY->assign('othernodegroups', $othernodegroups);
+$SMARTY->assign('mgmurls', $LMS->GetManagementUrls(LMSNetDevManager::NODE_URL, $nodeinfo['id']));
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);
 $SMARTY->assign('nodeinfo_sortable_order', $SESSION->get_persistent_setting('nodeinfo-sortable-order'));

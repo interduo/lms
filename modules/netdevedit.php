@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -32,13 +32,13 @@ if ($api) {
 
 	if (!isset($_POST['in']))
 		die;
-	$netdevdata = json_decode(base64_decode($_POST['in']), true);
+	$netdev = json_decode(base64_decode($_POST['in']), true);
 } else {
 	if (!$LMS->NetDevExists($id))
 		$SESSION->redirect('?m=netdevlist');
 
 	if (isset($_POST['netdev']))
-		$netdevdata = $_POST['netdev'];
+		$netdev = $_POST['netdev'];
 }
 
 $action = !empty($_GET['action']) ? $_GET['action'] : '';
@@ -217,8 +217,8 @@ switch ($action) {
 
 	case 'connect':
 		$linktype = !empty($_GET['linktype']) ? intval($_GET['linktype']) : '0';
-		$srcradiosector = ($linktype == 1 ? intval($_GET['srcradiosector']) : null);
-		$dstradiosector = ($linktype == 1 ? intval($_GET['dstradiosector']) : null);
+		$srcradiosector = ($linktype == LINKTYPE_WIRELESS ? intval($_GET['srcradiosector']) : null);
+		$dstradiosector = ($linktype == LINKTYPE_WIRELESS ? intval($_GET['dstradiosector']) : null);
 		$linktechnology = !empty($_GET['linktechnology']) ? intval($_GET['linktechnology']) : '0';
 		$linkspeed = !empty($_GET['linkspeed']) ? intval($_GET['linkspeed']) : '100000';
 		$dev['srcport'] = !empty($_GET['srcport']) ? intval($_GET['srcport']) : '0';
@@ -232,7 +232,7 @@ switch ($action) {
 		$takenports2 = $LMS->CountNetDevLinks($dev['id']);
 
 		if ($ports1 <= $takenports1 || $ports2 <= $takenports2)
-			$error['linknode'] = trans('No free ports on device!');
+			$error['srcport'] = trans('No free ports on device!');
 		else {
 			if ($dev['srcport']) {
 				if (!preg_match('/^[0-9]+$/', $dev['srcport']) || $dev['srcport'] > $ports2) {
@@ -333,8 +333,9 @@ switch ($action) {
 
 	case 'editip':
 		$nodeipdata = $LMS->GetNode($_GET['ip']);
-		$subtitle = trans('IP address edit');
 		$nodeipdata['ipaddr'] = $nodeipdata['ip'];
+		$nodeipdata['ipaddr_pub'] = $nodeipdata['ip_pub'];
+		$subtitle = trans('IP address edit');
 		$macs = array();
 		foreach ($nodeipdata['macs'] as $key => $value)
 			$macs[] = $nodeipdata['macs'][$key]['mac'];
@@ -387,7 +388,7 @@ switch ($action) {
 
 		$nodeipdata = trim_rec($nodeipdata);
 
-		if ($nodeipdata['ipaddr'] == '' && empty($nodeipdata['macs']) && $nodeipdata['name'] == '' && $nodeipdata['passwd'] == '') {
+		if ($nodeipdata['ipaddr'] == '' && $nodeipdata['name'] == '' && $nodeipdata['passwd'] == '') {
 			$SESSION->redirect('?m=netdevedit&action=addip&id=' . $_GET['id']);
 		}
 
@@ -435,10 +436,7 @@ switch ($action) {
 			}
 			elseif ($value != '')
 				$error['mac' . $key] = trans('Incorrect MAC address!');
-		if (empty($macs))
-			$error['mac0'] = trans('MAC address is required!');
-		else
-			$nodeipdata['macs'] = $macs;
+		$nodeipdata['macs'] = $macs;
 
 		if (strlen($nodeipdata['passwd']) > 32)
 			$error['passwd'] = trans('Password is too long (max.32 characters)!');
@@ -482,7 +480,7 @@ switch ($action) {
 				$nodeipdata[$key] = trim($value);
 			}
 
-		if ($nodeipdata['ipaddr'] == '' && empty($nodeipdata['macs']) && $nodeipdata['name'] == '' && $nodeipdata['passwd'] == '')
+		if ($nodeipdata['ipaddr'] == '' && $nodeipdata['name'] == '' && $nodeipdata['passwd'] == '')
 			$SESSION->redirect('?m=netdevedit&action=editip&id=' . $_GET['id'] . '&ip=' . $_GET['ip']);
 
 		if ($nodeipdata['name'] == '')
@@ -536,10 +534,7 @@ switch ($action) {
 			}
 			elseif ($value != '')
 				$error['mac' . $key] = trans('Incorrect MAC address!');
-		if (empty($macs))
-			$error['mac0'] = trans('MAC address is required!');
-		else
-			$nodeipdata['macs'] = $macs;
+		$nodeipdata['macs'] = $macs;
 
 		if (strlen($nodeipdata['passwd']) > 32)
 			$error['passwd'] = trans('Password is too long (max.32 characters)!');
@@ -566,7 +561,6 @@ switch ($action) {
 			$SESSION->redirect('?m=netdevinfo&id=' . $_GET['id']);
 		}
 
-		$nodeipdata['ip_pub'] = $nodeipdata['ipaddr_pub'];
 		$SMARTY->assign('nodeipdata', $nodeipdata);
 		$edit = 'ip';
 		break;
@@ -587,86 +581,77 @@ switch ($action) {
 		break;
 }
 
-if (isset($netdevdata)) {
-	$netdevdata['id'] = $id;
+if (isset($netdev)) {
+	$netdev['id'] = $id;
 
-	if ($netdevdata['name'] == '')
+	if ($netdev['name'] == '')
 		$error['name'] = trans('Device name is required!');
-	elseif (strlen($netdevdata['name']) > 60)
+	elseif (strlen($netdev['name']) > 60)
 		$error['name'] = trans('Specified name is too long (max. $a characters)!', '60');
 
-	$netdevdata['ports'] = intval($netdevdata['ports']);
+	$netdev['ports'] = intval($netdev['ports']);
 
-	if ($netdevdata['ports'] < $LMS->CountNetDevLinks($id))
+	if ($netdev['ports'] < $LMS->CountNetDevLinks($id))
 		$error['ports'] = trans('Connected devices number exceeds number of ports!');
 
-	if (!empty($netdevdata['ownerid']) && !$LMS->CustomerExists($netdevdata['ownerid']))
+	if (!empty($netdev['ownerid']) && !$LMS->CustomerExists($netdev['ownerid']))
 		$error['ownerid'] = trans('Customer doesn\'t exist!');
 
 	if (!$api) {
-		$netdevdata['clients'] = (empty($netdevdata['clients'])) ? 0 : intval($netdevdata['clients']);
+		$netdev['clients'] = (empty($netdev['clients'])) ? 0 : intval($netdev['clients']);
 
-		if ($netdevdata['purchasedate'] != '') {
-			$netdevdata['purchasetime'] = date_to_timestamp($netdevdata['purchasedate']);
-			if (empty($netdevdata['purchasetime']))
-				$error['purchasedate'] = trans('Invalid date format!');
-			else
-				if (time() < $netdevdata['purchasetime'])
-					$error['purchasedate'] = trans('Date from the future not allowed!');
-		} else
-			$netdevdata['purchasetime'] = 0;
+		$netdev['purchasetime'] = intval($netdev['purchasetime']);
+		if ($netdev['purchasetime'] && time() < $netdev['purchasetime'])
+			$error['purchasetime'] = trans('Date from the future not allowed!');
 
-		if ($netdevdata['guaranteeperiod'] != 0 && $netdevdata['purchasedate'] == '')
-			$error['purchasedate'] = trans('Purchase date cannot be empty when guarantee period is set!');
+		if ($netdev['guaranteeperiod'] != 0 && !$netdev['purchasetime'])
+			$error['purchasetime'] = trans('Purchase date cannot be empty when guarantee period is set!');
 	}
 
-	if ($api && isset($netdevdata['project'])) {
-		$project = $LMS->GetProjectByName($netdevdata['project']);
+	if (!strlen($netdev['projectid']) && !empty($netdev['project'])) {
+		$project = $LMS->GetProjectByName($netdev['project']);
 		if (empty($project)) {
-			$netdevdata['projectname'] = $netdevdata['project'];
-			$netdevdata['invprojectid'] = -1;
+			$netdev['projectid'] = -1;
 		} else
-			$netdevdata['invprojectid'] = $project['id'];
+			$netdev['projectid'] = $project['id'];
 	}
 
-	if ($netdevdata['invprojectid'] == '-1') { // new investment project
-		if (!strlen(trim($netdevdata['projectname'])))
-			$error['projectname'] = trans('Project name is required');
-		if ($LMS->ProjectByNameExists($netdevdata['projectname']))
-			$error['projectname'] = trans('Project with that name already exists');
-	}
+	$hook_data = $LMS->executeHook(
+		'netdevedit_validation_before_submit',
+		array(
+			'netdevdata' => $netdev,
+			'error' => $error
+		)
+	);
+	$netdev = $hook_data['netdevdata'];
+	$error = $hook_data['error'];
 
 	if (!$error) {
 		if (!$api) {
-			if ($netdevdata['guaranteeperiod'] == -1)
-				$netdevdata['guaranteeperiod'] = NULL;
+			if ($netdev['guaranteeperiod'] == -1)
+				$netdev['guaranteeperiod'] = NULL;
 
-			if (!isset($netdevdata['shortname']))
-				$netdevdata['shortname'] = '';
-			if (!isset($netdevdata['secret']))
-				$netdevdata['secret'] = '';
-			if (!isset($netdevdata['community']))
-				$netdevdata['community'] = '';
-			if (!isset($netdevdata['nastype']))
-				$netdevdata['nastype'] = 0;
+			if (!isset($netdev['shortname']))
+				$netdev['shortname'] = '';
+			if (!isset($netdev['secret']))
+				$netdev['secret'] = '';
+			if (!isset($netdev['community']))
+				$netdev['community'] = '';
+			if (!isset($netdev['nastype']))
+				$netdev['nastype'] = 0;
 		}
 
-		$ipi = $netdevdata['invprojectid'];
-		if ($ipi == '-1')
-			$ipi = $LMS->AddProject($netdevdata);
-
-		if ($netdevdata['invprojectid'] == '-1' || intval($ipi)>0) {
-			$netdevdata['invprojectid'] = intval($ipi);
-		} else {
-			$netdevdata['invprojectid'] = NULL;
-		}
+		if ($netdev['projectid'] == -1)
+			$netdev['projectid'] = $LMS->AddProject($netdev);
+		elseif (empty($netdev['projectid']))
+			$netdev['projectid'] = null;
 
 		// no net node selected
-		if ($netdevdata['netnodeid'] == "-1") {
-			$netdevdata['netnodeid'] = null;
+		if ($netdev['netnodeid'] == '-1') {
+			$netdev['netnodeid'] = null;
 		}
 
-		$result = $LMS->NetDevUpdate($netdevdata);
+		$result = $LMS->NetDevUpdate($netdev);
 		$LMS->CleanupProjects();
 
 		if ($api) {
@@ -680,6 +665,7 @@ if (isset($netdevdata)) {
 		$hook_data = $LMS->executeHook('netdevedit_after_update',
 			array(
 				'smarty' => $SMARTY,
+				'netdevdata' => $netdev,
 			));
 		$SESSION->redirect('?m=netdevinfo&id=' . $id);
 	} elseif ($api) {
@@ -688,20 +674,30 @@ if (isset($netdevdata)) {
 		die;
 	}
 } else {
-	$netdevdata = $LMS->GetNetDev($id);
+	$attachmenttype = 'netdevid';
+	$attachmentresourceid = $id;
+	include(MODULES_DIR . DIRECTORY_SEPARATOR . 'attachments.php');
 
-	if ($netdevdata['purchasetime'])
-		$netdevdata['purchasedate'] = date('Y/m/d', $netdevdata['purchasetime']);
+	$netdev = $LMS->GetNetDev($id);
 
-	if (($netdevdata['location_city'] || $netdevdata['location_street']) && !$netdevdata['ownerid'] ) {
-		$netdevdata['teryt'] = true;
+	if (preg_match('/^[0-9]+$/', $netdev['producerid'])
+		&& preg_match('/^[0-9]+$/', $netdev['modelid'])) {
+		$netdev['producer'] = $netdev['producerid'];
+		$netdev['model'] = $netdev['modelid'];
+	}
+
+	if ($netdev['purchasetime'])
+		$netdev['purchasedate'] = date('Y/m/d', $netdev['purchasetime']);
+
+	if (($netdev['location_city'] || $netdev['location_street']) && !$netdev['ownerid'] ) {
+		$netdev['teryt'] = true;
 	}
 }
 
-$netdevdata['id'] = $id;
+$netdev['id'] = $id;
 
 $netdevips       = $LMS->GetNetDevIPs($id);
-if ($netdevdata['ports'] > $netdevdata['takenports'])
+if ($netdev['ports'] > $netdev['takenports'])
 	$nodelist        = $LMS->GetUnlinkedNodes();
 $netdevconnected = $LMS->GetNetDevConnectedNames($id);
 $netcomplist     = $LMS->GetNetDevLinkedNodes($id);
@@ -711,24 +707,36 @@ unset($netdevlist['total']);
 unset($netdevlist['order']);
 unset($netdevlist['direction']);
 
-if ($netdevdata['producer']) {
-	$layout['pagetitle'] = trans('Device Edit: $a ($b)', $netdevdata['name'], $netdevdata['producer']);
+if ($netdev['producer']) {
+	$layout['pagetitle'] = trans('Device Edit: $a ($b)', $netdev['name'], $netdev['producer']);
 } else {
-	$layout['pagetitle'] = trans('Device Edit: $a', $netdevdata['name']);
+	$layout['pagetitle'] = trans('Device Edit: $a', $netdev['name']);
 }
+
+$hook_data = $LMS->executeHook('netdevedit_before_display',
+	array(
+		'netdevdata' => $netdev,
+		'smarty' => $SMARTY,
+	)
+);
+$netdev = $hook_data['netdevdata'];
 
 if ($subtitle)
 	$layout['pagetitle'] .= ' - ' . $subtitle;
 
 $SMARTY->assign('NNprojects', $LMS->GetProjects());
 $SMARTY->assign('NNnodes', $LMS->GetNetNodes());
+$SMARTY->assign('producers', $LMS->GetProducers());
+$SMARTY->assign('models', $LMS->GetModels());
 
 $SMARTY->assign('error'                , $error);
-$SMARTY->assign('netdevinfo'           , $netdevdata);
-$SMARTY->assign('objectid'             , $netdevdata['id']);
+$SMARTY->assign('netdev'           , $netdev);
+$SMARTY->assign('objectid'             , $netdev['id']);
 $SMARTY->assign('netdevlist'           , $netdevconnected);
 $SMARTY->assign('netcomplist'          , $netcomplist);
 $SMARTY->assign('nodelist'             , $nodelist);
+$SMARTY->assign('mgmurls', $LMS->GetManagementUrls(LMSNetDevManager::NETDEV_URL, $netdev['id']));
+$SMARTY->assign('radiosectors', $LMS->GetRadioSectors($netdev['id']));
 $SMARTY->assign('netdevcontype'        , $netdevcontype);
 $SMARTY->assign('netdevauthtype'       , $netdevauthtype);
 $SMARTY->assign('netdevips'            , $netdevips);
@@ -757,13 +765,16 @@ switch ($edit) {
 		if (ConfigHelper::checkConfig('phpui.ewx_support'))
 			$SMARTY->assign('channels', $DB->GetAll('SELECT id, name FROM ewx_channels ORDER BY name'));
 
+		$SMARTY->assign('netdevedit_sortable_order', $SESSION->get_persistent_setting('netdevedit-sortable-order'));
 		$SMARTY->display('netdev/netdevedit.html');
 		break;
 	case 'ip':
 		$SMARTY->assign('nodesessions', $LMS->GetNodeSessions($_GET['ip']));
+		$SMARTY->assign('netdevvipedit_sortable_order', $SESSION->get_persistent_setting('netdevipedit-sortable-order'));
 		$SMARTY->display('netdev/netdevipedit.html');
 		break;
 	case 'addip':
+		$SMARTY->assign('netdevvipadd_sortable_order', $SESSION->get_persistent_setting('netdevipadd-sortable-order'));
 		$SMARTY->display('netdev/netdevipadd.html');
 		break;
 	default:

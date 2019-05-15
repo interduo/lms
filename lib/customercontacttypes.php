@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -25,7 +25,11 @@
  */
 
 function format_customer_phone($contact) {
-	return '<a class="phone_number" href="tel:' . $contact['contact'] . '">' . $contact['contact'] . '</a>';
+	$call_phone_url = ConfigHelper::getConfig('phpui.call_phone_url', '');
+	if (!empty($call_phone_url))
+		$call_phone_url = str_replace('%phone', $contact['contact'], $call_phone_url);
+	return '<a class="phone_number" href="tel:' . $contact['contact'] . '">' . $contact['contact'] . '</a>&nbsp;'
+		. (isset($call_phone_url) ? '<a href="' . $call_phone_url . '"><i class="fas fa-phone"></i></a>' : '');
 }
 
 function format_customer_email($contact) {
@@ -60,6 +64,10 @@ function format_customer_im($contact) {
 				. '<a href="https://m.me/' . $contact['contact'] . '">' . $contact['contact'] . '</a>';
 			break;
 	}
+}
+
+function format_customer_representative($contact) {
+	return '<span class="bold">' . $contact['contact'] . '</span>';
 }
 
 function validate_customer_phones(&$customerdata, &$contacts, &$error) {
@@ -168,11 +176,27 @@ function validate_customer_ims(&$customerdata, &$contacts, &$error) {
 	}
 }
 
+function validate_customer_representatives(&$customerdata, &$contacts, &$error) {
+	if (!isset($customerdata['representatives']))
+		return;
+	foreach ($customerdata['representatives'] as $idx => &$val) {
+		$name = trim($val['contact']);
+		$data = trim($val['name']);
+		$type = !empty($val['type']) ? array_sum($val['type']) : NULL;
+		$type |= CONTACT_REPRESENTATIVE;
+
+		$val['type'] = $type;
+
+		if ($name)
+			$contacts[] = array('name' => $data, 'contact' => $name, 'type' => $type);
+	}
+}
+
 $CUSTOMERCONTACTTYPES = array(
 	'phone' => array(
 		'ui' => array(
 			'legend' => array(
-				'icon' => 'img/phone.gif',
+				'icon' => 'lms-ui-icon-phone fa-fw',
 				'text' => trans('Contact phones'),
 			),
 			'inputtype' => 'tel',
@@ -206,7 +230,7 @@ $CUSTOMERCONTACTTYPES = array(
 	'email' => array(
 		'ui' => array(
 			'legend' => array(
-				'icon' => 'img/mail.gif',
+				'icon' => 'lms-ui-icon-mail fa-fw',
 				'text' => trans('Email addresses'),
 			),
 			'inputtype' => 'email',
@@ -242,7 +266,7 @@ $CUSTOMERCONTACTTYPES = array(
 	'account' => array(
 		'ui' => array(
 			'legend' => array(
-				'icon' => 'img/card.gif',
+				'icon' => 'lms-ui-icon-cash fa-fw',
 				'text' => trans('Alternative bank accounts'),
 			),
 			'inputtype' => 'text',
@@ -266,7 +290,7 @@ $CUSTOMERCONTACTTYPES = array(
 	'url' => array(
 		'ui' => array(
 			'legend' => array(
-				'icon' => 'img/network.gif',
+				'icon' => 'lms-ui-icon-www fa-fw',
 				'text' => trans('URL addresses'),
 			),
 			'inputtype' => 'text',
@@ -286,7 +310,7 @@ $CUSTOMERCONTACTTYPES = array(
 	'im' => array(
 		'ui' => array(
 			'legend' => array(
-				'icon' => 'img/skype.gif',
+				'icon' => 'lms-ui-icon-chat fa-fw',
 				'text' => trans('Instant messengers'),
 			),
 			'inputtype' => 'text',
@@ -307,6 +331,26 @@ $CUSTOMERCONTACTTYPES = array(
 		'flagmask' => CONTACT_IM_GG | CONTACT_IM_YAHOO | CONTACT_IM_SKYPE | CONTACT_IM_FACEBOOK,
 		'formatter' => 'format_customer_im',
 		'validator' => 'validate_customer_ims',
+	),
+	'representative' => array(
+		'ui' => array(
+			'legend' => array(
+				'icon' => 'lms-ui-icon-user fa-fw',
+				'text' => trans('Representatives'),
+			),
+			'inputtype' => 'text',
+			'size' => 40,
+			'tip' => trans('Enter representative name (optional)'),
+			'flags' => array(
+				CONTACT_DISABLED => array(
+					'label' => $CONTACTTYPES[CONTACT_DISABLED],
+					'tip' => trans('Check if representative should be disabled'),
+				),
+			),
+		),
+		'flagmask' => CONTACT_REPRESENTATIVE,
+		'formatter' => 'format_customer_representative',
+		'validator' => 'validate_customer_representatives',
 	),
 );
 

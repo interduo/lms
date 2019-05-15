@@ -27,20 +27,34 @@
 function GetReceipt($id) {
 	$db = LMSDB::getInstance();
 
-	if ($receipt = $db->GetRow('SELECT d.*, u.name AS user, n.template,
+	if ($receipt = $db->GetRow('SELECT d.*, cc.name AS country, cd.name AS div_country,
+					u.name AS user, n.template,
 					ds.name AS d_name, ds.address AS d_address,
-					ds.zip AS d_zip, ds.city AS d_city
+					ds.zip AS d_zip, ds.city AS d_city, cds.name AS d_country
 				FROM documents d
+				LEFT JOIN countries cc ON cc.id = d.countryid
+				LEFT JOIN countries cd ON cd.id = d.div_countryid
 				LEFT JOIN vusers u ON (d.userid = u.id)
 				LEFT JOIN numberplans n ON (d.numberplanid = n.id)
 				LEFT JOIN customers c ON (d.customerid = c.id)
 				LEFT JOIN vdivisions ds ON (ds.id = c.divisionid)
+				LEFT JOIN countries cds ON cds.id = ds.countryid
 				WHERE d.type = 2 AND d.id = ?', array($id))) {
 		// if division for receipt is not defined and there is only one division in database
 		// we try to use this division
+		if (!empty($receipt['divisionid'])) {
+			$receipt['d_name'] = $receipt['div_name'];
+			$receipt['d_address'] = $receipt['div_address'];
+			$receipt['d_zip'] = $receipt['div_zip'];
+			$receipt['d_city'] = $receipt['div_city'];
+			$receipt['d_countryid'] = $receipt['div_countryid'];
+			$receipt['d_country'] = $receipt['div_country'];
+		}
 		if (empty($receipt['d_name']) && $db->GetOne('SELECT COUNT(*) FROM divisions') == 1)
-			$receipt = array_merge($receipt, $db->GetRow('SELECT name AS d_name, address AS d_address,
-				zip AS d_zip, city AS d_city FROM vdivisions'));
+			$receipt = array_merge($receipt, $db->GetRow('SELECT d.name AS d_name, address AS d_address,
+					zip AS d_zip, city AS d_city, countryid AS d_countryid, c.name AS d_country
+				FROM vdivisions d
+				LEFT JOIN countries c ON c.id = d.countryid'));
 
 		$receipt['contents'] = $db->GetAll('SELECT * FROM receiptcontents WHERE docid = ? ORDER BY itemid', array($id));
 		$receipt['total'] = 0;
@@ -84,26 +98,27 @@ if ($receipt_type == 'pdf') {
 } else
 	$document = new LMSHtmlReceipt($SMARTY);
 
-if (isset($_GET['print']) && $_GET['print'] == 'cached' && sizeof($_POST['marks'])) {
+if (isset($_GET['print']) && $_GET['print'] == 'cached' && count($_POST['marks'])) {
 	$SESSION->restore('rlm', $rlm);
 	$SESSION->remove('rlm');
 
-	if (sizeof($_POST['marks']))
-		foreach ($_POST['marks'] as $id => $mark)
-			$rlm[$id] = $mark;
-	if (sizeof($rlm))
-		foreach ($rlm as $mark)
-			$ids[] = intval($mark);
+	if (isset($_POST['marks'])) {
+		if (isset($_POST['marks']['receipt']))
+			$marks = $_POST['marks']['receipt'];
+		else
+			$marks = $_POST['marks'];
+	} else
+		$marks = array();
+
+	$ids = Utils::filterIntegers($marks);
 
 	if (empty($ids)) {
 		$SESSION->close();
 		die;
 	}
 
-	if (!empty($_GET['cash']))
-		$ids = $DB->GetCol('SELECT DISTINCT docid FROM cash, documents
-			WHERE docid = documents.id AND documents.type = ?
-				AND cash.id IN (' . implode(',', $ids) . ')', array(DOC_RECEIPT));
+	if (isset($_GET['cash']))
+		$ids = $DB->GetDocumentsForBalanceRecords($ids, array(DOC_RECEIPT));
 
 	sort($ids);
 
@@ -116,7 +131,7 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached' && sizeof($_POST['marks'
 		$type = explode(',', ConfigHelper::getConfig('receipts.default_printpage', 'original,copy'));
 
 	$i = 0;
-	$count = sizeof($ids);
+	$count = count($ids);
 	foreach ($ids as $idx => $receiptid) {
 		if ($receipt = GetReceipt($receiptid)) {
 			if ($count == 1)

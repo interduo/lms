@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -19,7 +19,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
  *  $Id$
@@ -56,7 +56,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 EOF;
 	exit(0);
@@ -65,7 +65,7 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
@@ -81,7 +81,7 @@ $quiet = array_key_exists('quiet', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-payments.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 EOF;
 }
@@ -95,7 +95,7 @@ if (!$quiet)
 	echo "Using file ".$CONFIG_FILE." as config." . PHP_EOL;
 
 if (!is_readable($CONFIG_FILE))
-	die('Unable to read configuration file ['.$CONFIG_FILE.']!'); 
+	die('Unable to read configuration file ['.$CONFIG_FILE.']!');
 
 define('CONFIG_FILE', $CONFIG_FILE);
 
@@ -160,6 +160,7 @@ $suspension_percentage = ConfigHelper::getConfig('finances.suspension_percentage
 $unit_name = trans(ConfigHelper::getConfig('payments.default_unit_name'));
 $check_invoices = ConfigHelper::checkConfig('payments.check_invoices');
 $proforma_generates_commitment = ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment');
+$delete_old_assignments_after_days = intval(ConfigHelper::getConfig('payments.delete_old_assignments_after_days', 30));
 
 function localtime2() {
 	global $fakedate;
@@ -217,6 +218,16 @@ $forward_aligned_periods = array(
 	QUARTERLY  => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+3, 0, $year)),
 	HALFYEARLY => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+6, 0, $year)),
 	YEARLY     => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month,   0, $year+1)),
+	DISPOSABLE => $forward_periods[DISPOSABLE],
+);
+
+$forward_aligned_partial_start_periods = array(
+	DAILY      => $forward_periods[DAILY],
+	WEEKLY     => $forward_periods[WEEKLY],
+	MONTHLY    => strftime($date_format, mktime(12, 0, 0, $month, $dom, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+1, 0, $year)),
+	QUARTERLY  => strftime($date_format, mktime(12, 0, 0, $month, $dom, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+3, 0, $year)),
+	HALFYEARLY => strftime($date_format, mktime(12, 0, 0, $month, $dom, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+6, 0, $year)),
+	YEARLY     => strftime($date_format, mktime(12, 0, 0, $month, $dom, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month,   0, $year+1)),
 	DISPOSABLE => $forward_periods[DISPOSABLE],
 );
 
@@ -313,8 +324,8 @@ $plans = array();
 $query = "SELECT n.id, n.period, doctype, COALESCE(a.divisionid, 0) AS divid, isdefault 
 		FROM numberplans n 
 		LEFT JOIN numberplanassignments a ON (a.planid = n.id) 
-		WHERE doctype IN (?, ?)";
-$results = $DB->GetAll($query, array(DOC_INVOICE, DOC_INVOICE_PRO));
+		WHERE doctype IN (?, ?, ?)";
+$results = $DB->GetAll($query, array(DOC_INVOICE, DOC_INVOICE_PRO, DOC_DNOTE));
 if (!empty($results))
 	foreach ($results as $row) {
 		if ($row['isdefault'])
@@ -371,8 +382,8 @@ if (!empty($assigns))
 	}
 
 // let's go, fetch *ALL* assignments in given day
-$query = "SELECT a.tariffid, a.liabilityid, a.customerid, a.recipient_address_id,
-		a.period, a.at, a.suspended, a.settlement, a.datefrom, a.pdiscount, a.vdiscount,
+$query = "SELECT a.id, a.tariffid, a.liabilityid, a.customerid, a.recipient_address_id,
+		a.period, a.at, a.suspended, a.settlement, a.datefrom, a.dateto, a.pdiscount, a.vdiscount,
 		a.invoice, a.separatedocument, t.description AS description, a.id AS assignmentid,
 		c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, a.attribute,
 		d.inv_paytype AS d_paytype, t.period AS t_period, t.numberplanid AS tariffnumberplanid,
@@ -413,7 +424,7 @@ $services = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION
 $billing_invoice_description = ConfigHelper::getConfig('payments.billing_invoice_description', 'Phone calls between %backward_periods (for %phones)');
 
 $query = "SELECT
-			a.tariffid, a.customerid, a.period, a.at, a.suspended, a.settlement, a.datefrom,
+			a.id, a.tariffid, a.customerid, a.period, a.at, a.suspended, a.settlement, a.datefrom,
 			0 AS pdiscount, 0 AS vdiscount, a.invoice, a.separatedocument, t.description AS description, a.id AS assignmentid,
 			c.divisionid, c.paytype, a.paytype AS a_paytype, a.numberplanid, a.attribute,
 			d.inv_paytype AS d_paytype, t.period AS t_period, t.numberplanid AS tariffnumberplanid,
@@ -478,7 +489,7 @@ $query = "SELECT
 		.(!empty($groupnames) ? $customergroups : "")
 	." ORDER BY a.customerid, a.recipient_address_id, a.invoice, a.paytype, a.numberplanid, a.separatedocument, voipcost.value DESC, a.id";
 
-$billings = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION, TARIFF_PHONE,
+$billings = $DB->GetAll($query, array(CSTATUS_CONNECTED, CSTATUS_DEBT_COLLECTION, SERVICE_PHONE,
 	DISPOSABLE, $today, DAILY, WEEKLY, $weekday, MONTHLY, $dom, QUARTERLY, $quarter, HALFYEARLY, $halfyear, YEARLY, $yearday,
 	$currtime, $currtime));
 
@@ -490,7 +501,7 @@ if ($billings) {
 	$billing_count = count($billings);
 	foreach ($services as $service_idx => &$service) {
 		$assigns[] = $service;
-		if ($billing_idx == $billing_count || $service['tarifftype'] != TARIFF_PHONE)
+		if ($billing_idx == $billing_count || $service['tarifftype'] != SERVICE_PHONE)
 			continue;
 
 		$service_customerid = $service['customerid'];
@@ -522,6 +533,142 @@ unset($services);
 if (empty($assigns))
 	die;
 
+// get dominating link technology per customer assignments when customer
+// node are directly connected to operator network device
+$assignment_linktechnologies = $DB->GetAllByKey("SELECT a.id, b.technology, MAX(b.technologycount) AS technologycount
+	FROM assignments a
+	JOIN (
+		SELECT a.id, n.linktechnology AS technology, COUNT(n.linktechnology) AS technologycount
+		FROM nodeassignments na
+			JOIN assignments a ON a.id = na.assignmentid
+			JOIN tariffs t ON t.id = a.tariffid
+			JOIN nodes n ON n.id = na.nodeid
+		WHERE n.linktechnology > 0 AND n.ownerid IS NOT NULL
+		GROUP BY a.id, n.linktechnology
+	) b ON b.id = a.id
+	GROUP BY a.id, b.technology
+	ORDER BY a.id", 'id');
+if (empty($assignment_linktechnologies))
+	$assignment_linktechnologies = array();
+
+// get dominating link technology per customer assignments when customer
+// node or customer network devices nodes are connected to operator through customer subnetwork
+// ************
+// get assignments which match to nodes or network device nodes in customer subnetworks
+$node_assignments = $DB->GetAllByKey("SELECT " . $DB->GroupConcat('na.assignmentid', ',', true) . " AS assignments,
+		na.nodeid
+	FROM nodeassignments na
+	JOIN nodes n ON n.id = na.nodeid
+	JOIN assignments a ON a.id = na.assignmentid
+	LEFT JOIN netdevices nd ON nd.id = n.netdev
+	WHERE nd.ownerid IS NOT NULL AND ((n.ownerid IS NULL AND n.netdev IS NOT NULL)
+		OR n.ownerid IS NOT NULL)
+		AND a.suspended = 0
+		AND a.period IN (" . implode(',', array(YEARLY, HALFYEARLY, QUARTERLY, MONTHLY, DISPOSABLE)) . ")
+		AND a.datefrom < ?NOW? AND (a.dateto = 0 OR a.dateto > ?NOW?)
+		AND NOT EXISTS (
+			SELECT id FROM assignments aa
+			WHERE aa.customerid = (CASE WHEN n.ownerid IS NULL THEN nd.ownerid ELSE n.ownerid END)
+				AND aa.tariffid IS NULL AND aa.liabilityid IS NULL
+				AND aa.datefrom < ?NOW?
+				AND (aa.dateto > ?NOW? OR aa.dateto = 0)
+		)
+	GROUP BY na.nodeid", 'nodeid');
+if (empty($node_assignments))
+	$node_assignments = array();
+else
+	foreach ($node_assignments as $nodeid => $assignments)
+		$node_assignments[$nodeid] = explode(',', $assignments['assignments']);
+
+if (!empty($node_assignments)) {
+	// search for links between operator network devices and customer network devices
+	$uni_links = $DB->GetAllByKey("SELECT nl.id AS netlinkid, nl.technology AS technology,
+				c.id AS customerid,
+				(CASE WHEN ndsrc.ownerid IS NULL THEN nl.src ELSE nl.dst END) AS operator_netdevid,
+				(CASE WHEN ndsrc.ownerid IS NULL THEN nl.dst ELSE nl.dst END) AS netdevid
+			FROM netlinks nl
+			JOIN netdevices ndsrc ON ndsrc.id = nl.src
+			JOIN netdevices nddst ON nddst.id = nl.dst
+			JOIN customers c ON (ndsrc.ownerid IS NULL AND c.id = nddst.ownerid)
+				OR (nddst.ownerid IS NULL AND c.id = ndsrc.ownerid)
+			WHERE nl.technology > 0 AND ((ndsrc.ownerid IS NULL AND nddst.ownerid IS NOT NULL)
+				OR (nddst.ownerid IS NULL AND ndsrc.ownerid IS NOT NULL))
+			ORDER BY nl.id",
+		'netlinkid');
+	if (!empty($uni_links)) {
+		function find_nodes_for_netdev($customerid, $netdevid, &$customer_nodes, &$customer_netlinks) {
+			if (isset($customer_nodes[$customerid . '_' . $netdevid]))
+				$nodeids = explode(',', $customer_nodes[$customerid . '_' . $netdevid]['nodeids']);
+			else
+				$nodeids = array();
+
+			foreach ($customer_netlinks as &$customer_netlink) {
+				if ($customer_netlink['src'] == $netdevid)
+					$next_netdevid = $customer_netlink['dst'];
+				else if ($customer_netlink['dst'] == $netdevid)
+					$next_netdevid = $customer_netlink['src'];
+				else
+					continue;
+				$nodeids = array_merge($nodeids, find_nodes_for_netdev($customerid, $next_netdevid,
+					$customer_nodes, $customer_netlinks));
+			}
+			unset($customer_netlink);
+
+			return $nodeids;
+		}
+
+		$customer_netlinks = $DB->GetAllByKey("SELECT " . $DB->Concat('nl.src', "'_'", 'nl.dst') . " AS netlink
+				FROM netlinks nl
+				JOIN netdevices ndsrc ON ndsrc.id = nl.src
+				JOIN netdevices nddst ON nddst.id = nl.dst
+				WHERE ndsrc.ownerid IS NOT NULL AND nddst.ownerid IS NOT NULL
+					AND ndsrc.ownerid = nddst.ownerid",
+			'netlink');
+
+		$customer_nodes = $DB->GetAllByKey("SELECT " . $DB->GroupConcat('n.id') . " AS nodeids,
+					" . $DB->Concat('CASE WHEN n.ownerid IS NULL THEN nd.ownerid ELSE n.ownerid END', "'_'", 'n.netdev') . " AS customerid_netdev
+				FROM nodes n
+				LEFT JOIN netdevices nd ON nd.id = n.netdev AND n.ownerid IS NULL AND nd.ownerid IS NOT NULL
+				WHERE n.ownerid IS NOT NULL OR nd.ownerid IS NOT NULL
+					AND EXISTS (
+						SELECT na.id FROM nodeassignments na
+						JOIN assignments a ON a.id = na.assignmentid
+						WHERE na.nodeid = n.id AND a.suspended = 0
+							AND a.period IN (" . implode(',', array(YEARLY, HALFYEARLY, QUARTERLY, MONTHLY, DISPOSABLE)) . ")
+							AND a.datefrom < ?NOW? AND (a.dateto = 0 OR a.dateto > ?NOW?)
+					)
+					AND NOT EXISTS (
+						SELECT id FROM assignments aa
+						WHERE aa.customerid = (CASE WHEN n.ownerid IS NULL THEN nd.ownerid ELSE n.ownerid END)
+							AND aa.tariffid IS NULL AND aa.liabilityid IS NULL
+							AND aa.datefrom < ?NOW?
+							AND (aa.dateto > ?NOW? OR aa.dateto = 0)
+					)
+				GROUP BY customerid_netdev",
+			'customerid_netdev');
+
+		// collect customer node/node-netdev identifiers connected to customer subnetwork
+		// and then fill assignment linktechnologies relations
+		foreach ($uni_links as $netlinkid => &$netlink) {
+			$nodes = find_nodes_for_netdev($netlink['customerid'], $netlink['netdevid'],
+				$customer_nodes, $customer_netlinks);
+			if (!empty($nodes))
+				foreach ($nodes as $nodeid)
+					foreach ($node_assignments[$nodeid] as $assignmentid)
+						$assignment_linktechnologies[$assignmentid] = array(
+							'id' => $assignmentid,
+							'technology' => $netlink['technology'],
+							'technologycount' => 1,
+						);
+		}
+		unset($netlink);
+		unset($uni_links);
+
+		unset($customer_netlinks);
+		unset($customer_nodes);
+	}
+}
+
 $suspended = 0;
 $invoices = array();
 $doctypes = array();
@@ -545,6 +692,8 @@ foreach ($assigns as $assign) {
 	$assign['value'] = str_replace(',', '.', floatval($assign['value']));
 	if (empty($assign['value'])) continue;
 
+	$linktechnology = isset($assignment_linktechnologies[$assign['id']]) ? $assignment_linktechnologies[$assign['id']]['technology'] : null;
+
 	if (!$assign['suspended'] && $assign['allsuspended'])
 		$assign['value'] = $assign['value'] * $suspension_percentage / 100;
 
@@ -553,7 +702,7 @@ foreach ($assigns as $assign) {
 	else
 		$desc = $comment;
 
-	$desc = preg_replace("/\%type/", $assign['tarifftype'] != TARIFF_OTHER ? $TARIFFTYPES[$assign['tarifftype']] : '', $desc);
+	$desc = preg_replace("/\%type/", $assign['tarifftype'] != SERVICE_OTHER ? $SERVICETYPES[$assign['tarifftype']] : '', $desc);
 	$desc = preg_replace("/\%tariff/", $assign['name'], $desc);
 	$desc = preg_replace("/\%attribute/", $assign['attribute'], $desc);
 	$desc = preg_replace("/\%desc/", $assign['description'], $desc);
@@ -575,6 +724,31 @@ foreach ($assigns as $assign) {
 	$desc = preg_replace("/\%forward_period_aligned/"  , $forward_aligned_periods[$p] , $desc);
 	$desc = preg_replace("/\%period/"                  , $forward_periods[$p]         , $desc);
 	$desc = preg_replace("/\%aligned_period/"          , $forward_aligned_periods[$p] , $desc);
+
+	$dayfrom = explode("/", date(preg_replace("/\%/", "", $date_format), $assign['datefrom']));
+	if ($assign['dateto']) {
+		$dayto = explode("/", date(preg_replace("/\%/", "", $date_format), $assign['dateto']));
+		$dayto_nextday = explode("/", date(preg_replace("/\%/", "", $date_format), $assign['dateto']+1));
+	}
+	if (intval($dayfrom[2]) != 1) {
+		$desc = preg_replace("/\%aligned_partial_period/"  , $forward_aligned_partial_start_periods[$p] , $desc);
+	} else {
+		if (isset($dayto) && isset($dayto_nextday) && intval($dayto_nextday[2]) != 1) {
+			$forward_aligned_partial_end_periods = array(
+				DAILY      => $forward_periods[DAILY],
+				WEEKLY     => $forward_periods[WEEKLY],
+				MONTHLY    => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month, intval($dayto[2]), $year)),
+				QUARTERLY  => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+2, intval($dayto[2]), $year)),
+				HALFYEARLY => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month+5, intval($dayto[2]), $year)),
+				YEARLY     => strftime($date_format, mktime(12, 0, 0, $month, 1, $year)).' - '.strftime($date_format, mktime(12, 0, 0, $month,   intval($dayto[2]), $year+1)),
+				DISPOSABLE => $forward_periods[DISPOSABLE],
+			);
+			$desc = preg_replace("/\%aligned_partial_period/"  , $forward_aligned_partial_end_periods[$p] , $desc);
+			unset($forward_aligned_partial_end_periods);
+		} else {
+			$desc = preg_replace("/\%aligned_partial_period/"  , $forward_aligned_periods[$p] , $desc);
+		}
+	}
 
 	// for phone calls
     if (isset($assign['phones']))
@@ -702,7 +876,7 @@ foreach ($assigns as $assign) {
 					($division['zip'] ? $division['zip'] : ''),
 					($division['countryid'] ? $division['countryid'] : null),
 					($division['ten'] ? $division['ten'] : ''),
-					($division['regon'] ? $division['regon'] : ''), 
+					($division['regon'] ? $division['regon'] : ''),
 					($division['account'] ? $division['account'] : ''),
 					($division['inv_header'] ? $division['inv_header'] : ''),
 					($division['inv_footer'] ? $division['inv_footer'] : ''),
@@ -719,32 +893,49 @@ foreach ($assigns as $assign) {
 				$addresses[$cid] = $assign['recipient_address_id'];
 				$numberplans[$cid] = $plan;
 			}
-			if (($tmp_itemid = $DB->GetOne("SELECT itemid FROM invoicecontents 
-				WHERE tariffid=? AND value=$val AND docid=? AND description=? AND pdiscount=? AND vdiscount=?",
-				array($assign['tariffid'], $invoices[$cid], $desc, $assign['pdiscount'], $assign['vdiscount']))) != 0)
-			{
-				$DB->Execute("UPDATE invoicecontents SET count=count+1 
-					WHERE tariffid=? AND docid=? AND value=? AND description=? AND pdiscount=? AND vdiscount=?",
-					array($assign['tariffid'], $invoices[$cid], $assign['value'], $desc, $assign['pdiscount'], $assign['vdiscount']));
-                if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
-                    $DB->Execute("UPDATE cash SET value=value+($val*-1) 
-                        WHERE docid = ? AND itemid = $tmp_itemid", array($invoices[$cid]));
+
+			if ($assign['invoice'] == DOC_DNOTE)
+				$tmp_itemid = 0;
+			else
+				$tmp_itemid = $DB->GetOne("SELECT itemid FROM invoicecontents 
+					WHERE tariffid=? AND value=? AND docid=? AND description=? AND pdiscount=? AND vdiscount=?",
+						array($assign['tariffid'], $val, $invoices[$cid], $desc, $assign['pdiscount'], $assign['vdiscount']));
+
+			if ($tmp_itemid != 0) {
+				if ($assign['invoice'] == DOC_DNOTE)
+					$DB->Execute("UPDATE debitnotecontents SET value = value + ? 
+						WHERE docid = ? AND itemid = ?",
+						array($val, $invoices[$cid], $tmp_itemid));
+				else
+					$DB->Execute("UPDATE invoicecontents SET count = count + 1 
+						WHERE docid = ? AND itemid = ?",
+						array($invoices[$cid], $tmp_itemid));
+				if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
+					$DB->Execute("UPDATE cash SET value = value + ? 
+						WHERE docid = ? AND itemid = ?",
+						array(str_replace(',', '.', $val * - 1), $invoices[$cid], $tmp_itemid));
 			} else {
 				$itemid++;
 
-				$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid, 
-					content, count, description, tariffid, itemid, pdiscount, vdiscount) 
-					VALUES (?, $val, ?, ?, ?, 1, ?, ?, $itemid, ?, ?)",
-					array($invoices[$cid], $assign['taxid'], $assign['prodid'], $unit_name,
-					$desc, empty($assign['tariffid']) ? null : $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
-				if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
-                    $DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid) 
-                        VALUES ($currtime, $val * -1, ?, $cid, ?, ?, $itemid)",
-                        array($assign['taxid'], $desc, $invoices[$cid]));
+				if ($assign['invoice'] == DOC_DNOTE)
+					$DB->Execute("INSERT INTO debitnotecontents (docid, value, description, itemid) 
+						VALUES (?, ?, ?, ?)",
+						array($invoices[$cid], $val, $desc, $itemid));
+				else
+					$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid, 
+						content, count, description, tariffid, itemid, pdiscount, vdiscount) 
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						array($invoices[$cid], $val, $assign['taxid'], $assign['prodid'], $unit_name, 1,
+						$desc, empty($assign['tariffid']) ? null : $assign['tariffid'], $itemid, $assign['pdiscount'], $assign['vdiscount']));
+				if ($assign['invoice'] == DOC_INVOICE || $assign['invoice'] == DOC_DNOTE || $proforma_generates_commitment)
+					$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid, linktechnology) 
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+						array($currtime, str_replace(',', '.', $val * -1), $assign['taxid'], $cid, $desc, $invoices[$cid], $itemid, $linktechnology));
 			}
 		} else
-			$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment) 
-				VALUES ($currtime, $val * -1, ?, $cid, ?)", array($assign['taxid'], $desc));
+			$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, linktechnology) 
+				VALUES (?, ?, ?, ?, ?, ?)",
+				array($currtime, str_replace(',', '.', $val * -1), $assign['taxid'], $cid, $desc, $linktechnology));
 
 		if (!$quiet) print "CID:$cid\tVAL:$val\tDESC:$desc" . PHP_EOL;
 
@@ -797,7 +988,7 @@ foreach ($assigns as $assign) {
 				//print "value: $val diffdays: $diffdays alldays: $alldays settl_value: $value" . PHP_EOL;
 
 				$sdesc = $s_comment;
-				$sdesc = preg_replace("/\%type/", $assign['tarifftype'] != TARIFF_OTHER ? $TARIFFTYPES[$assign['tarifftype']] : '', $sdesc);
+				$sdesc = preg_replace("/\%type/", $assign['tarifftype'] != SERVICE_OTHER ? $SERVICETYPES[$assign['tarifftype']] : '', $sdesc);
 				$sdesc = preg_replace("/\%tariff/", $assign['name'], $sdesc);
 				$sdesc = preg_replace("/\%attribute/", $assign['attribute'], $sdesc);
 				$sdesc = preg_replace("/\%desc/", $assign['description'], $sdesc);
@@ -807,36 +998,45 @@ foreach ($assigns as $assign) {
 				$sdesc = preg_replace("/\%next_period/", $next_period, $sdesc);
 				$sdesc = preg_replace("/\%prev_period/", $prev_period, $sdesc);
 
-				if ($assign['invoice'])
-				{
-					if (($tmp_itemid = $DB->GetOne("SELECT itemid FROM invoicecontents
-						WHERE tariffid=? AND value=$value AND docid=? AND description=?",
-						array($assign['tariffid'], $invoices[$cid], $sdesc))) != 0)
-					{
-						$DB->Execute("UPDATE invoicecontents SET count=count+1
-							WHERE tariffid=? AND docid=? AND description=?",
-							array($assign['tariffid'], $invoices[$cid], $sdesc));
+				if ($assign['invoice']) {
+					if ($assign['invoice'] == DOC_DNOTE)
+						$tmp_itemid = 0;
+					else
+						$tmp_itemid = $DB->GetOne("SELECT itemid FROM invoicecontents
+						WHERE tariffid = ? AND value = ? AND docid = ? AND description = ?",
+						array($assign['tariffid'], $value, $invoices[$cid], $sdesc));
 
+					if ($tmp_itemid != 0) {
+						$DB->Execute("UPDATE invoicecontents SET count = count + 1
+							WHERE docid = ? AND itemid = ?",
+							array($invoices[$cid], $tmp_itemid));
 						if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
-	                        $DB->Execute("UPDATE cash SET value = value + ($value * -1)
-	                            WHERE docid = ? AND itemid = $tmp_itemid",
-	                            array($invoices[$cid]));
+							$DB->Execute("UPDATE cash SET value = value + ?
+								WHERE docid = ? AND itemid = ?",
+								array(str_replace(',', '.', $value * -1), $invoices[$cid], $tmp_itemid));
 					} else {
 						$itemid++;
 
-						$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid,
-							content, count, description, tariffid, itemid, pdiscount, vdiscount)
-							VALUES (?, $value, ?, ?, ?, 1, ?, ?, $itemid, ?, ?)",
-							array($invoices[$cid], $assign['taxid'], $assign['prodid'], $unit_name,
-							$sdesc, empty($assign['tariffid']) ? null : $assign['tariffid'], $assign['pdiscount'], $assign['vdiscount']));
-						if ($assign['invoice'] == DOC_INVOICE || $proforma_generates_commitment)
-	                        $DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid)
-	                            VALUES($currtime, $value * -1, ?, $cid, ?, ?, $itemid)",
-	                            array($assign['taxid'], $sdesc, $invoices[$cid]));
+						if ($assign['invoice'] == DOC_DNOTE)
+							$DB->Execute("INSERT INTO debitnotecontents (docid, value, description, itemid) 
+								VALUES (?, ?, ?, ?)",
+								array($invoices[$cid], $value, $desc, $itemid));
+						else
+							$DB->Execute("INSERT INTO invoicecontents (docid, value, taxid, prodid,
+								content, count, description, tariffid, itemid, pdiscount, vdiscount)
+								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+								array($invoices[$cid], $value, $assign['taxid'], $assign['prodid'], $unit_name, 1,
+								$sdesc, empty($assign['tariffid']) ? null : $assign['tariffid'],
+								$itemid, $assign['pdiscount'], $assign['vdiscount']));
+						if ($assign['invoice'] == DOC_INVOICE || $assign['invoice'] == DOC_DNOTE || $proforma_generates_commitment)
+							$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, docid, itemid, linktechnology)
+								VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+								array($currtime, str_replace(',', '.', $value * -1), $assign['taxid'], $cid, $sdesc, $invoices[$cid], $itemid, $linktechnology));
 					}
 				} else
-					$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment)
-						VALUES ($currtime, $value * -1, ?, $cid, ?)", array($assign['taxid'], $sdesc));
+					$DB->Execute("INSERT INTO cash (time, value, taxid, customerid, comment, linktechnology)
+						VALUES (?, ?, ?, ?, ?, ?)",
+						array($currtime, str_replace(',', '.', $value * -1), $assign['taxid'], $cid, $sdesc, $linktechnology));
 
 				if (!$quiet) print "CID:$cid\tVAL:$value\tDESC:$sdesc" . PHP_EOL;
 			}
@@ -847,13 +1047,20 @@ foreach ($assigns as $assign) {
 	}
 }
 
-// delete old assignments
-$DB->Execute("DELETE FROM liabilities WHERE id IN (
-	SELECT liabilityid FROM assignments
-	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30
-		AND liabilityid IS NOT NULL)");
-$DB->Execute("DELETE FROM assignments
-	WHERE dateto < ?NOW? - 86400 * 30 AND dateto <> 0 AND at < $today - 86400 * 30");
+if ($delete_old_assignments_after_days) {
+	// delete old assignments
+	$DB->Execute("DELETE FROM liabilities WHERE id IN (
+			SELECT liabilityid FROM assignments
+				WHERE ((dateto <> 0 AND dateto < $today - ? * 86400
+						OR (period = ? AND at < $today - ? * 86400))
+					AND liabilityid IS NOT NULL)
+		)",
+		array($delete_old_assignments_after_days, DISPOSABLE, $delete_old_assignments_after_days));
+	$DB->Execute("DELETE FROM assignments
+		WHERE (dateto <> 0 AND dateto < $today - ? * 86400)
+			OR (period = ? AND at < $today - ? * 86400)",
+		array($delete_old_assignments_after_days, DISPOSABLE, $delete_old_assignments_after_days));
+}
 
 // clear voip tariff rule states
 $DB->Execute("DELETE FROM voip_rule_states");

@@ -24,12 +24,20 @@
  *  $Id$
  */
 
+function userpanel_style_change() {
+	$files = getdir(USERPANEL_DIR . DIRECTORY_SEPARATOR . 'templates_c', '^.*\.html\.php$');
+	if (!empty($files))
+		foreach ($files as $file)
+			unlink(USERPANEL_DIR . DIRECTORY_SEPARATOR . 'templates_c' . DIRECTORY_SEPARATOR . $file);
+}
+
 function module_setup()
 {
     global $SMARTY, $DB, $USERPANEL, $layout, $LMS;
     $layout['pagetitle'] = trans('Userpanel Configuration');
     $SMARTY->assign('page_header', ConfigHelper::getConfig('userpanel.page_header', ''));
     $SMARTY->assign('company_logo', ConfigHelper::getConfig('userpanel.company_logo', ''));
+    $SMARTY->assign('shortcut_icon', ConfigHelper::getConfig('userpanel.shortcut_icon', ''));
     $SMARTY->assign('stylelist', getdir(USERPANEL_DIR . DIRECTORY_SEPARATOR . 'style', '^[a-z0-9]*$'));
     $SMARTY->assign('style', ConfigHelper::getConfig('userpanel.style', 'default'));
     $SMARTY->assign('hint', ConfigHelper::getConfig('userpanel.hint', 'modern'));
@@ -53,7 +61,7 @@ function module_setup()
 	} else
 		$enabled_modules = explode(',', $enabled_modules);
     $SMARTY->assign('enabled_modules', $enabled_modules);
-    $SMARTY->assign('total', sizeof($USERPANEL->MODULES));
+    $SMARTY->assign('total', count($USERPANEL->MODULES));
     $SMARTY->display('file:' . USERPANEL_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . 'setup.html');
 }
 
@@ -70,9 +78,11 @@ function module_submit_setup()
     else
         $DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES('userpanel', 'hint', ?)", array($_POST['hint']));
 
-    if($DB->GetOne("SELECT 1 FROM uiconfig WHERE section = 'userpanel' AND var = 'style'"))
-        $DB->Execute("UPDATE uiconfig SET value = ? WHERE section = 'userpanel' AND var = 'style'", array($_POST['style']));
-    else
+    if ($oldstyle = $DB->GetOne("SELECT value FROM uiconfig WHERE section = 'userpanel' AND var = 'style'")) {
+		$DB->Execute("UPDATE uiconfig SET value = ? WHERE section = 'userpanel' AND var = 'style'", array($_POST['style']));
+		if ($oldstyle != $_POST['style'])
+			userpanel_style_change();
+    } else
         $DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES('userpanel', 'style', ?)", array($_POST['style']));
 
     if($DB->GetOne("SELECT 1 FROM uiconfig WHERE section = 'userpanel' AND var = 'hide_nodes_modules'"))
@@ -105,7 +115,12 @@ function module_submit_setup()
     else
         $DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES('userpanel', 'company_logo', ?)", array($_POST['company_logo']));
 
-    if ($DB->GetOne("SELECT 1 FROM uiconfig WHERE section = 'userpanel' AND var = 'reminder_sms_body'"))
+	if ($DB->GetOne("SELECT 1 FROM uiconfig WHERE section = 'userpanel' AND var = 'shortcut_icon'"))
+		$DB->Execute("UPDATE uiconfig SET value = ? WHERE section = 'userpanel' AND var = 'shortcut_icon'", array($_POST['shortcut_icon']));
+	else
+		$DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES('userpanel', 'shortcut_icon', ?)", array($_POST['shortcut_icon']));
+
+	if ($DB->GetOne("SELECT 1 FROM uiconfig WHERE section = 'userpanel' AND var = 'reminder_sms_body'"))
         $DB->Execute("UPDATE uiconfig SET value = ? WHERE section = 'userpanel' AND var = 'reminder_sms_body'", array($_POST['reminder_sms_body']));
     else
         $DB->Execute("INSERT INTO uiconfig (section, var, value) VALUES('userpanel', 'reminder_sms_body', ?)", array($_POST['reminder_sms_body']));

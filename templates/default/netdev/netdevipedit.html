@@ -1,9 +1,10 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 {$xajax}
 <!-- $Id$ -->
 <H1>{$layout.pagetitle}</H1>
+<div id="netdevipedit-sortable" class="lms-ui-sortable-persistent">
 {block name=netdevipeditbox}
 	{include file="netdev/netdevipeditbox.html"}
 {/block}
@@ -15,6 +16,9 @@
 {/block}
 {block name=netdevnodesessionbox}
 	{include file="node/nodesessions.html"}
+{/block}
+{block name=netdevattachments}
+	{include file="attachments.html" attachmenttype="netdevid" attachmentresourceid=$netdev.id}
 {/block}
 {block name=netdevmanagementurl}
 	{include file="managementurl/managementurls.html"}
@@ -28,4 +32,8 @@
 {block name=netdevradiosectors}
 	{include file="netdev/radiosectors.html"}
 {/block}
+</div>
+<script type="text/javascript">
+	restoreSortable('netdevipedit-sortable', '{$netdevvipedit_sortable_order}');
+</script>
 {/block}

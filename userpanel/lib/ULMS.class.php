@@ -70,6 +70,13 @@ class ULMS extends LMS {
 			return NULL;
 	}
 
+	public function UpdateCustomerPIN($id, $pin) {
+		$res = $this->DB->Execute('UPDATE customers SET pin = ? WHERE id = ?',
+			array($pin, $id));
+		$_SESSION['session_passwd'] = $pin;
+		return $res;
+	}
+
 	public function GetCustomerMessage($id) {
 		return $this->DB->GetOne('SELECT message FROM customers WHERE id=?', array($id));
 	}
@@ -121,7 +128,8 @@ class ULMS extends LMS {
 				FROM rtmessages
 				LEFT JOIN customers ON (customers.id = customerid)
 				LEFT JOIN vusers ON (vusers.id = userid)
-				WHERE ticketid = ? AND rtmessages.type = ? AND rtmessages.deleted = 0 ORDER BY createtime ASC', array($id, RTMESSAGE_REGULAR));
+				WHERE ticketid = ? AND rtmessages.type = ? AND rtmessages.deleted = 0
+				ORDER BY createtime DESC', array($id, RTMESSAGE_REGULAR));
 
 		foreach ($ticket['messages'] as &$message)
 			$message['attachments'] = $this->DB->GetAll('SELECT filename, contenttype FROM rtattachments WHERE messageid = ?',

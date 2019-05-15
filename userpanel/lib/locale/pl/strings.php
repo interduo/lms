@@ -24,6 +24,7 @@
  *  $Id$
  */
 
+$_LANG['Hide customer nodes box'] = 'Ukryj okno komputerów klienta';
 $_LANG['Access denied!'] = 'Brak dostępu!';
 $_LANG['and'] = 'i';
 $_LANG['Cancel'] = 'Anuluj';
@@ -106,5 +107,8 @@ $_LANG['Google reCAPTCHA site key:'] = 'Klucz witryny Google reCAPTCHA:';
 $_LANG['Enter Google reCAPTCHA site key'] = 'Podaj klucz witryny Google reCAPTCHA:';
 $_LANG['Google reCAPTCHA secret:'] = 'Podaj tajne hasło Google reCAPTCHA:';
 $_LANG['Enter Google reCAPTCHA secret'] = 'Podaj tajne hasło Google reCAPTCHA:';
+
+$_LANG['Web browser icon'] = 'Ikona w przeglądarce www';
+$_LANG['Enter full or relative URL address of web browser icon'] = 'Podaj pełny lub względny adres URL ikony widocznej w przeglądarce www';
 
 ?>

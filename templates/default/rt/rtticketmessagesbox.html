@@ -4,33 +4,16 @@
 	<THEAD>
 	<TR>
 		<TD style="width: 1%;" class="bold nobr">
-			<IMG src="img/open.gif" alt=""> <B>{trans("Ticket History")}</B>
+			<i class="lms-ui-icon-message"></i> <B>{trans("Ticket History")}</B>
 		</TD>
 		<TD style="width: 99%;" class="text-right nobr" colspan="2">
-			{if $ticket.state != 2}
-			<A href="?m=rtnoteadd&amp;ticketid={$ticket.ticketid}"><IMG src="img/note.gif" alt=""> {trans("New Note")}</A>
-			<A href="?m=rtmessageadd&amp;ticketid={$ticket.ticketid}"><IMG src="img/mail.gif" alt=""> {trans("New Message")}</A>
+			{if $ticket.state != $smarty.const.RT_RESOLVED}
+				{button icon="lms-ui-icon-note" label="New Note" onclick="window.location.href = '?m=rtnoteadd&ticketid={$ticket.ticketid}';"}
+				{button icon="lms-ui-icon-message" label="New Message" onclick="window.location.href = '?m=rtmessageadd&ticketid={$ticket.ticketid}';"}
 			{/if}
 		</TD>
 	</TR>
 	</THEAD>
-	<TFOOT>
-	<TR>
-		<TD style="width: 100%;" class="navigation" colspan="3">
-			{if $ticket.prev_ticketid != NULL}
-				<A href="?m=rtticketview&amp;id={$ticket.prev_ticketid}">&laquo;&laquo;&laquo;&nbsp;{trans("Previous ticket")}</A>
-			{else}
-				&laquo;&laquo;&laquo;&nbsp;{trans("Previous ticket")}
-			{/if}
-			&nbsp;&nbsp;&nbsp;
-			{if $ticket.next_ticketid != NULL}
-				<A href="?m=rtticketview&amp;id={$ticket.next_ticketid}">{trans("Next ticket")}&nbsp;&raquo;&raquo;&raquo;</A>
-			{else}
-				{trans("Next ticket")}&nbsp;&raquo;&raquo;&raquo;
-			{/if}
-		</TD>
-	</TR>
-	</TFOOT>
 	<TBODY>
 	<TR>
 		<TD style="width: 100%;" colspan="3">
@@ -80,23 +63,30 @@
 
 						{if $message.type == $smarty.const.RTMESSAGE_NOTE}
 							{if $message.deleted == 1 && $message.deltime != 0 && (ConfigHelper::checkPrivilege('helpdesk_advanced_operations'))}
-								<A href="?m=rtrestore&amp;id={$message.id}&amp;maction=restore" onClick="return confirmLink(this,'{trans("Are you sure, you want to restore that message?")}');"><IMG src="img/reload.gif" alt=""> {trans("Restore<!RT>")}</A>
-								<A href="?m=rtremove&amp;id={$message.id}&amp;maction=delperm" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that message?")}');"><IMG src="img/delete.gif" alt=""> {trans("Delete permanently")}</A>
+								{button icon="lms-ui-icon-restore" onclick="if (confirmLink(this,'{trans("Are you sure, you want to restore that message?")}')) location.href = '?m=rtrestore&id={$message.id}&maction=restore';"
+									label="Restore<!RT>"}
+								{button icon="lms-ui-icon-delete" onclick="if (confirmLink(this, '{trans("Are you sure, you want to delete that message?")}')) location.href = '?m=rtremove&id={$message.id}&maction=delperm';"
+									label="Delete permanently"}
 							{else}
-								<A href="?m=rtmessagedel&amp;id={$message.id}&amp;maction=delete" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that message?")}');"><IMG src="img/delete.gif" alt=""> {trans("Delete")}</A>
+								{button icon="lms-ui-icon-trash" onclick="if (confirmLink(this, '{trans("Are you sure, you want to delete that message?")}')) location.href = '?m=rtmessagedel&id={$message.id}&maction=delete';"
+									label="Delete"}
 							{/if}
 						{else}
-							<A href="?m=rtmessageview&amp;id={$message.id}"><IMG src="img/view.gif" alt=""> {trans("Details")}</A>
+							{button icon="lms-ui-icon-details" onclick="location.href = '?m=rtmessageview&id={$message.id}';" label="Details"}
 							{if $msgidx > 0}
 								{if $message.deleted == 1 && $message.deltime != 0 && (ConfigHelper::checkPrivilege('helpdesk_advanced_operations'))}
-								<A href="?m=rtrestore&amp;id={$message.id}&amp;maction=restore" onClick="return confirmLink(this,'{trans("Are you sure, you want to restore that message?")}');"><IMG src="img/reload.gif" alt=""> {trans("Restore<!RT>")}</A>
-								<A href="?m=rtremove&amp;id={$message.id}&amp;maction=delperm" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that message?")}');"><IMG src="img/delete.gif" alt=""> {trans("Delete permanently")}</A>
+									{button icon="lms-ui-icon-restore" onclick="if (confirmLink(this,'{trans("Are you sure, you want to restore that message?")}')) location.href = '?m=rtrestore&id={$message.id}&maction=restore';"
+										label="Restore<!RT>"}
+								{button icon="lms-ui-icon-delete" onclick="if (confirmLink(this, '{trans("Are you sure, you want to delete that message?")}')) location.href = '?m=rtremove&id={$message.id}&maction=delperm';"
+									label="Delete permanently"}
 								{else}
-								<A href="?m=rtmessagedel&amp;id={$message.id}&amp;maction=delete" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that message?")}');"><IMG src="img/delete.gif" alt=""> {trans("Delete")}</A>
+									{button icon="lms-ui-icon-trash" onclick="if (confirmLink(this, '{trans("Are you sure, you want to delete that message?")}')) location.href = '?m=rtmessagedel&id={$message.id}&maction=delete';"
+										label="Delete"}
 								{/if}
 							{/if}
 							{if $ticket.state != $smarty.const.RT_RESOLVED}
-								<A href="?m=rtmessageadd&amp;id={$message.id}&amp;ticketid={$ticket.ticketid}"><IMG src="img/forward.gif" alt=""> {trans("Answer")}</A>
+								{button icon="lms-ui-icon-reply" onclick="location.href = '?m=rtmessageadd&id={$message.id}&ticketid={$ticket.ticketid}';" label="<!vocative>Reply"}
+								{button icon="lms-ui-icon-quoting" onclick="location.href = '?m=rtmessageadd&id={$message.id}&ticketid={$ticket.ticketid}&citing=1';" label="Quote"}
 							{/if}
 						{/if}
 					</TD>
@@ -105,13 +95,14 @@
 				<TBODY>
 				<TR>
 					<TD colspan="4" {if $message.deleted == 1 && $message.deltime != 0} class="lucid lms-ui-rtmessage-deleted fbt" {else} class="fbt superlight{if $message.type == $smarty.const.RTMESSAGE_NOTE} blend{/if}"{/if}>
-						{$message.body|escape|replace:"\n":"<BR>"}
+						{$message.body|escape|replace:"\n":'<br>'|replace:"[matched-text]":"<span class=\"lms-ui-matched-text\">"|replace:"[/matched-text]":"</span>"|message_quote}
 					</TD>
 				</TR>
 				</TBODY>
 				{counter print=false}
-				{elseif $message.type != $smarty.const.RTMESSAGE_NOTE}
-					<tr class="blend">
+				{else}
+				<TBODY>
+					<tr id="rtmessage-{$message.id}" class="blend">
 						<td width="1%" class="fbt text-right bold nobr valign-top">
 							{$message.createtime|date_format:"%Y/%m/%d %H:%M"}
 						</td>
@@ -120,25 +111,10 @@
 						</td>
 						<td width="98%" colspan="2" class="fbt">
 							<A href="?m=userinfo&id={$message.userid}">{$message.username}</A><BR>
-							{$message.body}
+							{$message.body|escape|replace:"\n":"<BR>"}
 						</td>
 					</tr>
-				{else}
-				<THEAD>
-				<TR>
-					<TD style="width: 97%;" class="text-right nobr">
-						<A href="?m=rtnotedel&amp;id={$message.id}" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that note?")}');"><IMG src="img/delete.gif" alt=""> {trans("Delete")}</A>
-					</TD>
-				</TR>
-				</THEAD>
-				<TBODY>
-					<TR>
-						<TD colspan="4" class="fbt superlight blend">
-							{$message.body|escape|replace:"\n":"<BR>"}
-						</TD>
-					</TR>
 				</TBODY>
-				{counter print=false}
 				{/if}
 				{/foreach}
 			</TABLE>
@@ -146,8 +122,13 @@
 	</TR>
 	</TBODY>
 </TABLE>
-<script type="text/javascript" src="img/Autolinker.min.js"></script>
+<script type="text/javascript" src="js/Autolinker.min.js"></script>
 <script type="text/javascript">
     var myTextEl = document.getElementById( 'messages' );
     myTextEl.innerHTML = Autolinker.link( myTextEl.innerHTML );
+	if (location.hash.length) {
+		$('tr' + location.hash).parent('thead').addClass('lms-ui-rtmessage-current')
+			.next('tbody').addClass('lms-ui-rtmessage-current');
+		$('tr' + location.hash).parent('tbody').addClass('lms-ui-rtsystemmessage-current');
+	}
 </script>

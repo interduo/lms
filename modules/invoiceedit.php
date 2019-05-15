@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -29,12 +29,14 @@ include(MODULES_DIR . DIRECTORY_SEPARATOR . 'invoicexajax.inc.php');
 $taxeslist = $LMS->GetTaxes();
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
-if(isset($_GET['id']) && ($action == 'edit' || $action == 'convert'))
-{
+if (isset($_GET['id']) && ($action == 'edit' || $action == 'init')) {
 	if ($LMS->isDocumentPublished($_GET['id']) && !ConfigHelper::checkPrivilege('published_document_modification'))
 		return;
 
 	if ($LMS->isDocumentReferenced($_GET['id']))
+		return;
+
+	if ($LMS->isArchiveDocument($_GET['id']))
 		return;
 
 	$invoice = $LMS->GetInvoiceContent($_GET['id']);
@@ -42,17 +44,15 @@ if(isset($_GET['id']) && ($action == 'edit' || $action == 'convert'))
 	if (!empty($invoice['cancelled']))
 		return;
 
-	$invoice['proforma'] = isset($_GET['proforma']) ? $action : null;
+	$invoice['proforma'] = isset($_GET['proforma']) ? $action : 0;
 
 	$SESSION->remove('invoicecontents');
 	$SESSION->remove('invoice');
 	$SESSION->remove('invoicecustomer');
 	$SESSION->remove('invoiceediterror');
 
-	$i = 0;
 	$invoicecontents = array();
 	foreach ($invoice['content'] as $item) {
-		$i++;
 		$invoicecontents[] = array(
 			'tariffid' => $item['tariffid'],
 			'name' => $item['description'],
@@ -68,7 +68,6 @@ if(isset($_GET['id']) && ($action == 'edit' || $action == 'convert'))
 			's_valuebrutto' => str_replace(',' ,'.', $item['total']),
 			'tax' => isset($taxeslist[$item['taxid']]) ? $taxeslist[$item['taxid']]['label'] : '',
 			'taxid' => $item['taxid'],
-			'posuid' => $i,
 		);
 	}
 
@@ -78,26 +77,15 @@ if(isset($_GET['id']) && ($action == 'edit' || $action == 'convert'))
 	$invoice['oldnumber'] = $invoice['number'];
 	$invoice['oldnumberplanid'] = $invoice['numberplanid'];
 	$invoice['oldcustomerid'] = $invoice['customerid'];
+	$invoice['oldcomment'] = $invoice['comment'];
 
-	if ($invoice['proforma'] == 'convert') {
-		$currtime = time();
-		$invoice['cdate'] = $currtime;
-		$invoice['sdate'] = $currtime;
-		$invoice['deadline'] = $invoice['cdate'] + $invoice['paytime'] * 86400;
-
-		$customer = $LMS->GetCustomer($invoice['customerid'], true);
-		$invoice['numberplanid'] = $DB->GetOne('SELECT n.id FROM numberplans n
-			JOIN numberplanassignments a ON (n.id = a.planid)
-			WHERE n.doctype = ? AND n.isdefault = 1 AND a.divisionid = ?',
-			array(DOC_INVOICE, $customer['divisionid']));
-
-		$invoice['number'] = $LMS->GetNewDocumentNumber(array(
-			'doctype' => DOC_INVOICE,
-			'planid' => $invoice['numberplanid'],
-			'cdate' => $invoice['cdate'],
-			'customerid' => $invoice['customerid'],
-		));
-	}
+	$hook_data = array(
+		'contents' => $invoicecontents,
+		'invoice' => $invoice,
+	);
+	$hook_data = $LMS->ExecuteHook('invoiceedit_init', $hook_data);
+	$invoicecontents = $hook_data['contents'];
+	$invoice = $hook_data['invoice'];
 
 	$SESSION->save('invoicecontents', $invoicecontents);
 	$SESSION->save('invoice', $invoice);
@@ -117,9 +105,7 @@ $ntempl = docnumber(array(
 	'cdate' => $invoice['cdate'],
 	'customerid' => $invoice['customerid'],
 ));
-if (isset($invoice['proforma']) && $invoice['proforma'] == 'convert')
-	$layout['pagetitle'] = trans('Conversion Pro Forma Invoice $a To Invoice', $ntempl);
-elseif($invoice['doctype'] == DOC_INVOICE_PRO)
+if($invoice['doctype'] == DOC_INVOICE_PRO)
 	$layout['pagetitle'] = trans('Pro Forma Invoice Edit: $a', $ntempl);
 else
 	$layout['pagetitle'] = trans('Invoice Edit: $a', $ntempl);
@@ -127,15 +113,37 @@ else
 if(isset($_GET['customerid']) && $_GET['customerid'] != '' && $LMS->CustomerExists($_GET['customerid']))
 	$action = 'setcustomer';
 
+function changeContents($contents, $newcontents) {
+	$result = array();
+
+	foreach ($newcontents as $posuid => &$newposition)
+		if (isset($contents[$posuid]))
+			$result[] = $contents[$posuid];
+	unset($newposition);
+
+	return $result;
+}
+
 switch($action)
 {
 	case 'additem':
+	case 'savepos':
 		if ($invoice['closed'])
 			break;
 
-		$itemdata = r_trim($_POST);
+		$error = array();
 
-		unset($error);
+		$itemdata = r_trim($_POST);
+		$contents = changeContents($contents, $itemdata['invoice-contents']);
+
+		if ($action == 'savepos') {
+			if (!isset($_GET['posuid']) || !isset($contents[$_GET['posuid']]))
+				die;
+			$posuid = $_GET['posuid'];
+			$itemdata = $itemdata['invoice-contents'][$posuid];
+		}
+
+		unset($itemdata['invoice-contents']);
 
 		$itemdata['discount'] = str_replace(',', '.', $itemdata['discount']);
 		$itemdata['pdiscount'] = 0;
@@ -147,11 +155,23 @@ switch($action)
 		if ($itemdata['pdiscount'] < 0 || $itemdata['pdiscount'] > 99.9 || $itemdata['vdiscount'] < 0)
 			$error['discount'] = trans('Wrong discount value!');
 
-		if ($error)
+		$hook_data = array(
+			'contents' => $contents,
+			'itemdata' => $itemdata,
+			'invoice' => $invoice,
+		);
+		$hook_data = $LMS->ExecuteHook('invoiceedit_savepos_validation', $hook_data);
+		if (isset($hook_data['error']) && is_array($hook_data['error']))
+			$error = array_merge($error, $hook_data['error']);
+
+		if (!empty($error))
 			break;
 
-		foreach(array('count', 'discount', 'pdiscount', 'vdiscount', 'valuenetto', 'valuebrutto') as $key)
-			$itemdata[$key] = round((float) str_replace(',', '.', $itemdata[$key]), 2);
+		$itemdata = $hook_data['itemdata'];
+
+		foreach (array('discount', 'pdiscount', 'vdiscount', 'valuenetto', 'valuebrutto') as $key)
+			$itemdata[$key] = f_round($itemdata[$key]);
+		$itemdata['count'] = f_round($itemdata['count'], 3);
 
 		if ($itemdata['count'] > 0 && $itemdata['name'] != '')
 		{
@@ -175,13 +195,15 @@ switch($action)
 			// str_replace here is needed because of bug in some PHP versions (4.3.10)
 			$itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] / ($taxvalue / 100 + 1));
 			$itemdata['valuenetto'] = f_round($itemdata['valuenetto']);
-			$itemdata['count'] = f_round($itemdata['count']);
+			$itemdata['count'] = f_round($itemdata['count'], 3);
 			$itemdata['discount'] = f_round($itemdata['discount']);
 			$itemdata['pdiscount'] = f_round($itemdata['pdiscount']);
 			$itemdata['vdiscount'] = f_round($itemdata['vdiscount']);
 			$itemdata['tax'] = $taxeslist[$itemdata['taxid']]['label'];
-			$itemdata['posuid'] = (string) getmicrotime();
-			$contents[] = $itemdata;
+			if ($action == 'savepos')
+				$contents[$posuid] = $itemdata;
+			else
+				$contents[] = $itemdata;
 		}
 	break;
 
@@ -189,10 +211,10 @@ switch($action)
 		if ($invoice['closed'])
 			break;
 
-		if (sizeof($contents))
-			foreach($contents as $idx => $row)
-				if ($row['posuid'] == $_GET['posuid']) 
-					unset($contents[$idx]);
+		if (isset($contents[$_GET['posuid']]))
+			unset($contents[$_GET['posuid']]);
+
+		$contents = changeContents($contents, $_POST['invoice-contents']);
 	break;
 
 	case 'setcustomer':
@@ -228,6 +250,7 @@ switch($action)
 		$invoice['oldnumber'] = $oldnumber;
 		$invoice['oldnumberplanid'] = $oldnumberplanid;
 		$invoice['oldcustomerid'] = $oldcustomerid;
+		$invoice['oldcomment'] = $oldcomment;
 		$invoice['divisionid'] = $divisionid;
 		$invoice['name'] = $name;
 		$invoice['address'] = $address;
@@ -237,45 +260,45 @@ switch($action)
 		$invoice['city'] = $city;
 		$invoice['countryid'] = $countryid;
 
-		if($invoice['cdate']) // && !$invoice['cdatewarning'])
-		{
-			list($year, $month, $day) = explode('/', $invoice['cdate']);
-			if(checkdate($month, $day, $year))
-			{
-				$oldday = date('d', $invoice['oldcdate']);
-				$oldmonth = date('m', $invoice['oldcdate']);
-				$oldyear = date('Y', $invoice['oldcdate']);
+		$currtime = time();
 
-				if($oldday != $day || $oldmonth != $month || $oldyear != $year)
-				{
-					$invoice['cdate'] = mktime(date('G', time()), date('i', time()), date('s', time()), $month, $day, $year);
-				}
-				else // save hour/min/sec value if date is the same
-					$invoice['cdate'] = $invoice['oldcdate'];
+		if (ConfigHelper::checkPrivilege('invoice_consent_date')) {
+			if ($invoice['cdate']) { // && !$invoice['cdatewarning'])
+				list ($year, $month, $day) = explode('/', $invoice['cdate']);
+				if (checkdate($month, $day, $year)) {
+					$oldday = date('d', $invoice['oldcdate']);
+					$oldmonth = date('m', $invoice['oldcdate']);
+					$oldyear = date('Y', $invoice['oldcdate']);
+
+					if ($oldday != $day || $oldmonth != $month || $oldyear != $year)
+						$invoice['cdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime),
+							$month, $day, $year);
+					else // save hour/min/sec value if date is the same
+						$invoice['cdate'] = $invoice['oldcdate'];
+				} else
+					$error['cdate'] = trans('Incorrect date format!');
 			}
-			else
-				$error['cdate'] = trans('Incorrect date format!');
-		}
+		} else
+			$invoice['cdate'] = $invoice['oldcdate'];
 
-		if($invoice['sdate'])
-		{
-			list($syear, $smonth, $sday) = explode('/', $invoice['sdate']);
-			if(checkdate($smonth, $sday, $syear))
-			{
-				$oldsday = date('d', $invoice['oldsdate']);
-				$oldsmonth = date('m', $invoice['oldsdate']);
-				$oldsyear = date('Y', $invoice['oldsdate']);
+		if (ConfigHelper::checkPrivilege('invoice_sale_date')) {
+			if ($invoice['sdate']) {
+				list ($syear, $smonth, $sday) = explode('/', $invoice['sdate']);
+				if (checkdate($smonth, $sday, $syear)) {
+					$oldsday = date('d', $invoice['oldsdate']);
+					$oldsmonth = date('m', $invoice['oldsdate']);
+					$oldsyear = date('Y', $invoice['oldsdate']);
 
-				if($oldsday != $sday || $oldsmonth != $smonth || $oldsyear != $syear)
-				{
-					$invoice['sdate'] = mktime(date('G', time()), date('i', time()), date('s', time()), $smonth, $sday, $syear);
-				}
-				else // save hour/min/sec value if date is the same
-					$invoice['sdate'] = $invoice['oldsdate'];
+					if ($oldsday != $sday || $oldsmonth != $smonth || $oldsyear != $syear)
+						$invoice['sdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime),
+							$smonth, $sday, $syear);
+					else // save hour/min/sec value if date is the same
+						$invoice['sdate'] = $invoice['oldsdate'];
+				} else
+					$error['sdate'] = trans('Incorrect date format!');
 			}
-			else
-				$error['sdate'] = trans('Incorrect date format!');
-		}
+		} else
+			$invoice['sdate'] = $invoice['cdate'];
 
 		if ($invoice['deadline']) {
 			list ($dyear, $dmonth, $dday) = explode('/', $invoice['deadline']);
@@ -285,7 +308,7 @@ switch($action)
 				$olddyear = date('Y', $invoice['oldddate']);
 
 				if ($olddday != $dday || $olddmonth != $dmonth || $olddyear != $dyear)
-					$invoice['deadline'] = mktime(date('G', time()), date('i', time()), date('s', time()), $dmonth, $dday, $dyear);
+					$invoice['deadline'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $dmonth, $dday, $dyear);
 				else // save hour/min/sec value if date is the same
 					$invoice['deadline'] = $invoice['olddeadline'];
 			} else
@@ -305,7 +328,7 @@ switch($action)
 				||	($invoice['oldnumber'] == $invoice['number'] && $invoice['oldcustomerid'] != $invoice['customerid'])
 				|| $invoice['oldnumberplanid'] != $invoice['numberplanid']) && ($docid = $LMS->DocumentExists(array(
 					'number' => $invoice['number'],
-					'doctype' => $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+					'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
 					'planid' => $invoice['numberplanid'],
 					'cdate' => $invoice['cdate'],
 					'customerid' => $invoice['customerid'],
@@ -322,8 +345,29 @@ switch($action)
 		if (empty($contents) || empty($invoice['customerid']) || !$LMS->CustomerExists($invoice['customerid']))
 			break;
 
+		$error = array();
+
+		$contents = changeContents($contents, $_POST['invoice-contents']);
+
 		$SESSION->restore('invoiceid', $invoice['id']);
 		$invoice['type'] = $invoice['doctype'];
+
+		if (!ConfigHelper::checkPrivilege('invoice_consent_date'))
+			$invoice['cdate'] = $invoice['oldcdate'];
+
+		if (!ConfigHelper::checkPrivilege('invoice_sale_date'))
+			$invoice['sdate'] = $invoice['cdate'];
+
+		$hook_data = array(
+			'contents' => $contents,
+			'invoice' => $invoice,
+		);
+		$hook_data = $LMS->ExecuteHook('invoiceedit_save_validation', $hook_data);
+		if (isset($hook_data['error']) && is_array($hook_data['error']))
+			$error = array_merge($error, $hook_data['error']);
+
+		if (!empty($error))
+			break;
 
 		// updates customer recipient address stored in document
 		$prev_rec_addr = $DB->GetOne('SELECT recipient_address_id FROM documents WHERE id = ?', array($invoice['id']));
@@ -351,6 +395,7 @@ switch($action)
 		$cdate = $invoice['cdate'] ? $invoice['cdate'] : $currtime;
 		$sdate = $invoice['sdate'] ? $invoice['sdate'] : $currtime;
 		$deadline = $invoice['deadline'] ? $invoice['deadline'] : $currtime;
+		$comment = $invoice['comment'] ? $invoice['comment'] : NULL;
 		$paytime = round(($deadline - $cdate) / 86400);
 		$iid   = $invoice['id'];
 
@@ -374,7 +419,7 @@ switch($action)
 
 		if (!$invoice['number'])
 			$invoice['number'] = $LMS->GetNewDocumentNumber(array(
-				'doctype' => $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+				'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
 				'planid' => $invoice['numberplanid'],
 				'cdate' => $invoice['cdate'],
 				'customerid' => $invoice['customerid'],
@@ -386,7 +431,7 @@ switch($action)
 				||	($invoice['oldnumber'] == $invoice['number'] && $invoice['oldcustomerid'] != $invoice['customerid'])
 				|| $invoice['numberplanid'] != $invoice['oldnumberplanid']) && ($docid = $LMS->DocumentExists(array(
 					'number' => $invoice['number'],
-					'doctype' => $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+					'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
 					'planid' => $invoice['numberplanid'],
 					'cdate' => $invoice['cdate'],
 					'customerid' => $invoice['customerid'],
@@ -395,7 +440,7 @@ switch($action)
 
 			if ($error) {
 				$invoice['number'] = $LMS->GetNewDocumentNumber(array(
-					'doctype' => $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+					'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
 					'planid' => $invoice['numberplanid'],
 					'cdate' => $invoice['cdate'],
 					'customerid' => $invoice['customerid'],
@@ -403,6 +448,14 @@ switch($action)
 				$error = null;
 			}
 		}
+
+		$hook_data = array(
+			'contents' => $contents,
+			'invoice' => $invoice,
+		);
+		$hook_data = $LMS->ExecuteHook('invoiceedit_save_before_submit', $hook_data);
+		$contents = $hook_data['contents'];
+		$invoice = $hook_data['invoice'];
 
 		$args = array(
 			'cdate' => $cdate,
@@ -435,9 +488,10 @@ switch($action)
 			'div_inv_footer' => ($division['inv_footer'] ? $division['inv_footer'] : ''),
 			'div_inv_author' => ($division['inv_author'] ? $division['inv_author'] : ''),
 			'div_inv_cplace' => ($division['inv_cplace'] ? $division['inv_cplace'] : ''),
+			'comment' => ($invoice['comment'] ? $invoice['comment'] : null),
 		);
 
-		$args['type'] = $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE;
+		$args['type'] = $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE;
 		$args['number'] = $invoice['number'];
 		if ($invoice['numberplanid'])
 			$args['fullnumber'] = docnumber(array(
@@ -455,7 +509,7 @@ switch($action)
 				name = ?, address = ?, ten = ?, ssn = ?, zip = ?, city = ?, countryid = ?, divisionid = ?,
 				div_name = ?, div_shortname = ?, div_address = ?, div_city = ?, div_zip = ?, div_countryid = ?,
 				div_ten = ?, div_regon = ?, div_account = ?, div_inv_header = ?, div_inv_footer = ?,
-				div_inv_author = ?, div_inv_cplace = ?, type = ?, number = ?, fullnumber = ?, numberplanid = ?
+				div_inv_author = ?, div_inv_cplace = ?, comment = ?, type = ?, number = ?, fullnumber = ?, numberplanid = ?
 				WHERE id = ?', array_values($args));
 		if ($SYSLOG)
 			$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args,
@@ -512,8 +566,7 @@ switch($action)
 					$SYSLOG->AddMessage(SYSLOG::RES_INVOICECONT, SYSLOG::OPER_ADD, $args);
 				}
 
-				if ($invoice['doctype'] == DOC_INVOICE || ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment')
-					|| $invoice['proforma'] == 'convert')
+				if ($invoice['doctype'] == DOC_INVOICE || ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment'))
 					$LMS->AddBalance(array(
 						'time' => $cdate,
 						'value' => $item['valuebrutto']*$item['count']*-1,
@@ -540,16 +593,23 @@ switch($action)
 				array($invoice['customerid'], $iid));
 		}
 
+		$hook_data = array(
+			'contents' => $contents,
+			'invoice' => $invoice,
+		);
+		$hook_data = $LMS->ExecuteHook('invoiceedit_save_after_submit', $hook_data);
+
 		$DB->UnLockTables();
 		$DB->CommitTrans();
 
 		if (isset($_GET['print']))
-			$SESSION->save('invoiceprint', array('invoice' => $invoice['id'],
+			$SESSION->save('invoiceprint', array(
+				'invoice' => $invoice['id'],
 				'original' => !empty($_GET['original']) ? 1 : 0,
-			'copy' => !empty($_GET['copy']) ? 1 : 0,
+				'copy' => !empty($_GET['copy']) ? 1 : 0,
 				'duplicate' => !empty($_GET['duplicate']) ? 1 : 0));
 
-		$SESSION->redirect('?m=invoicelist' . (isset($invoice['proforma']) && $invoice['proforma'] == 'edit' ? '&proforma=1' : ''));
+		$SESSION->redirect('?m=invoicelist' . (isset($invoice['proforma']) && $invoice['proforma'] === 'edit' ? '&proforma=1' : ''));
 	break;
 }
 
@@ -568,18 +628,15 @@ if (!ConfigHelper::checkConfig('phpui.big_networks'))
 	$SMARTY->assign('customers', $LMS->GetCustomerNames());
 
 $SMARTY->assign('error', $error);
-$SMARTY->assign('contents', $contents);
 if (isset($invoice['customerid']) && !empty($invoice['customerid']))
 	$customer = $LMS->GetCustomer($invoice['customerid'], true);
 else
 	$customer = null;
-$SMARTY->assign('customer', $customer);
-$SMARTY->assign('invoice', $invoice);
 $SMARTY->assign('tariffs', $LMS->GetTariffs());
 $SMARTY->assign('taxeslist', $taxeslist);
 
 $args = array(
-	'doctype' => isset($invoice['proforma']) && $invoice['proforma'] == 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+	'doctype' => isset($invoice['proforma']) && $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
 	'cdate' => date('Y/m', $invoice['cdate']),
 );
 if (isset($invoice['customerid']) && !empty($invoice['customerid'])) {
@@ -587,6 +644,20 @@ if (isset($invoice['customerid']) && !empty($invoice['customerid'])) {
 	$args['division'] = $DB->GetOne('SELECT divisionid FROM customers WHERE id = ?', array($invoice['customerid']));
 }
 $SMARTY->assign('numberplanlist', $LMS->GetNumberPlans($args));
+
+$hook_data = array(
+	'customer' => $customer,
+	'contents' => $contents,
+	'invoice' => $invoice,
+);
+$hook_data = $LMS->ExecuteHook('invoiceedit_before_display', $hook_data);
+$customer = $hook_data['customer'];
+$contents = $hook_data['contents'];
+$invoice = $hook_data['invoice'];
+
+$SMARTY->assign('customer', $customer);
+$SMARTY->assign('contents', $contents);
+$SMARTY->assign('invoice', $invoice);
 
 $SMARTY->display('invoice/invoiceedit.html');
 

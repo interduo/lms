@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -251,6 +251,12 @@
 				<OPTION VALUE="{$item.id}">{$item.name}</OPTION>
 				{/foreach}
 			</SELECT>
+			&nbsp;{trans("with end date:")}
+			<select name="search[withenddate]">
+				<option value="-1">{trans("<!enddate>- any -")}</option>
+				<option value="1">{trans("yes")}</option>
+				<option value="0">{trans("no")}</option>
+			</select>
 		</TD>
 	</TR>
 	<TR>
@@ -260,7 +266,7 @@
 		<TD style="width: 99%;">
 			<SELECT SIZE="1" name="search[tarifftype]">
 				<OPTION VALUE="" SELECTED>{trans("- all -")}</OPTION>
-				{foreach $_TARIFFTYPES as $id => $name}
+				{foreach $_SERVICETYPES as $id => $name}
 				 	<OPTION VALUE="{$id}">{$name}</OPTION>
 				{/foreach}
 			</SELECT>
@@ -268,11 +274,28 @@
 	</TR>
 	<TR>
 		<TD style="width: 1%;" class="bold nobr">
+			<IMG src="img/money.gif" alt=""> {trans("Assignments:")}
+		</TD>
+		<TD style="width: 99%;">
+			<select size="1" name="search[assignments]">
+				<option value="0">{trans('- all -')}</option>
+				<option value="7">{trans('expire in $a days', 7)}</option>
+				<option value="14">{trans('expire in $a days', 14)}</option>
+				<option value="30">{trans('expire in $a days', 30)}</option>
+				<option value="-1">{trans('without end date')}</option>
+				<option value="-2">{trans('active')}</option>
+				<option value="-3">{trans('active, with invoice')}</option>
+				<option value="-4">{trans('suspended')}</option>
+			</select>
+		</TD>
+	</TR>
+	<TR>
+		<TD style="width: 1%;" class="bold nobr">
 			<IMG src="img/empty.gif" width="16" alt=""> {trans("Created:")}
 		</TD>
 		<TD style="width: 99%;">
-			{trans("from")} <INPUT type="text" class="calendar" value="" name="search[createdfrom]" size="10" placeholder="{trans("yyyy/mm/dd")}">
-			{trans("to")} <INPUT type="text" class="calendar" value="" name="search[createdto]" size="10" placeholder="{trans("yyyy/mm/dd")}">
+			{trans("from")} <INPUT type="text" class="lms-ui-date" value="" name="search[createdfrom]" size="10" placeholder="{trans("yyyy/mm/dd")}">
+			{trans("to")} <INPUT type="text" class="lms-ui-date" value="" name="search[createdto]" size="10" placeholder="{trans("yyyy/mm/dd")}">
 		</TD>
 	</TR>
 	<TR>
@@ -280,8 +303,8 @@
 			<IMG src="img/empty.gif" width="16" alt=""> {trans("Deleted:")}
 		</TD>
 		<TD style="width: 99%;">
-			{trans("from")} <INPUT type="text" class="calendar" value="" name="search[deletedfrom]" size="10" placeholder="{trans("yyyy/mm/dd")}">
-			{trans("to")} <INPUT type="text" class="calendar" value="" name="search[deletedto]" size="10" placeholder="{trans("yyyy/mm/dd")}">
+			{trans("from")} <INPUT type="text" class="lms-ui-date" value="" name="search[deletedfrom]" size="10" placeholder="{trans("yyyy/mm/dd")}">
+			{trans("to")} <INPUT type="text" class="lms-ui-date" value="" name="search[deletedto]" size="10" placeholder="{trans("yyyy/mm/dd")}">
 		</TD>
 	</TR>
 	<TR>
@@ -328,7 +351,26 @@
 				<OPTION VALUE="54">{trans("without group")}</OPTION>
 				<OPTION VALUE="55">{trans("without tariff")}</OPTION>
 				<OPTION VALUE="56">{trans("suspended<!plural>")}</OPTION>
+				<OPTION value="59">{trans("without contracts")}</OPTION>
+				<OPTION value="60">{trans("with expired contracts")}</OPTION>
+				<OPTION value="61">{trans("with expiring contracts")}</OPTION>
 			</SELECT>
+		</TD>
+	</TR>
+	<TR>
+		<TD class="bold nobr">
+			<img src="img/money.gif" alt=""> {trans("Balance:")}
+		</TD>
+		<TD>
+			<label>
+				<input type="radio" name="search[balance_relation]" value="-1" checked>
+				{trans("less or equal")}
+			</label>
+			<label>
+				<input type="radio" name="search[balance_relation]" value="1">
+				{trans("greater or equal")}
+			</label>
+			&nbsp;<input type="text" name="search[balance]" size="7">
 		</TD>
 	</TR>
 	<TR>
@@ -336,11 +378,11 @@
 			<IMG src="img/network.gif" alt=""> {trans("Network:")}
 		</TD>
 		<TD style="width: 99%;">
-			<SELECT SIZE="1" name="n">
-				<OPTION value="0" {if !$listdata.network} SELECTED {/if}>{trans("- all networks -")}</OPTION>
-				{section name=networks loop=$networks}
-				<OPTION value="{$networks[networks].id}" {if $listdata.network == $networks[networks].id} SELECTED {/if}>{$networks[networks].name|truncate:50:"...":true}</OPTION>
-				{/section}
+			<input type="hidden" name="n" value="all">
+			<SELECT SIZE="1" name="n[]" class="lms-ui-multiselect" data-default-value="{trans("- all networks -")}" multiple>
+				{foreach $networks as $network}
+				<OPTION value="{$network.id}"{if $listdata.network && in_array($network.id, $listdata.network)} selected{/if}>{$network.name|truncate:50:"...":true}</OPTION>
+				{/foreach}
 			</SELECT>
 		</TD>
 	</TR>

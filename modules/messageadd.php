@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,6 +23,8 @@
  *
  *  $Id$
  */
+
+check_file_uploads();
 
 function getMessageTemplate($tmplid, $subjectelem, $messageelem) {
 	global $DB;
@@ -61,6 +63,7 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 	$linktype = intval($filter['linktype']);
 	$tarifftype = intval($filter['tarifftype']);
 	$consent = isset($filter['consent']);
+	$netdevices = isset($filter['netdevices']) ? $filter['netdevices'] : null;
 
 	if($group == 50)
 	{
@@ -132,6 +135,12 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 	else
 		$expired_debt_table = '';
 
+	if (!empty($netdevices))
+		$netdevtable = ' JOIN (
+				SELECT DISTINCT n.ownerid FROM nodes n
+				WHERE n.ownerid IS NOT NULL AND netdev IN (' . implode(',', $netdevices) . ')
+			) nd ON nd.ownerid = c.id ';
+
 	$suspension_percentage = f_round(ConfigHelper::getConfig('finances.suspension_percentage'));
 
 	$recipients = $LMS->DB->GetAll('SELECT c.id, pin, '
@@ -168,6 +177,7 @@ function GetRecipients($filter, $type = MSG_MAIL) {
 			WHERE a.datefrom <= ?NOW? AND (a.dateto > ?NOW? OR a.dateto = 0) 
 			GROUP BY a.customerid
 		) t ON (t.customerid = c.id) '
+		. (isset($netdevtable) ? $netdevtable : '')
 		. (isset($mailtable) ? $mailtable : '')
 		. (isset($smstable) ? $smstable : '')
 		. ($tarifftype ? $tarifftable : '')
@@ -227,21 +237,16 @@ function BodyVars(&$body, $data)
 	if (strpos($body, '%bankaccount') !== false)
 		$body = str_replace('%bankaccount', format_bankaccount(bankaccount($data['id'])), $body);
 
-	if(!(strpos($body, '%last_10_in_a_table') === FALSE))
-	{
-		$last10 = '';
-		if($last10_array = $LMS->DB->GetAll('SELECT comment, time, value 
-			FROM cash WHERE customerid = ?
-			ORDER BY time DESC LIMIT 10', array($data['id'])))
-		{
-			foreach($last10_array as $r)
-			{
-				$last10 .= date("Y/m/d | ", $r['time']);
-				$last10 .= sprintf("%20s | ", sprintf($LANGDEFS[$LMS->ui_lang]['money_format'], $r['value']));
-				$last10 .= $r['comment']."\n";
+	if (preg_match('/%last_(?<number>[0-9]+)_in_a_table/', $body, $m)) {
+		$lN = '';
+		$lastN = $LMS->GetCustomerShortBalanceList($data['id'], $m['number']);
+		if (!empty($lastN))
+			foreach ($lastN as $r) {
+				$lN .= date("Y/m/d | ", $r['time']);
+				$lN .= sprintf("%20s | ", sprintf($LANGDEFS[$LMS->ui_lang]['money_format'], $r['value']));
+				$lN .= $r['comment']."\n";
 			}
-		}
-		$body = str_replace('%last_10_in_a_table', $last10, $body);
+		$body = preg_replace('/%last_[0-9]+_in_a_table/', $lN, $body);
 	}
 
 	$hook_data = $LMS->ExecuteHook('messageadd_variable_parser', array(
@@ -251,10 +256,114 @@ function BodyVars(&$body, $data)
 	$body = $hook_data['body'];
 }
 
+function FindNetDeviceUplink($netdevid) {
+	static $uplink_netdev = null;
+	static $visited = array();
+	static $root_netdevid = null;
+	static $netdev_links = null;
+	static $DB = null;
+
+	if (is_null($DB))
+		$DB = LMSDB::getInstance();
+
+	if (empty($root_netdevid))
+		$root_netdevid = ConfigHelper::getConfig('phpui.root_netdevice_id');
+
+	if (is_null($netdev_links)) {
+		$netlinks = $DB->GetAll('SELECT id, src, dst FROM netlinks');
+		if (!empty($netlinks))
+			foreach ($netlinks as $netlink) {
+				if (!isset($netdev_links[$netlink['src']]))
+					$netdev_links[$netlink['src']] = array();
+				$netdev_links[$netlink['src']][] = $netlink['dst'];
+				if (!isset($netdev_links[$netlink['dst']]))
+					$netdev_links[$netlink['dst']] = array();
+				$netdev_links[$netlink['dst']][] = $netlink['src'];
+			}
+		else
+			$netdev_links = array();
+	}
+
+	$visited[$netdevid] = true;
+
+	if ($root_netdevid == $netdevid)
+		return $uplink_netdev;
+
+	if (!isset($netdev_links[$netdevid]))
+		return null;
+
+	foreach ($netdev_links[$netdevid] as $netdev) {
+		if (isset($visited[$netdev]))
+			continue;
+
+		if ($netdev == $root_netdevid)
+			return $netdev;
+		else
+			$uplink_netdev = FindNetDeviceUplink($netdev);
+			if (!empty($uplink_netdev))
+				return $netdev;
+	}
+
+	return $uplink_netdev;
+}
+
+function GetNetDevicesInSubtree($netdevid) {
+	static $uplink_netdev = null;
+	static $netdevices = array();
+	static $visited = array();
+	static $netdev_links = null;
+	static $DB = null;
+
+	if (is_null($uplink_netdev)) {
+		$uplink_netdev = FindNetDeviceUplink($netdevid);
+		if (empty($uplink_netdev))
+			$uplink_netdev = 0;
+	}
+
+	if (is_null($DB))
+		$DB = LMSDB::getInstance();
+
+	if (is_null($netdev_links)) {
+		$netlinks = $DB->GetAll('SELECT id, src, dst FROM netlinks');
+		if (!empty($netlinks))
+			foreach ($netlinks as $netlink) {
+				if (!isset($netdev_links[$netlink['src']]))
+					$netdev_links[$netlink['src']] = array();
+				$netdev_links[$netlink['src']][] = $netlink['dst'];
+				if (!isset($netdev_links[$netlink['dst']]))
+					$netdev_links[$netlink['dst']] = array();
+				$netdev_links[$netlink['dst']][] = $netlink['src'];
+			}
+		else
+			$netdev_links = array();
+	}
+
+	$netdevices[] = $netdevid;
+	$visited[$netdevid] = true;
+
+	if (!isset($netdev_links[$netdevid]))
+		return array();
+
+	foreach ($netdev_links[$netdevid] as $netdev) {
+		if ($netdev == $uplink_netdev || isset($visited[$netdev]))
+			continue;
+		GetNetDevicesInSubtree($netdev);
+	}
+
+	return $netdevices;
+}
+
 $layout['pagetitle'] = trans('Message Add');
 
 if (isset($_POST['message']) && !isset($_GET['sent'])) {
 	$message = $_POST['message'];
+
+	$message['netdevices'] = array();
+	if (!empty($message['netdev']))
+		if (isset($message['wholesubtree'])) {
+			$message['netdevices'] = GetNetDevicesInSubtree($message['netdev']);
+		} else
+			$message['netdevices'][] = $message['netdev'];
 
 	if (!in_array($message['type'], array(MSG_MAIL, MSG_SMS, MSG_ANYSMS, MSG_WWW, MSG_USERPANEL)))
 		$message['type'] = MSG_USERPANEL_URGENT;
@@ -388,14 +497,17 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
 
 		$message['body'] = str_replace("\r", '', $message['body']);
 
+		$html_format = isset($message['wysiwyg']) && isset($message['wysiwyg']['mailbody']) && ConfigHelper::checkValue($message['wysiwyg']['mailbody']);
+
 		if ($message['type'] == MSG_MAIL) {
-			$message['body'] = wordwrap($message['body'], 76, "\n");
+			if (!$html_format)
+				$message['body'] = wordwrap($message['body'], 76, "\n");
 			$dsn_email = ConfigHelper::getConfig('mail.dsn_email', '', true);
 			$mdn_email = ConfigHelper::getConfig('mail.mdn_email', '', true);
 		}
 
 		$SMARTY->assign('message', $message);
-		$SMARTY->assign('recipcount', sizeof($recipients));
+		$SMARTY->assign('recipcount', count($recipients));
 		$SMARTY->display('message/messagesend.html');
 
 		$DB->BeginTrans();
@@ -451,7 +563,8 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
 					);
 
 				// deletes uploaded files
-				rrmdir($tmppath);
+				if (!empty($tmppath))
+					rrmdir($tmppath);
 			}
 
 			$debug_email = ConfigHelper::getConfig('mail.debug_email');
@@ -466,7 +579,7 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
 
 			if (isset($message['copytosender']))
 				$headers['Cc'] = $headers['From'];
-			if (!empty($message['wysiwyg']))
+			if ($html_format)
 				$headers['X-LMS-Format'] = 'html';
 			if (!empty($dsn_email)) {
 				$headers['From'] = $dsn_email;
@@ -503,8 +616,8 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
 					echo '<img src="img/sms.gif" border="0" align="absmiddle" alt=""> ';
 				}
 
-				echo trans('$a of $b ($c) $d:', ($key + 1), sizeof($recipients),
-				sprintf('%02.1f%%', round((100 / sizeof($recipients)) * ($key + 1), 1)),
+				echo trans('$a of $b ($c) $d:', ($key + 1), count($recipients),
+				sprintf('%02.1f%%', round((100 / count($recipients)) * ($key + 1), 1)),
 					$row['customername'] . ' &lt;' . $destination . '&gt;');
 				flush();
 
@@ -633,6 +746,11 @@ $SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
 $SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());
 $SMARTY->assign('userinfo', $LMS->GetUserInfo(Auth::GetCurrentUser()));
 $SMARTY->assign('users', $DB->GetAll('SELECT name, phone FROM vusers WHERE phone <> \'\' ORDER BY name'));
+
+$netdevices = $LMS->GetNetDevList();
+unset($netdevices['total'], $netdevices['order'], $netdevices['direction']);
+$SMARTY->assign('netdevices', $netdevices);
+
 $SMARTY->display('message/messageadd.html');
 
 ?>

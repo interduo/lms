@@ -1,7 +1,11 @@
 {block name="eventlistbox"}
-{cycle values="light,lucid" print=false}
-{section name=daylist loop=$daylist}
-<TABLE class="lmsbox">
+<style>
+    .event-single-sortable-handler {
+        cursor: grab;
+    }
+</style>
+{foreach $daylist as $day}
+<TABLE id="event-day-{$day}" class="lmsbox lms-ui-background-cycle event-day-table">
     <COLGROUP>
         <COL style="width: 1%;">
         <COL style="width: 1%; min-width:90px;">
@@ -11,88 +15,90 @@
         <COL style="width: 1%;" class="no-print">
     </COLGROUP>
     <THEAD>
-        <TR{if $daylist[daylist] == $today} class="superdark"{/if}>
+        <TR{if $day == $today} class="superdark"{/if}>
             <TD class="bold nobr">
-                <IMG src="img/calendar.gif" alt="">
-                {$daylist[daylist]|date_format:"%A"}
+                <i class="lms-ui-icon-content lms-ui-icon-timetable"></i>{$day|date_format:"%A"}
             </TD>
             <TD colspan="3">
-                <span class="bold">({$daylist[daylist]|date_format:"%x"})</span>
-                {if $getHolidays[$daylist[daylist]]}
-                <span class="red">{trans("Holiday:")} {$getHolidays[$daylist[daylist]]}</span>
+                <span class="bold">({$day|date_format:"%x"})</span>
+                {if $getHolidays[$day]}
+                <span class="red">{trans("Holiday:")} {$getHolidays[$day]}</span>
                 {/if}
-                <a href="?m=eventsearch&datefrom={$daylist[daylist]|date_format:"%Y/%m/%d"}&dateto={$daylist[daylist]|date_format:"%Y/%m/%d"}">&raquo;&raquo;&raquo;</a>
+                <a href="?m=eventsearch&datefrom={$day|date_format:"%Y/%m/%d"}&dateto={$day|date_format:"%Y/%m/%d"}">&raquo;&raquo;&raquo;</a>
             </TD>
             <TD colspan="2" class="text-right nobr">
                 <div class="no-print">
-                    <A href="?m=eventprint&day={$daylist[daylist]}&u={$listdata.customerid}{foreach $listdata.userid as $userid}&a[]={$userid}{/foreach}{foreach $listdata.type as $type}&t[]={$type}{/foreach}&closed={$listdata.closed}&privacy={$listdata.privacy}" target="_blank"><IMG src="img/print.gif" alt=""> {trans("Print")}</A>
-                    <A href="?m=eventadd&amp;day={$daylist[daylist]|date_format:"%d"}&amp;month={$daylist[daylist]|date_format:"%m"}&amp;year={$daylist[daylist]|date_format:"%Y"}"><IMG src="img/save.gif" alt=""> {trans("Add Event")}</A>&nbsp;
+					{button icon="add" onclick="window.location.href='?m=eventadd&day={$day|date_format:"%d"}&month={$day|date_format:"%m"}&year={$day|date_format:"%Y"}';"
+						external=true label="Add Event"}
+					{button icon="print" onclick="window.location.href='?m=eventprint&day={$day}&u={$filter.customerid}{foreach $filter.userid as $userid}&a[]={$userid}{/foreach}{foreach $filter.type as $type}&t[]={$type}{/foreach}&closed={$filter.closed}&privacy={$filter.privacy}';"
+						external=true label="Print"}
                 </div>
             </TD>
         </TR>
     </THEAD>
-    <TBODY>
-        {if $counter%2 && $counter!=0}{cycle print=false}{/if}
-        {assign var=counter value=0}
-        {section name=eventlist loop=$eventlist}
-        {if $eventlist[eventlist].date == $daylist[daylist]}
-        {math equation="x+1" x=$counter assign=counter}
-        <TR class="highlight {cycle}{if $eventlist[eventlist].closed} blend{/if}"  >
-            <TD style="min-width: 90px; {if isset($_EVENTSTYLES[$eventlist[eventlist].type])} {$_EVENTSTYLES[$eventlist[eventlist].type]}{/if}" class="text-center bold">
-                {$_EVENTTYPES[$eventlist[eventlist].type]}<BR>
-		{if $eventlist[eventlist].ticketid}<A href="?m=rtticketview&id={$eventlist[eventlist].ticketid}">{$eventlist[eventlist].ticketid|string_format:"%06d"}</A>{/if}
-            </TD>
-            <TD class="text-left nobr" onClick="return self.location.href = '?m=eventinfo&amp;id={$eventlist[eventlist].id}'">
-                <span class="bold">
-                    {math equation="floor(x/100)" x=$eventlist[eventlist].begintime format="%02d"}:{math equation="x % 100" x=$eventlist[eventlist].begintime format="%02d"}
-                    {if $eventlist[eventlist].begintime != $eventlist[eventlist].endtime}
-                    - {math equation="floor(x/100)" x=$eventlist[eventlist].endtime format="%02d"}:{math equation="x % 100" x=$eventlist[eventlist].endtime format="%02d"}
-                    {/if}</span><BR>
-                {foreach $eventlist[eventlist].userlist as $user}
-                <A href="?m=userinfo&amp;id={$user.id}">{$user.name|truncate:"25":"...":true}</A><BR>
-                {/foreach}
-            </TD>
-            <TD onClick="return self.location.href = '?m=eventinfo&amp;id={$eventlist[eventlist].id}'">
-                <IMG src="img/calendar.gif" alt=""> <span class="bold">{$eventlist[eventlist].title}</span>
-                &nbsp;<a href="?m=eventinfo&id={$eventlist[eventlist].id}">&raquo;&raquo;&raquo;</a><BR>
-                {if $eventlist[eventlist].description != ''}<IMG src="img/info1.gif" alt=""> {$eventlist[eventlist].description}{/if}<br>
-                {if $eventlist[eventlist].note != ''}<span{if !$eventlist[eventlist].closed} style="color: red;"{/if}><IMG src="img/note.gif" alt=""> {$eventlist[eventlist].note}</span>{/if}
-            </TD>
-            <TD class="nobr" colspan="2">
-                {if $eventlist[eventlist].customername}
-                <A href="?m=customerinfo&amp;id={$eventlist[eventlist].customerid}">{$eventlist[eventlist].customername|truncate:"30":"...":true}</A><br>
-                {if !empty($eventlist[eventlist].address_id)}
-                {$eventlist[eventlist].location}
-                {elseif !empty($eventlist[eventlist].nodeid)}
-                <a href="?m=nodeinfo&id={$eventlist[eventlist].nodeid}">{$eventlist[eventlist].nodelocation}</a>
-                {else}
-                {$eventlist[eventlist].customerlocation}
-                {/if}
-                {/if}
-            </TD>
-            <TD class="text-right nobr">
-                <div class="no-print">
-                    {if ConfigHelper::checkPrivilege('timetable_management')}
-                    {if $eventlist[eventlist].closed}
-                    <A href="?m=eventedit&amp;id={$eventlist[eventlist].id}&amp;action=open"><IMG src="img/resolved.gif" alt="{trans("Open")}"title="&nbsp;{trans("Open")}&nbsp;"></A>
-                    {else}
-                    <A href="?m=eventedit&amp;id={$eventlist[eventlist].id}&amp;action=close"><IMG src="img/open.gif" alt="{trans("Close")}"title="&nbsp;{trans("Close")}&nbsp;"></A>
-                    {/if}
-                    <A href="?m=eventdel&amp;id={$eventlist[eventlist].id}" OnClick="return confirmLink(this, '{trans("Are you sure, you want to delete that event?")}')"><IMG src="img/delete.gif" alt="{trans("Delete")}"title="&nbsp;{trans("Delete")}&nbsp;"></A>&nbsp;
-                    <A href="?m=eventedit&amp;id={$eventlist[eventlist].id}"><IMG src="img/edit.gif" alt="{trans("Edit")}"title="&nbsp;{trans("Edit")}&nbsp;"></A>
-                    {/if}
-                    {if $eventlist[eventlist].note == ''}
-                    {foreach item=user from=$eventlist[eventlist].userlist}
-                    {if $layout.logid == $user.id}<A href="?m=eventnote&id={$eventlist[eventlist].id}"><IMG src="img/note.gif" alt="{trans("Add Note")}" title="{trans("Add Note")}"></A>{/if}
-                    {/foreach}
-                    {/if}
-                </div>
-            </TD>
-        </TR>
-        </TR>
+    <TBODY class="event-day" data-event-day="{$day}">
+        {foreach $eventlist as $event}
+        {if $event.date == $day}
+            {include file="event/eventlistboxrow.html"}
         {/if}
-        {/section}
+        {/foreach}
     </TBODY>
 </TABLE>
-{/section}
+{/foreach}
+<script>
+
+    $('.event-day').sortable({
+        axis: 'y',
+        items: '.event-single',
+        handle: '.event-single-sortable-handler',
+        opacity: 0.9,
+        placeholder: 'light',
+        connectWith: '.event-day',
+        helper: function (e,  ui) {
+        	$('table.lmsbox').find('.event-single[data-event-id="' + $(ui).attr('data-event-id') + '"]')
+                .not(ui).hide();
+        	return ui;
+        },
+		update: function (e, ui) {
+			if (ui.sender == null) {
+				return;
+            }
+        	var eventid = ui.item.attr('data-event-id');
+			var items = $('.event-single[data-event-id="' + eventid + '"]').not(ui.item);
+			var day = ui.item.closest('.event-day-table').next('.event-day-table');
+			items.each(function() {
+				if (day.length) {
+					day.find('.event-day').append(this);
+					day = day.next('.event-day-table');
+					$(this).show();
+				}
+            });
+			var todate = ui.item.closest('.event-day').attr('data-event-day');
+			var fromdate = ui.sender.attr('data-event-day');
+			var fd = new Date(fromdate * 1000);
+			var td = new Date(todate * 1000);
+			if (confirm($t('Are you sure you want to move event from $a to $b?',
+				sprintf("%04d/%02d/%02d", fd.getFullYear(), fd.getMonth() + 1, fd.getDate()),
+				sprintf("%04d/%02d/%02d", td.getFullYear(), td.getMonth() + 1, td.getDate())
+			))) {
+				var delta = todate - fromdate;
+				$('html,body').css('cursor', 'wait');
+				$.ajax('?m={$layout.module}&api=1', {
+					method: "GET",
+					data: {
+						action: 'eventmove',
+						id: eventid,
+						delta: delta
+					},
+					complete: function () {
+						$('html,body').css('cursor', 'auto');
+					}
+				});
+			} else {
+				$(ui.sender).sortable('cancel');
+			}
+		}
+    });
+
+</script>
 {/block}

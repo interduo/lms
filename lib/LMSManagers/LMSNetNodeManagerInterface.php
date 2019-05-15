@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2017 LMS Developers
+ *  Copyright (C) 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,6 +27,8 @@
 interface LMSNetNodeManagerInterface {
 	public function GetNetNode($id);
 
+	public function GetNetNodeName($id);
+
 	public function GetNetNodes();
 
 	public function GetNetNodeList($search, $order);
@@ -38,4 +40,6 @@ interface LMSNetNodeManagerInterface {
 	public function NetNodeDelete($id);
 
 	public function NetNodeUpdate($netnodedata);
+
+	public function GetCustomerNetNodes($id);
 }

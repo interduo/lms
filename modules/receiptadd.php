@@ -175,7 +175,7 @@ $SMARTY->assign('xajax', $LMS->RunXajax());
 // receipt positions adding with double click protection
 function additem(&$content, $item)
 {
-	for($i=0, $x=sizeof($content); $i<$x; $i++)
+	for($i=0, $x=count($content); $i<$x; $i++)
 		if($content[$i]['value'] == $item['value']
 			&& $content[$i]['description'] == $item['description']
 			&& $content[$i]['posuid'] + 1 > $item['posuid'])
@@ -452,7 +452,7 @@ switch($action)
 	break;
 	case 'deletepos':
 
-		if(sizeof($contents))
+		if(count($contents))
 			foreach($contents as $idx => $row)
 				if($row['posuid'] == $_GET['posuid']) 
 					unset($contents[$idx]);
@@ -887,7 +887,7 @@ if(isset($list))
 	if($contents)
 		foreach($list as $idx => $row)
 		{
-			for($i=0, $x=sizeof($contents); $i<$x; $i++)
+			for($i=0, $x=count($contents); $i<$x; $i++)
 				if(isset($contents[$i]['docid']) && $row['id'] == $contents[$i]['docid'])
 					break;
 			if($i == $x)

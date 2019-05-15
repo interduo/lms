@@ -5,8 +5,9 @@
 <meta http-equiv="Content-Language" content="{$LANGDEFS.$_ui_language.html}">
 <meta http-equiv="Content-Type" content="text/html; charset={$LANGDEFS.$_ui_language.charset}">
 <title>::: LMS :{if $layout.pagetitle != ""} {$layout.pagetitle} :{/if}::</title>
-<link href="img/style.css" rel="stylesheet" type="text/css">
-<script type="text/javascript" src="img/common.js"></SCRIPT>
+{include file="jquery.html" language=$LANGDEFS.$_ui_language.html}
+<link href="css/style.css" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="js/common.js"></SCRIPT>
 {if $js}<script type="text/javascript">
 <!--
 	{$js}
@@ -21,7 +22,7 @@
 </frameset>
 {/if}
 {if $part == 'top'}
-<body>
+<body class="lms-ui-popup">
 <table cellpadding="5" width="100%">
 	<tr>
 		<td class="fall dark bold text-center">
@@ -32,7 +33,7 @@
 </body>
 {/if}
 {if $part == 'bottom'}
-<body>
+<body class="lms-ui-popup">
 <script type="text/javascript">
 <!--
 	function SaveForm() {
@@ -61,24 +62,20 @@
 	}
 
 	function FilterForm() {
-		var txt = document.getElementById('flt').value;
+		var txt = $('#flt').val().trim();
+
 		var doc = null;
 		for (var i = 0; i < window.parent.frames.length; i++)
 			if (window.parent.frames[i].name == 'm')
 				doc = window.parent.frames[i].document;
-		if (txt.trim() != '') {
+
+		if (txt.length) {
 			txt = txt.toLowerCase();
-			var rows = doc.getElementsByTagName('tr');
-			for (var i = 0; i < rows.length; i++)
-				if (rows[i].getAttribute('data-netdevname').lastIndexOf(txt, 0) != 0)
-					rows[i].style.display = 'none';
-				else
-					rows[i].style.display = '';
+			$('tr[data-netdevname]', doc).each(function() {
+				$(this).toggle($(this).attr('data-netdevname').indexOf(txt) != -1);
+			});
 		} else {
-			var rows = doc.getElementsByTagName('tr');
-			for (var i = 0; i < rows.length; i++)
-				if (rows[i].getAttribute('data-netdevname').lastIndexOf(txt,0) === 0)
-					rows[i].style.display = '';
+			$('tr[data-netdevname]', doc).show();
 		}
 	}
 //-->
@@ -100,7 +97,7 @@
 </body>
 {/if}
 {if $part == 'main'}
-<body>
+<body class="lms-ui-popup">
 <form name="netdevlist">
 <table cellpadding="5" width="100%">
 	<COLGROUP>

@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2017 LMS Developers
+ *  Copyright (C) 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -119,10 +119,12 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 			'vlanid' => intval($netadd['vlanid']),
             SYSLOG::RES_HOST => $netadd['hostid'],
             'authtype' => $netadd['authtype'],
+            'snat' => !empty($netadd['snat']) ? $netadd['snat'] : null,
+            'pubnetid' => empty($netadd['pubnetid']) ? null : $netadd['pubnetid'],
         );
 		if ($this->db->Execute('INSERT INTO networks (name, address, mask, interface, gateway,
-				dns, dns2, domain, wins, dhcpstart, dhcpend, notes, vlanid, hostid, authtype)
-				VALUES (?, inet_aton(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))) {
+				dns, dns2, domain, wins, dhcpstart, dhcpend, notes, vlanid, hostid, authtype, snat, pubnetid)
+				VALUES (?, inet_aton(?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, inet_aton(?), ?)', array_values($args))) {
 			$netid = $this->db->GetLastInsertID('networks');
 			if (!$netid)
 				return false;
@@ -218,16 +220,14 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 			WHERE ownerid IS NULL AND netdev = ?', array($id));
     }
 
-    public function GetNetworkList( $search = 'id,asc' )
+    public function GetNetworkList(array $search)
     {
-		if( is_array($search) )
-			$order = array_key_exists('order', $search) ? $search['order'] : 'id,asc';
-		else if( $search == '' )
-			$order = 'id,asc';
-		else
-			$order = $search;
-		if (!is_array($search))
-			$search = array();
+    	if (!is_array($search))
+    		$search = array(
+    			'order' => 'id,asc',
+			);
+
+		$order = isset($search['order']) && !empty($search['order']) ? $search['order'] : 'id,asc';
 
         list($order, $direction) = sscanf($order, '%[^,],%s');
 
@@ -331,30 +331,43 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 		}
 		$sqlwhere = rtrim($sqlwhere, $search['operatorType']);
 
+		$count = isset($search['count']) && !empty($search['count']);
+
+		if ($count) {
+			return $this->db->GetOne('SELECT COUNT(n.id)
+				FROM networks n
+				LEFT JOIN hosts h ON h.id = n.hostid
+				' . ($sqlwhere != ' WHERE' ? $sqlwhere : ''));
+		}
+
 		$networks = $this->db->GetAll( 'SELECT 
-														n.id, h.name AS hostname, n.name, inet_ntoa(address) AS address, 
-														address AS addresslong, mask, interface, gateway, dns, dns2, 
-														domain, wins, dhcpstart, dhcpend,
-														mask2prefix(inet_aton(mask)) AS prefix,
-														broadcast(address, inet_aton(mask)) AS broadcastlong, vlanid,
-														inet_ntoa(broadcast(address, inet_aton(mask))) AS broadcast,
-														pow(2,(32 - mask2prefix(inet_aton(mask)))) AS size, disabled,
-														(SELECT COUNT(*) 
-															FROM nodes 
-															WHERE netid = n.id AND ipaddr <> 0 AND (ipaddr >= address AND ipaddr <= broadcast(address, inet_aton(mask))) 
-																OR (ipaddr_pub >= address AND ipaddr_pub <= broadcast(address, inet_aton(mask)))
-														) AS assigned,
-														(SELECT COUNT(*) 
-															FROM nodes 
-															WHERE netid = n.id AND ipaddr <> 0 AND ((ipaddr >= address AND ipaddr <= broadcast(address, inet_aton(mask))) 
-																OR (ipaddr_pub >= address AND ipaddr_pub <= broadcast(address, inet_aton(mask))))
-																AND (?NOW? - lastonline < ?)
-														) AS online
-													FROM 
-														networks n LEFT JOIN hosts h ON h.id = n.hostid' . ($sqlwhere != ' WHERE' ? $sqlwhere : '') . ($sqlord != '' ? $sqlord . ' ' . $direction : '')
-													, array(intval(ConfigHelper::getConfig('phpui.lastonline_limit'))));
-		
-        if($networks) {											
+				n.id, h.name AS hostname, n.name, inet_ntoa(address) AS address, 
+				address AS addresslong, mask, interface, gateway, dns, dns2, 
+				domain, wins, dhcpstart, dhcpend,
+				mask2prefix(inet_aton(mask)) AS prefix,
+				broadcast(address, inet_aton(mask)) AS broadcastlong, vlanid,
+				inet_ntoa(broadcast(address, inet_aton(mask))) AS broadcast,
+				pow(2,(32 - mask2prefix(inet_aton(mask)))) AS size, disabled,
+				(SELECT COUNT(*) 
+					FROM nodes 
+					WHERE netid = n.id AND ipaddr <> 0 AND (ipaddr >= address AND ipaddr <= broadcast(address, inet_aton(mask))) 
+						OR (ipaddr_pub >= address AND ipaddr_pub <= broadcast(address, inet_aton(mask)))
+				) AS assigned,
+				(SELECT COUNT(*) 
+					FROM nodes 
+					WHERE netid = n.id AND ipaddr <> 0 AND ((ipaddr >= address AND ipaddr <= broadcast(address, inet_aton(mask))) 
+						OR (ipaddr_pub >= address AND ipaddr_pub <= broadcast(address, inet_aton(mask))))
+						AND (?NOW? - lastonline < ?)
+				) AS online
+			FROM networks n
+			LEFT JOIN hosts h ON h.id = n.hostid'
+			. ($sqlwhere != ' WHERE' ? $sqlwhere : '')
+			. ($sqlord != '' ? $sqlord . ' ' . $direction : '')
+			. (isset($search['limit']) ? ' LIMIT ' . $search['limit'] : '')
+			. (isset($search['offset']) ? ' OFFSET ' . $search['offset'] : ''),
+			array(intval(ConfigHelper::getConfig('phpui.lastonline_limit'))));
+
+        if($networks) {
             $size = 0;
             $assigned = 0;
             $online = 0;
@@ -449,12 +462,14 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             'notes' => $networkdata['notes'],
             SYSLOG::RES_HOST => $networkdata['hostid'],
             'authtype' => $networkdata['authtype'],
+            'snat' => $networkdata['snatlong'],
+            'pubnetid' => empty($networkdata['pubnetid']) ? null : $networkdata['pubnetid'],
             SYSLOG::RES_NETWORK => $networkdata['id']
         );
 
         $res = $this->db->Execute('UPDATE networks SET name=?, address=inet_aton(?), 
             mask=?, interface=?, vlanid=?, gateway=?, dns=?, dns2=?, domain=?, wins=?,
-            dhcpstart=?, dhcpend=?, notes=?, hostid=?, authtype=? WHERE id=?', array_values($args));
+            dhcpstart=?, dhcpend=?, notes=?, hostid=?, authtype=?, snat=?, pubnetid=? WHERE id=?', array_values($args));
 
 		if ($res && $this->syslog)
 			$this->syslog->AddMessage(SYSLOG::RES_NETWORK, SYSLOG::OPER_UPDATE, $args);
@@ -480,7 +495,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
                 $nodes[] = $network['nodes']['addresslong'][$idx];
 
         for ($i = $address + 1; $i < $broadcast; $i++) {
-            if (!sizeof($nodes))
+            if (!count($nodes))
                 break;
 
             // skip special and dhcp range addresses
@@ -495,7 +510,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             // don't change assigned special addresses
             if (in_array($ip, $specials)) {
                 array_unshift($nodes, $ip);
-                $size = sizeof($nodes);
+                $size = count($nodes);
 
                 foreach ($nodes as $idx => $ip)
                     if (!in_array($ip, $specials)) {
@@ -503,7 +518,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
                         break;
                     }
 
-                if ($size == sizeof($nodes))
+                if ($size == count($nodes))
                     break;
             }
 
@@ -549,7 +564,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
         $counter = 0;
 
         for ($i = $address; $i < $broadcast; $i++) {
-            if (!sizeof($nodes))
+            if (!count($nodes))
                 break;
             $ip = array_pop($nodes);
 
@@ -589,8 +604,8 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
     {
         $network = $this->db->GetRow('SELECT no.ownerid, ne.id, ne.name, ne.vlanid, inet_ntoa(ne.address) AS address,
                 ne.address AS addresslong, ne.mask, ne.interface, ne.gateway, ne.dns, ne.dns2,
-                ne.domain, ne.wins, ne.dhcpstart, ne.dhcpend, ne.hostid, ne.authtype,
-                mask2prefix(inet_aton(ne.mask)) AS prefix, ne.notes,
+                ne.domain, ne.wins, ne.dhcpstart, ne.dhcpend, ne.hostid, ne.authtype, inet_ntoa(ne.snat) AS snat,
+                mask2prefix(inet_aton(ne.mask)) AS prefix, ne.notes, ne.pubnetid,
                 inet_ntoa(broadcast(ne.address, inet_aton(ne.mask))) AS broadcast
             FROM networks ne
             LEFT JOIN nodes no ON (no.netid = ne.id AND no.ipaddr = 0 AND no.ipaddr_pub = 0)
@@ -601,7 +616,13 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             $network['customername'] = $customer_manager->GetCustomerName($network['ownerid']);
         }
 
-        $nodes = $this->db->GetAllByKey('
+		if ($network['pubnetid']) {
+			$network['pubnet'] = $this->db->GetRow('SELECT name, inet_ntoa(address) AS address, mask
+				FROM networks WHERE id = ?', array($network['pubnetid']));
+			$network['pubnet']['prefix'] = mask2prefix($network['pubnet']['mask']);
+		}
+
+		$nodes = $this->db->GetAllByKey('
 				SELECT id, name, ipaddr, ownerid, netdev 
 				FROM vnodes WHERE netid = ? AND ipaddr > ? AND ipaddr < ?
 				UNION ALL
@@ -669,7 +690,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
                 break;
         }
 
-        $network['rows'] = ceil(sizeof($network['nodes']['address']) / 4);
+        $network['rows'] = ceil(count($network['nodes']['address']) / 4);
         $network['page'] = $page + 1;
 
         return $network;
@@ -706,5 +727,9 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 		$ip = ip_long($ip);
 		$page = floor(($ip - $net) / ConfigHelper::getConfig('phpui.networkhosts_pagelimit')) + 1;
 		return $page;
+	}
+
+	public function GetPublicNetworkID($netid) {
+		return $this->db->GetOne('SELECT pubnetid FROM networks WHERE id = ?', array($netid));
 	}
 }

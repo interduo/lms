@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,12 +24,9 @@
  *  $Id$
  */
 
-
-$schema = $DB->GetRow('SELECT s.*, p.id AS pid, p.name AS promotion,
-    t.name AS tariff, t.value
+$schema = $DB->GetRow('SELECT s.*, p.id AS pid, p.name AS promotion
     FROM promotionschemas s
     JOIN promotions p ON (p.id = s.promotionid)
-    LEFT JOIN tariffs t ON (t.id = s.ctariffid)
     WHERE s.id = ?',
     array(intval($_GET['id'])));
 
@@ -58,6 +55,7 @@ foreach ($schema['data'] as $idx => $data) {
     }
     $schema['periods'][] = $period;
 }
+$schema['periods'][] = trans('Months $a-', $mon);
 
 $schema['data'] = implode(' &raquo; ', (array)$schema['data']);
 
@@ -68,13 +66,26 @@ $schema['tariffs'] = $DB->GetAll('SELECT t.name, t.value,
     WHERE a.promotionschemaid = ?
     ORDER BY a.orderid', array($schema['id']));
 
+$users = $LMS->GetUserNamesIndexedById();
+
 if (!empty($schema['tariffs'])) {
 	$schema['selections'] = array();
 	foreach ($schema['tariffs'] as $idx => $value) {
 		$tmp = explode(';', $value['data']);
 		$data = array();
-		foreach ($tmp as $didx => $d)
-			list($data['value'][$didx], $data['period'][$didx]) = explode(':', $d);
+		foreach ($tmp as $didx => $d) {
+			$cols = explode(':', $d);
+			$data['value'][$didx] = $cols[0];
+			$data['period'][$didx] = (count($cols) > 1 ? $cols[1] : null);
+			$data['users'][$didx] = (count($cols) > 2 && !empty($cols[2]) ? explode(',', $cols[2]) : array());
+
+			if (!empty($data['users'][$didx])) {
+				$user_names = array();
+				foreach ($data['users'][$didx] as $userid)
+					$user_names[] = $users[$userid]['rname'];
+				$data['users_text'][$didx] = implode('<br>', $user_names);
+			}
+		}
 		$schema['tariffs'][$idx]['data'] = $data;
 		if (!empty($value['label']))
 			$schema['selections'][] = $value['label'];
@@ -94,6 +105,7 @@ $layout['pagetitle'] = trans('Schema Info: $a', $schema['name']);
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $SMARTY->assign('tariffs', $tariffs);
+$SMARTY->assign('users', $users);
 $SMARTY->assign('schema', $schema);
 $SMARTY->display('promotion/promotionschemainfo.html');
 

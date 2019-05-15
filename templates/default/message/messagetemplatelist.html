@@ -1,0 +1,139 @@
+{extends file="layout.html"}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
+{block name=module_content}
+<!--// $Id$ //-->
+<H1>{$layout.pagetitle}</H1>
+
+<form method="post" action="?m=messagetemplatedel" name="messagetemplates" id="messagetemplates">
+</form>
+
+<form method="get" name="filter" id="filter">
+	<input type="hidden" name="m" value="{$layout.module}">
+</form>
+
+<TABLE class="lmsbox lms-ui-background-cycle" id="message-templates">
+	<COLGROUP>
+		<COL style="width: 1%;">
+		<COL style="width: 1%;">
+		<COL style="width: 1%;">
+		<COL style="width: 96%;">
+		<COL style="width: 1%;">
+		<COL style="width: 1%;">
+		<COL style="width: 1%;">
+	</COLGROUP>
+	<THEAD>
+		<TR>
+			<TD class="nobr">
+				{trans("Type:")}
+			</TD>
+			<TD class="nobr">
+				{trans("Name:")}
+			</TD>
+			<TD class="nobr">
+				{trans("Subject:")}
+			</TD>
+			<TD class="nobr">
+				{trans("Message:")}
+			</TD>
+			<TD class="nobr">
+				{trans("Queues:")}
+			</TD>
+			<TD class="nobr">
+				{trans("<!message-type>Message types:")}
+			</TD>
+			<TD>
+				&nbsp;
+			</TD>
+		</TR>
+		<TR>
+			<td colspan="7">
+				<span class="bold">{trans("Filter:")}</span> {trans("Type:")}
+				<select name="type" form="filter" onchange="javascript:document.filter.submit();">
+					<option value="0">{trans("- all -")}</option>
+					{foreach $_MESSAGETEMPLATES as $template_type => $template}
+					<option value="{$template_type}"
+							{if $type == $template_type} selected{/if}>{$template.label}</option>
+					{/foreach}
+				</select>
+			</td>
+		</TR>
+	</THEAD>
+	<TBODY class="lms-ui-multi-check">
+		{foreach $templates as $template}
+		<TR class="highlight" data-template-id="{$template.id}">
+			<TD class="nobr text-center" data-template-type="{$template.type}">
+				<i class="{$_MESSAGETEMPLATES[$template.type].class}" title="{$_MESSAGETEMPLATES[$template.type].label}"></i>
+			</TD>
+			<TD class="nobr" data-template-name="{$template.name}">
+				{$template.name}
+			</TD>
+			<TD class="nobr" data-template-subject="{$template.subject}">
+				{$template.subject}
+			</TD>
+			<TD>
+				{$template.message|truncate:5000:"..."|replace:"\n":"<BR>"}
+				<div style="display: none;" class="data-template-message">{$template.message}</div>
+			</TD>
+			<TD data-template-helpdesk-queues="{$template.queues}">
+				{$template.queuenames}
+			</TD>
+			<TD data-template-helpdesk-message-types="{$template.messagetypes}">
+				{if !empty($template.messagetypes)}
+					{foreach explode(',', $template.messagetypes) as $type}
+						{if $type == $smarty.const.RTMESSAGE_REGULAR}
+						{trans("<!message-type>message")}{if !$type@last},{/if}
+						{elseif $type == $smarty.const.RTMESSAGE_NOTE}
+						{trans("<!message-type>note")}{if !$type@last},{/if}
+						{/if}
+					{/foreach}
+				{/if}
+			</TD>
+			<TD class="text-right nobr">
+				{button type="link" class="edit-template-dialog-btn" icon="edit" tip="Edit"
+					onclick="javascript:open_edit_dialog({$template.id});"}
+				{button type="link" href="?m=messagetemplatedel&id={$template.id}" icon="delete" tip="Delete"
+					onclick="return confirmLink(this, '{t}Are you sure, you want to delete that message template?{/t}')"}
+				<input type="checkbox" name="marks[{$template.id}]" value="{$template.id}" class="lms-ui-multi-check" form="messagetemplates">
+			</TD>
+		</TR>
+		{foreachelse}
+		<TR>
+			<TD colspan="7" class="empty-table">
+				<p>{trans("No message templates in database.")}</p>
+			</TD>
+		</TR>
+		{/foreach}
+	</TBODY>
+	<TFOOT>
+		<TR class="lms-ui-button-panel">
+			<TD colspan="5" class="nobr">
+				{button icon="add" class="add-template-dialog-btn" tip="Add" label="Add"
+					onclick="javascript:open_add_dialog();"}
+			</TD>
+			<TD colspan="2" class="text-right nobr">
+				{button icon="delete" id="delete-message-templates" tip="Delete" label="Delete"}
+				<label>
+					{trans("Check All")}
+					<INPUT TYPE="checkbox" NAME="allbox" class="lms-ui-multi-check-all" VALUE="1">
+				</label>
+			</TD>
+		</TR>
+	</TFOOT>
+</TABLE>
+
+{include file='message/messagetemplatedialog.html' operation="add"}
+{include file='message/messagetemplatedialog.html' operation="edit"}
+
+<script>
+
+	$(function() {
+		$('#delete-message-templates').click(function() {
+			if (!$(this).closest('tfoot').siblings('tbody.lms-ui-multi-check').find('input:checked').length
+				|| !confirm('{trans("Are you sure, you want to delete all selected message templates?")}'))
+				return false;
+			$('form#messagetemplates').attr('action', '?m=messagetemplatedel&is_sure=1').submit();
+		});
+	});
+
+</script>
+{/block}

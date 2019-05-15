@@ -256,6 +256,71 @@ function module_updateusersave()
 	}
 }
 
+function module_updatepinform() {
+	global $LMS, $SMARTY, $SESSION;
+
+	$userinfo = $LMS->GetCustomer($SESSION->id);
+
+	$usernodes = $LMS->GetCustomerNodes($SESSION->id);
+	$usernodes['ownerid'] = $SESSION->id;
+
+	$SMARTY->assign('userinfo',$userinfo);
+	$SMARTY->assign('usernodes',$usernodes);
+
+	$SMARTY->display('module:updatepin.html');
+}
+
+function module_updatepin() {
+	global $LMS, $SMARTY, $SESSION;
+
+	if (!ConfigHelper::checkConfig('userpanel.pin_changes') || !isset($_POST['userdata']))
+		header('Location: ?m=info');
+
+	$error = null;
+
+	$userdata = $_POST['userdata'];
+	$userinfo = $LMS->GetCustomer($SESSION->id);
+
+	if ($userinfo['pin'] != $userdata['oldpin'])
+		$error['oldpin'] = trans('Incorrect current PIN!');
+
+	if (!strlen($userdata['pin']) || !strlen($userdata['pin2']))
+		$error['pin'] = $error['pin2'] = trans('PINs cannot be empty!');
+	elseif ($userdata['pin'] != $userdata['pin2'])
+		$error['pin'] = $error['pin2'] = trans('Entered PINs do not match!');
+	elseif ($userinfo['pin'] == $userdata['pin'])
+		$error['pin'] = $error['pin2'] = trans('New PIN should be different than old PIN!');
+	else{
+		$pin_min_size = intval(ConfigHelper::getConfig('phpui.pin_min_size', 4));
+		$pin_max_size = intval(ConfigHelper::getConfig('phpui.pin_max_size', 6));
+		$pin_allowed_characters = ConfigHelper::getConfig('phpui.pin_allowed_characters', '0123456789');
+		if (!validate_random_string($userdata['pin'], $pin_min_size, $pin_max_size, $pin_allowed_characters)) {
+			$pin_allowed_characters = ConfigHelper::getConfig('phpui.pin_allowed_characters', '0123456789');
+			$pin_allowed_characters = str_split($pin_allowed_characters, 30);
+			$error['pin'] = $error['pin2'] = trans('PIN should have at least $a, maximum $b characters and contain only \'$c\' characters!',
+				ConfigHelper::getConfig('phpui.pin_min_size', 4),
+				ConfigHelper::getConfig('phpui.pin_max_size', 6),
+				implode('<br>', $pin_allowed_characters));
+		}
+	}
+
+	if (isset($error)) {
+		$usernodes = $LMS->GetCustomerNodes($SESSION->id);
+		$usernodes['ownerid'] = $SESSION->id;
+
+		$SMARTY->assign('userinfo',$userinfo);
+		$SMARTY->assign('usernodes',$usernodes);
+		$SMARTY->assign('error', $error);
+		$SMARTY->assign('updatepin', 1);
+
+		$SMARTY->display('module:updatepin.html');
+	} else {
+		$LMS->UpdateCustomerPIN($SESSION->id, $userdata['pin']);
+
+		header('Location: ?m=info');
+	}
+}
+
 if(defined('USERPANEL_SETUPMODE'))
 {
 	function module_changes()
@@ -470,8 +535,10 @@ if(defined('USERPANEL_SETUPMODE'))
 		global $SMARTY, $LMS;
 
 		$SMARTY->assign('hide_nodesbox', ConfigHelper::getConfig('userpanel.hide_nodesbox'));
+		$SMARTY->assign('hide_documentbox', ConfigHelper::getConfig('userpanel.hide_documentbox'));
 		$SMARTY->assign('consent_text', ConfigHelper::getConfig('userpanel.data_consent_text'));
 		$SMARTY->assign('show_confirmed_documents_only', ConfigHelper::checkConfig('userpanel.show_confirmed_documents_only'));
+		$SMARTY->assign('pin_changes', ConfigHelper::checkConfig('userpanel.pin_changes'));
 		$SMARTY->assign('change_notification_mail_sender', ConfigHelper::getConfig('userpanel.change_notification_mail_sender'));
 		$SMARTY->assign('change_notification_mail_recipient', ConfigHelper::getConfig('userpanel.change_notification_mail_recipient'));
 		$SMARTY->assign('change_notification_mail_subject', ConfigHelper::getConfig('userpanel.change_notification_mail_subject'));
@@ -490,9 +557,13 @@ if(defined('USERPANEL_SETUPMODE'))
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array(isset($_POST['hide_nodesbox']) ? 1 : 0, 'userpanel', 'hide_nodesbox'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array(isset($_POST['hide_documentbox']) ? 1 : 0, 'userpanel', 'hide_documentbox'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array($_POST['consent_text'], 'userpanel', 'data_consent_text'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array(isset($_POST['show_confirmed_documents_only']) ? 'true' : 'false', 'userpanel', 'show_confirmed_documents_only'));
+		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
+			array(isset($_POST['pin_changes']) ? 'true' : 'false', 'userpanel', 'pin_changes'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
 			array($_POST['change_notification_mail_sender'], 'userpanel', 'change_notification_mail_sender'));
 		$DB->Execute('UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',

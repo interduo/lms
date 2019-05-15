@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 {$xajax}
 <!--// $Id$ //-->
@@ -96,7 +96,7 @@
 			<B>{trans("Settlement date:")}</B>
 		</TD>
 		<TD WIDTH="99%" NOWRAP>
-			<INPUT TYPE="TEXT" NAME="receipt[cdate]" class="calendar" VALUE="{$receipt.cdate|date_format:"%Y/%m/%d"}" SIZE="10" {tip text="Enter date of settlement in YYYY/MM/DD format (empty field means current date) or click to select it from calendar" trigger="cdate"} {if ($rights & 256) != 256}readonly{/if}>
+			<INPUT TYPE="TEXT" NAME="receipt[cdate]" class="lms-ui-date" VALUE="{$receipt.cdate|date_format:"%Y/%m/%d"}" SIZE="10" {tip text="Enter date of settlement in YYYY/MM/DD format (empty field means current date) or click to select it from calendar" trigger="cdate"} {if ($rights & 256) != 256}readonly{/if}>
 			{if $receipt.cdatewarning}
 			<INPUT TYPE="HIDDEN" NAME="receipt[cdatewarning]" VALUE="1">
 			{/if}
@@ -181,7 +181,7 @@
     </TBODY>
 </TABLE>
 </FORM>
-{if $error.nocash}<h2 align="center"><font class="alert">{$error.nocash}</font></h2>{/if}
+{if $error.nocash}<h2 align="center"><span class="lms-ui-error">{$error.nocash}</span></h2>{/if}
 {if $receipt.selected && $customer}
 <P>
 <TABLE class="lmsbox">
@@ -198,7 +198,7 @@
 		</TD>
 		<TD WIDTH="98%" align="right">
 			{if $customer.groups}<span class="red bold">
-			({foreach from=$customer.groups item=item name=groups}{$item.name}{if $smarty.foreach.groups.iteration < sizeof($customer.groups)}, {/if}{/foreach})
+			({foreach from=$customer.groups item=item name=groups}{$item.name}{if $smarty.foreach.groups.iteration < count($customer.groups)}, {/if}{/foreach})
 			</span>{/if}
 		</TD>
 	</TR>

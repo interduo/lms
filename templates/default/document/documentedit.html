@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -14,7 +14,7 @@
 	}
 //-->
 </script>
-<P><FORM name="documentedit" method="POST" action="?m=documentedit&id={$document.id}" enctype="multipart/form-data">
+<P><FORM name="documentedit" method="POST" id="documentedit-form" action="?m=documentedit&id={$document.id}" enctype="multipart/form-data">
 <INPUT type="submit" class="hiddenbtn">
 <INPUT type="hidden" name="customerid" value="{$document.customerid}">
 <TABLE class="lmsbox">
@@ -74,8 +74,8 @@
 			{trans("Period:")}
 		</TD>
 		<TD>
-			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
-			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
+			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
+			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
 		</TD>
 	</TR>
 	<TR>
@@ -97,7 +97,7 @@
 			{trans("New files:")}
 		</TD>
 		<TD>
-			{fileupload id="attachments" fileupload=$fileupload}
+			{fileupload id="attachments" fileupload=$fileupload form="documentedit-form"}
 		</TD>
 	</TR>
 	{if !empty($document.attachments)}
@@ -162,6 +162,17 @@
 			<INPUT type="checkbox" name="document[closed]" id="closed" value="1" {if $document.closed} checked{/if}>
 		</TD>
 	</TR>
+	<TR{if !$document.closed} style="display: none;"{/if}>
+		<TD>
+			<IMG src="img/db.gif" ALT="">
+		</TD>
+		<TD class="bold nobr">
+			<label for="archived">{trans("Archived:")}</label>
+		</TD>
+		<TD>
+			<INPUT type="checkbox" name="document[archived]" id="archived" value="1" {if $document.archived} checked{/if}>
+		</TD>
+	</TR>
 	<TR>
 		<TD colspan="3" class="buttons">
 			<A href="javascript: document.documentedit.submit();">{trans("Submit")} <IMG SRC="img/save.gif" alt=""></A>
@@ -171,11 +182,19 @@
     </TBODY>
 </TABLE>
 </FORM></P>
-<SCRIPT type="text/javascript">
-<!--
+<SCRIPT>
+
 	$(function() {
 		$('form[name="documentedit"] [name="document[title]"]').focus();
+
+		$('#closed').click(function() {
+			if ($('#archived').prop('checked') && !$(this).prop('checked')) {
+				$(this).prop('checked', true);
+				alert($t("Cannot undo document confirmation while it is archived!"));
+			}
+			$('#archived').closest('tr').toggle($(this).prop('checked'));
+		});
 	});
-//-->
+
 </SCRIPT>
 {/block}

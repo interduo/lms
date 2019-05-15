@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -30,11 +30,11 @@
 </STYLE>
 
 {function bitrate_restrictions}
-    {if $day}{$day} kbit/s{else}{trans("no limits")}{/if}
+    {if $day}{convert_to_units($day * 1000)}/s{else}{trans("no limits")}{/if}
 
     ({trans("night:")}
 
-    {if $night}{$night|default:0} kbit/s{else}{trans("not defined")}{/if})
+    {if $night}{convert_to_units($night * 1000)}/s{else}{trans("not defined")}{/if})
 {/function}
 
 {function restrictions}
@@ -43,6 +43,22 @@
     ({trans("night:")}
 
     {if $night}{$night|default:0}{else}{trans("not defined")}{/if})
+{/function}
+
+{function burst_time_restrictions}
+{if $day}{$day} s{else}{trans("not defined")}{/if}
+
+({trans("night:")}
+
+{if $night}{$night|default:"0"} s{else}{trans("not defined")}{/if})
+{/function}
+
+{function burst_restrictions}
+    {if $day}{$day} kbit/s{else}{trans("not defined")}{/if}
+
+    ({trans("night:")}
+
+    {if $night}{$night|default:"0"} kbit/s{else}{trans("not defined")}{/if})
 {/function}
 
 {function user_restrictions}
@@ -76,7 +92,7 @@
                                     {if $tariff.period}
                                         {assign var=tperiod value=$tariff.period}({$_PERIODS.$tperiod})
                                     {else}
-                                        <font class="blend">({trans("period undefined")})</font>
+                                        <span class="blend">({trans("period undefined")})</span>
                                     {/if}
                                 </TD>
                             </TR>
@@ -88,7 +104,7 @@
                             <TR>
                                 <TD><IMG SRC="img/money.gif" ALT=""></TD>
                                 <TD>{trans("Type:")}</TD>
-                                <TD>{$_TARIFFTYPES[$tariff.type]}</TD>
+                                <TD>{$_SERVICETYPES[$tariff.type]}</TD>
                             </TR>
 
                             {if isset($tariff.numberplan)}
@@ -183,7 +199,7 @@
 
                         </TABLE>
                     </TD>
-                    {if $tariff.type != $smarty.const.TARIFF_PHONE}
+                    {if $tariff.type != $smarty.const.SERVICE_PHONE}
                     <TD WIDTH="50%" CLASS="valign-top">
                         <TABLE CLASS="tariff_tab bold-second">
                             <TR>
@@ -197,6 +213,21 @@
                                 <TD>{bitrate_restrictions day=$tariff.upceil night=$tariff.upceil_n}</TD>
                             </TR>
                             <TR>
+                                <TD></TD>
+                                <TD>{trans("Upload burst time:")}</TD>
+                                <TD>{burst_time_restrictions day=$tariff.up_burst_time night=$tariff.up_burst_time_n}</TD>
+                            </TR>
+                            <TR>
+                                <TD></TD>
+                                <TD>{trans("Upload burst threshold:")}</TD>
+                                <TD>{burst_restrictions day=$tariff.up_burst_threshold night=$tariff.up_burst_threshold_n}</TD>
+                            </TR>
+                            <TR>
+                                <TD></TD>
+                                <TD>{trans("Upload burst limit:")}</TD>
+                                <TD>{burst_restrictions day=$tariff.up_burst_limit night=$tariff.up_burst_limit_n}</TD>
+                            </TR>
+                            <TR>
                                 <TD><IMG SRC="img/downrate.gif" ALT=""></TD>
                                 <TD>{trans("Download rate:")}</TD>
                                 <TD>{bitrate_restrictions day=$tariff.downrate night=$tariff.downrate_n}</TD>
@@ -205,6 +236,21 @@
                                 <TD></TD>
                                 <TD>{trans("Download ceil:")}</TD>
                                 <TD>{bitrate_restrictions day=$tariff.downceil night=$tariff.downceil_n}</TD>
+                            </TR>
+                            <TR>
+                                <TD></TD>
+                                <TD>{trans("Download burst time:")}</TD>
+                                <TD>{burst_time_restrictions day=$tariff.down_burst_time night=$tariff.down_burst_time_n}</TD>
+                            </TR>
+                            <TR>
+                                <TD></TD>
+                                <TD>{trans("Download burst threshold:")}</TD>
+                                <TD>{burst_restrictions day=$tariff.down_burst_threshold night=$tariff.down_burst_threshold_n}</TD>
+                            </TR>
+                            <TR>
+                                <TD></TD>
+                                <TD>{trans("Download burst limit:")}</TD>
+                                <TD>{burst_restrictions day=$tariff.down_burst_limit night=$tariff.down_burst_limit_n}</TD>
                             </TR>
                             <TR>
                                 <TD><IMG SRC="img/options.gif" ALT=""></TD>
@@ -228,7 +274,7 @@
             </TABLE>
         </TD>
     </TR>
-    {if $tariff.type != $smarty.const.TARIFF_PHONE && $tariff.type != $smarty.const.TARIFF_TV && $tariff.type != $smarty.const.TARIFF_INTERNET}
+    {if $tariff.type != $smarty.const.SERVICE_PHONE && $tariff.type != $smarty.const.SERVICE_TV && $tariff.type != $smarty.const.SERVICE_INTERNET}
     <TR>
         <TD COLSPAN="2">
             <TABLE CLASS="tariff_tab bold-first">
@@ -262,7 +308,7 @@
             </TABLE>
         </TD>
     </TR>
-    {else if $tariff.type == $smarty.const.TARIFF_PHONE}
+    {else if $tariff.type == $smarty.const.SERVICE_PHONE}
     <TR>
         <TD COLSPAN="2">
             <TABLE CLASS="tariff_tab bold-first">

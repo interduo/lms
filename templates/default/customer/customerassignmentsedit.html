@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -38,7 +38,7 @@
 
 								{foreach $tariffs as $tariff}
 									<option value="{$tariff.id}" data-tarifftype="{$tariff.tarifftype}" data-tariffaccess="{$tariff.authtype}" data-tarifftags="{$tariff.tags}" {if $tariff.id==$assignment.tariffid} selected{/if} data-valid="{$tariff.valid}"{if !$tariff.valid} class="blend"{if !$assignment.alltariffs} style="display: none;"{/if}{/if}>
-									{$tariff.name} ({if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}{$tariff.value|money_format}{/if}{if $tariff.upceil || $tariff.downceil}, {$tariff.downceil}/{$tariff.upceil} kbit/s{/if})
+									{$tariff.name} ({if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances')}{$tariff.value|money_format}{/if}{if $tariff.upceil || $tariff.downceil}, {convert_to_units($tariff.downceil * 1000)}/{convert_to_units($tariff.upceil * 1000)}{/if})
 									</option>
 								{/foreach}
 							</select>
@@ -106,8 +106,8 @@
 	var assignment_settings = {
 		customerid: {$customerinfo.id},
 		selected: selected,
-		internetTariffType: {$smarty.const.TARIFF_INTERNET},
-		phoneTariffType: {$smarty.const.TARIFF_PHONE},
+		internetTariffType: {$smarty.const.SERVICE_INTERNET},
+		phoneTariffType: {$smarty.const.SERVICE_PHONE},
 		tariffTypes: tariffTypes,
 		variablePrefix: 'assignment',
         hideFinances: {if !ConfigHelper::checkConfig('privileges.superuser') && ConfigHelper::checkConfig('privileges.hide_finances')}true{else}false{/if}
@@ -133,7 +133,7 @@
                     	return;
 					break;
 				default:
-					if (tariffTypes[tariffid] == {$smarty.const.TARIFF_INTERNET}
+					if (tariffTypes[tariffid] == {$smarty.const.SERVICE_INTERNET}
 				        && !$('#nodelist :checked:not([name="allbox"])').length
 				        && !confirm('{trans("No nodes has been selected for assignment, by at least one is recommended! Are you sure you want to continue despite of this?")}')) {
 					    e.stopImmediatePropagation();

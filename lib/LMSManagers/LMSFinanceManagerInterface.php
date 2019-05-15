@@ -36,7 +36,7 @@ interface LMSFinanceManagerInterface
 
     public function GetCustomerTariffsValue($id);
 
-    public function GetCustomerAssignments($id, $show_expired = false);
+    public function GetCustomerAssignments($id, $show_expired = false, $show_approved = true);
 
     public function DeleteAssignment($id);
 
@@ -44,9 +44,21 @@ interface LMSFinanceManagerInterface
 
 	public function ValidateAssignment($data);
 
+	public function CheckSchemaModifiedValues($data);
+
 	public function UpdateExistingAssignments($data);
 
 	public function SuspendAssignment($id, $suspend = TRUE);
+
+	public function GetTradeDocumentArchiveStats($ids);
+
+	public function DeleteArchiveTradeDocument($id);
+
+	public function ArchiveTradeDocument($doc);
+
+	public function GetTradeDocument($doc);
+
+	public function GetInvoiceList(array $params);
 
     public function AddInvoice($invoice);
 
@@ -56,7 +68,9 @@ interface LMSFinanceManagerInterface
 
     public function GetInvoiceContent($invoiceid);
 
-    public function GetNoteContent($id);
+	public function GetNoteList(array $params);
+
+	public function GetNoteContent($id);
 
     public function TariffAdd($tariff);
 
@@ -80,9 +94,13 @@ interface LMSFinanceManagerInterface
 
 	public function DebitNoteContentDelete($docid, $itemid = 0);
 
-    public function AddBalance($addbalance);
+	public function GetBalanceList(array $params);
+
+	public function AddBalance($addbalance);
 
     public function DelBalance($id);
+
+	public function PreserveProforma($docid);
 
     public function GetPaymentList();
 
@@ -106,9 +124,13 @@ interface LMSFinanceManagerInterface
     
     public function CalcAt($period, $date);
 
+	public function PublishDocuments($ids);
+
 	public function isDocumentPublished($id);
 
 	public function isDocumentReferenced($id);
+
+	public function GetReceiptList(array $params);
 
 	public function AddReceipt(array $receipt);
 
@@ -117,4 +139,10 @@ interface LMSFinanceManagerInterface
 	public function GetOpenedLiabilities($customerid);
 
 	public function GetPromotions();
+
+	public function AggregateDocuments($list);
+
+	public function GetDocumentsForBalanceRecords($ids, $doctypes);
+
+	public function GetDocumentLastReference($docid);
 }

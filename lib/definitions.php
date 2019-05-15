@@ -121,6 +121,8 @@ define('RT_RESOLVED', 2);
 define('RT_DEAD', 3);
 define('RT_SCHEDULED', 4);
 define('RT_WAITING', 5);
+define('RT_EXPIRED', 6);
+define('RT_VERIFIED', 7);
 
 $RT_STATES = array(
 	RT_NEW => array(
@@ -163,7 +165,34 @@ $RT_STATES = array(
 		'color' => '#b26b00',
 		'img' => 'img/calendar.gif',
 		'name' => 'RT_WAITING'
-	)
+	),
+	RT_EXPIRED => array(
+		'label' => trans('<!rt>expired'),
+		'color' => '#278981',
+		'img' => 'img/calendar.gif',
+		'name' => 'RT_EXPIRED'
+	),
+    RT_VERIFIED => array(
+        'label' => trans('Verified'),
+        'color' => 'green',
+        'img' => 'img/verifier.png',
+        'name' => 'RT_VERIFIED'
+    ),
+);
+
+// Helpdesk rights
+define('RT_RIGHT_READ', 1);
+define('RT_RIGHT_WRITE', 2);
+define('RT_RIGHT_DELETE', 4);
+define('RT_RIGHT_NOTICE', 8);
+define('RT_RIGHT_INDICATOR', 16);
+
+$RT_RIGHTS = array(
+	RT_RIGHT_READ => trans("Read"),
+	RT_RIGHT_WRITE => trans("Write (+R)"),
+	RT_RIGHT_DELETE => trans("Delete (+R)"),
+	RT_RIGHT_NOTICE => trans("Notice (+R)"),
+	RT_RIGHT_INDICATOR => trans("Indicator (+R)"),
 );
 
 //Helpdesk ticket source
@@ -188,26 +217,42 @@ $RT_SOURCES = array(
 );
 
 //Helpdesk ticket priority
+define('RT_PRIORITY_IDLE', -3);
 define('RT_PRIORITY_VERYLOW', -2);
 define('RT_PRIORITY_LOW', -1);
 define('RT_PRIORITY_NORMAL', 0);
-define('RT_PRIORITY_URGENT', 1);
-define('RT_PRIORITY_CRITICAL', 2);
+define('RT_PRIORITY_HIGHER', 1);
+define('RT_PRIORITY_URGENT', 2);
+define('RT_PRIORITY_CRITICAL', 3);
 
 $RT_PRIORITIES = array(
+	RT_PRIORITY_IDLE => trans('idle'),
 	RT_PRIORITY_VERYLOW => trans('very low'),
 	RT_PRIORITY_LOW => trans('low'),
 	RT_PRIORITY_NORMAL => trans('normal'),
+	RT_PRIORITY_HIGHER => trans('higher'),
 	RT_PRIORITY_URGENT => trans('urgent'),
 	RT_PRIORITY_CRITICAL => trans('critical'),
 );
 
 $RT_PRIORITY_STYLES = array(
-	RT_PRIORITY_VERYLOW => 'background-color: blue; color: white;',
-	RT_PRIORITY_LOW => 'background-color: lightgreen; color: black;',
+	RT_PRIORITY_IDLE => 'background-color: darkblue; color: white;',
+	RT_PRIORITY_VERYLOW => 'background-color: dodgerblue; color: white;',
+	RT_PRIORITY_LOW => 'background-color: chartreuse; color: black;',
 	RT_PRIORITY_NORMAL => 'background-color: transparent; color: black;',
-	RT_PRIORITY_URGENT => 'background-color: orange; color: white;',
-	RT_PRIORITY_CRITICAL => 'background-color: red; color: white;',
+	RT_PRIORITY_HIGHER => 'background-color: yellow; color: black;',
+	RT_PRIORITY_URGENT => 'background-color: orange; color: black;',
+	RT_PRIORITY_CRITICAL => 'background-color: red; color: black;',
+);
+
+$RT_MAIL_PRIORITIES = array(
+	RT_PRIORITY_IDLE => 7,
+	RT_PRIORITY_VERYLOW => 6,
+	RT_PRIORITY_LOW => 5,
+	RT_PRIORITY_NORMAL => 4,
+	RT_PRIORITY_HIGHER => 3,
+	RT_PRIORITY_URGENT => 2,
+	RT_PRIORITY_CRITICAL => 1,
 );
 
 // Helpdesk cause type
@@ -235,7 +280,97 @@ define('RTMESSAGE_LOCATION_CHANGE', 256);
 define('RTMESSAGE_NODE_CHANGE', 512);
 define('RTMESSAGE_NETNODE_CHANGE', 1024);
 define('RTMESSAGE_PRIORITY_CHANGE', 2048);
+define('RTMESSAGE_NETDEV_CHANGE', 4096);
+define('RTMESSAGE_VERIFIER_CHANGE', 8192);
+define('RTMESSAGE_DEADLINE_CHANGE', 16384);
+define('RTMESSAGE_SERVICE_CHANGE', 32768);
+define('RTMESSAGE_TYPE_CHANGE', 65536);
+define('RTMESSAGE_INVPROJECT_CHANGE', 131072);
+define('RTMESSAGE_VERIFIER_RTIME', 262144);
 define('RTMESSAGE_SOURCE_CHANGE', 524288);
+define('RTMESSAGE_PARENT_CHANGE', 1048576);
+
+define('NETWORK_INTERFACE_TYPE_UNI', 0);
+define('NETWORK_INTERFACE_TYPE_NNI', 1);
+
+$NETWORK_INTERFACE_TYPES = array(
+	NETWORK_INTERFACE_TYPE_UNI => array(
+		'label' => trans('Access network interface'),
+		'name' => 'NETWORK_INTERFACE_TYPE_UNI',
+		'alias' => 'uni',
+	),
+	NETWORK_INTERFACE_TYPE_NNI => array(
+		'label' => trans('Infrastructure network interface'),
+		'name' => 'NETWORK_INTERFACE_TYPE_NNI',
+		'alias' => 'nni',
+	),
+);
+
+//Request Tracker Ticket Types
+define('RT_TYPE_OFFER', 1);
+define('RT_TYPE_DOCS', 2);
+define('RT_TYPE_FAULT', 3);
+define('RT_TYPE_INST', 4);
+define('RT_TYPE_MOD', 5);
+define('RT_TYPE_START', 6);
+define('RT_TYPE_STOP', 7);
+define('RT_TYPE_REMOVE', 8);
+define('RT_TYPE_OTHER', 9);
+define('RT_TYPE_CONF', 10);
+
+
+$RT_TYPES = array(
+	RT_TYPE_OTHER => array(
+		'label' => trans('Other'),
+		'class' => 'lms-ui-rt-ticket-type-other',
+		'name' => 'RT_TYPE_OTHER'
+	),
+	RT_TYPE_OFFER => array(
+		'label' => trans('Offer'),
+		'class' => 'lms-ui-rt-ticket-type-offer',
+		'name' => 'RT_TYPE_OFFER'
+	),
+	RT_TYPE_DOCS => array(
+		'label' => trans('Documents'),
+		'class' => 'lms-ui-rt-ticket-type-docs',
+		'name' => 'RT_TYPE_DOCS'
+	),
+	RT_TYPE_FAULT => array(
+		'label' => trans('Fault'),
+		'class' => 'lms-ui-rt-ticket-type-fault',
+		'name' => 'RT_TYPE_FAULT'
+	),
+	RT_TYPE_INST => array(
+		'label' => trans('Instalation'),
+		'class' => 'lms-ui-rt-ticket-type-inst',
+		'name' => 'RT_TYPE_INST'
+	),
+	RT_TYPE_MOD => array(
+		'label' => trans('Modification'),
+		'class' => 'lms-ui-rt-ticket-type-mod',
+		'name' => 'RT_TYPE_MOD'
+	),
+	RT_TYPE_CONF => array(
+		'label' => trans('Configuration'),
+		'class' => 'lms-ui-rt-ticket-type-conf',
+		'name' => 'RT_TYPE_CONF'
+	),
+	RT_TYPE_START => array(
+		'label' => trans('Start service'),
+		'class' => 'lms-ui-rt-ticket-type-start',
+		'name' => 'RT_TYPE_START'
+	),
+	RT_TYPE_STOP => array(
+		'label' => trans('Hold service'),
+		'class' => 'lms-ui-rt-ticket-type-stop',
+		'name' => 'RT_TYPE_STOP'
+	),
+	RT_TYPE_REMOVE => array(
+		'label' => trans('Deinstalation'),
+		'class' => 'lms-ui-rt-ticket-type-remove',
+		'name' => 'RT_TYPE_REMOVE'
+	),
+);
 
 // Messages status and type
 define('MSG_NEW', 1);
@@ -258,6 +393,38 @@ define('TMPL_SMS', 3);
 define('TMPL_WWW', 4);
 define('TMPL_USERPANEL', 5);
 define('TMPL_USERPANEL_URGENT', 6);
+define('TMPL_HELPDESK', 7);
+
+$MESSAGETEMPLATES = array(
+	TMPL_WARNING => array(
+		'class' => 'lms-ui-icon-warning',
+		'label' => trans('<!message>warning'),
+	),
+	TMPL_MAIL => array(
+		'class' => 'lms-ui-icon-mail',
+		'label' => trans('mail'),
+	),
+	TMPL_SMS => array(
+		'class' => 'lms-ui-icon-sms',
+		'label' => trans('sms'),
+	),
+	TMPL_WWW => array(
+		'class' => 'lms-ui-icon-www',
+		'label' => trans('www'),
+	),
+	TMPL_USERPANEL => array(
+		'class' => 'lms-ui-icon-userpanel',
+		'label' => trans('<!message>userpanel'),
+	),
+	TMPL_USERPANEL_URGENT => array(
+		'class' => 'lms-ui-icon-userpanel',
+		'label' => trans('<!message>userpanel (urgent)'),
+	),
+	TMPL_HELPDESK => array(
+		'class' => 'lms-ui-icon-helpdesk',
+		'label' => trans('<!message>helpdesk'),
+	),
+);
 
 // Account types
 define('ACCOUNT_SHELL', 1);
@@ -339,6 +506,7 @@ define('DOC_PRICELIST', -11);
 define('DOC_PROMOTION', -12);
 define('DOC_WARRANTY', -13);
 define('DOC_REGULATIONS', -14);
+define('DOC_CONF_FILE', -15);
 
 
 $DOCTYPES = array(
@@ -363,7 +531,24 @@ $DOCTYPES = array(
     DOC_PROMOTION       =>  trans('promotion'), // promocja
     DOC_WARRANTY       =>  trans('warranty'), // gwarancja
     DOC_REGULATIONS       =>  trans('regulations'), // regulamin
+    DOC_CONF_FILE   =>  trans('configuration file'),
     DOC_OTHER       =>  trans('other')
+);
+
+define('DOCRIGHT_VIEW', 1);
+define('DOCRIGHT_CREATE', 2);
+define('DOCRIGHT_CONFIRM', 4);
+define('DOCRIGHT_EDIT', 8);
+define('DOCRIGHT_DELETE', 16);
+define('DOCRIGHT_ARCHIVE', 32);
+
+$DOCRIGHTS = array(
+	DOCRIGHT_VIEW => trans('Viewing'),
+	DOCRIGHT_CREATE => trans('Creating'),
+	DOCRIGHT_CONFIRM => trans('Confirming'),
+	DOCRIGHT_EDIT => trans('Editing'),
+	DOCRIGHT_DELETE => trans('Deleting'),
+	DOCRIGHT_ARCHIVE => trans('Archiving'),
 );
 
 // Guarantee periods
@@ -408,13 +593,13 @@ $NUM_PERIODS = array(
     DAILY	=>	trans('daily'),
 );
 
-// Tariff types
-define('TARIFF_INTERNET', 1);
-define('TARIFF_HOSTING', 2);
-define('TARIFF_SERVICE', 3);
-define('TARIFF_PHONE', 4);
-define('TARIFF_TV', 5);
-define('TARIFF_OTHER', -1);
+// Service Types
+define('SERVICE_OTHER', -1);
+define('SERVICE_INTERNET', 1);
+define('SERVICE_HOSTING', 2);
+define('SERVICE_SERVICE', 3);
+define('SERVICE_PHONE', 4);
+define('SERVICE_TV', 5);
 
 // VoIP call types
 define('CALL_INCOMING', 1);
@@ -439,13 +624,13 @@ $VOIP_POOL_NUMBER_TYPES = array(
 define('CALL_FLAG_ADMIN_RECORDING', 1);
 define('CALL_FLAG_CUSTOMER_RECORDING', 2);
 
-$TARIFFTYPES = array(
-	TARIFF_INTERNET	=> ConfigHelper::getConfig('tarifftypes.internet', trans('internet')),
-	TARIFF_HOSTING	=> ConfigHelper::getConfig('tarifftypes.hosting', trans('hosting')),
-	TARIFF_SERVICE	=> ConfigHelper::getConfig('tarifftypes.service', trans('service')),
-	TARIFF_PHONE	=> ConfigHelper::getConfig('tarifftypes.phone', trans('phone')),
-	TARIFF_TV	=> ConfigHelper::getConfig('tarifftypes.tv', trans('tv')),
-	TARIFF_OTHER	=> ConfigHelper::getConfig('tarifftypes.other', trans('other')),
+$SERVICETYPES = array(
+    SERVICE_OTHER => ConfigHelper::getConfig('tarifftypes.other', trans('other')),
+    SERVICE_INTERNET => ConfigHelper::getConfig('tarifftypes.internet', trans('internet')),
+    SERVICE_HOSTING => ConfigHelper::getConfig('tarifftypes.hosting', trans('hosting')),
+    SERVICE_SERVICE	=> ConfigHelper::getConfig('tarifftypes.service', trans('service')),
+    SERVICE_PHONE => ConfigHelper::getConfig('tarifftypes.phone', trans('phone')),
+    SERVICE_TV => ConfigHelper::getConfig('tarifftypes.tv', trans('tv')),
 );
 
 $PAYTYPES = array(
@@ -457,6 +642,8 @@ $PAYTYPES = array(
     6   => trans('barter'),
     7   => trans('contract'),
     8   => trans('paid'),
+    9   => trans('cash on delivery'),
+    10  => trans('instalments'),
 );
 
 // Contact types
@@ -476,6 +663,7 @@ define('CONTACT_IM_SKYPE', 2048);
 define('CONTACT_IM_FACEBOOK', 4096);
 define('CONTACT_DISABLED', 16384);
 define('CONTACT_DOCUMENTS', 32768);
+define('CONTACT_REPRESENTATIVE', 65536);
 
 $CONTACTTYPES = array(
     CONTACT_MOBILE          =>	trans('mobile'),
@@ -489,6 +677,7 @@ $CONTACTTYPES = array(
     CONTACT_IM_SKYPE        =>	trans('Skype'),
     CONTACT_IM_FACEBOOK     =>	trans('Facebook'),
     CONTACT_DOCUMENTS		=>	trans('documents'),
+	CONTACT_REPRESENTATIVE	=>	trans('representative'),
 );
 
 define('DISCOUNT_PERCENTAGE', 1);
@@ -701,11 +890,11 @@ $EVENTSTYLES = array(
 	EVENT_NETWORK => 'background-color: blue; color: white;',
 	EVENT_SERVICE => 'background-color: red; color: white;',
 	EVENT_INSTALLATION => 'background-color: green; color: white;',
-	EVENT_MEETING => 'background-color: yellow; color: black;',
+	EVENT_MEETING => 'background-color: gold; color: black;',
 	EVENT_VACATION => 'background-color: white; color: black;',
 	EVENT_DUTY => 'background-color: brown; color: white;',
-	EVENT_PHONE => 'background-color: white; color: black;',
-	EVENT_TV => 'background-color: white; color: blue;',
+	EVENT_PHONE => 'background-color: yellow; color: black;',
+	EVENT_TV => 'background-color: greenyellow; color: blue;',
 );
 
 define('SESSIONTYPE_PPPOE', 1);
@@ -756,19 +945,24 @@ $EXISTINGASSIGNMENTS = array(
 
 if(isset($SMARTY))
 {
+	$SMARTY->assign('_NETWORK_INTERFACE_TYPES',$NETWORK_INTERFACE_TYPES);
 	$SMARTY->assign('_CTYPES',$CTYPES);
 	$SMARTY->assign('_CSTATUSES', $CSTATUSES);
+	$SMARTY->assign('_MESSAGETEMPLATES', $MESSAGETEMPLATES);
 	$SMARTY->assign('_ACCOUNTTYPES', $ACCOUNTTYPES);
 	$SMARTY->assign('_DOCTYPES', $DOCTYPES);
+	$SMARTY->assign('_DOCRIGHTS', $DOCRIGHTS);
 	$SMARTY->assign('_PERIODS', $PERIODS);
 	$SMARTY->assign('_GUARANTEEPERIODS', $GUARANTEEPERIODS);
 	$SMARTY->assign('_NUM_PERIODS', $NUM_PERIODS);
+	$SMARTY->assign('_RT_RIGHTS', $RT_RIGHTS);
 	$SMARTY->assign('_RT_STATES', $RT_STATES);
 	$SMARTY->assign('_RT_SOURCES', $RT_SOURCES);
 	$SMARTY->assign('_RT_PRIORITIES', $RT_PRIORITIES);
 	$SMARTY->assign('_RT_PRIORITY_STYLES', $RT_PRIORITY_STYLES);
+	$SMARTY->assign('_RT_TYPES', $RT_TYPES);
 	$SMARTY->assign('_CONFIG_TYPES', $CONFIG_TYPES);
-	$SMARTY->assign('_TARIFFTYPES', $TARIFFTYPES);
+	$SMARTY->assign('_SERVICETYPES', $SERVICETYPES);
 	$SMARTY->assign('_PAYTYPES', $PAYTYPES);
 	$SMARTY->assign('_CONTACTTYPES', $CONTACTTYPES);
 	$SMARTY->assign('_DISCOUNTTYPES', $DISCOUNTTYPES);

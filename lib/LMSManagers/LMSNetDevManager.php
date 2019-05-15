@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2017 LMS Developers
+ *  Copyright (C) 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -30,6 +30,8 @@
  */
 class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 {
+	const NETDEV_URL = 1;
+	const NODE_URL = 2;
 
     public function GetNetDevLinkedNodes($id)
     {
@@ -221,9 +223,22 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			$args['name'] = $data['name'];
 		if (array_key_exists('description', $data))
 			$args['description'] = empty($data['description']) ? '' : $data['description'];
+
 		if (array_key_exists('producer', $data))
 			$args['producer'] = empty($data['producer']) ? '' : $data['producer'];
 		if (array_key_exists('model', $data))
+			$args['model'] = empty($data['model']) ? '' : $data['model'];
+
+		if (preg_match('/^[0-9]+$/', $data['producerid'])) {
+			if (preg_match('/^[0-9]+$/', $data['modelid']))
+				$args['netdevicemodelid'] = $data['modelid'];
+			else {
+				$args['netdevicemodelid'] = null;
+				$args['producer'] = $this->db->GetOne('SELECT name FROM netdeviceproducers WHERE id = ?', array($data['producerid']));
+			}
+		} else
+			$args['netdevicemodelid'] = null;
+
 			$args['model'] = empty($data['model']) ? '' : $data['model'];
 		if (array_key_exists('serialnumber', $data))
 			$args['serialnumber'] = empty($data['serialnumber']) ? '' : $data['serialnumber'];
@@ -249,8 +264,8 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			$args['longitude'] = !empty($data['longitude']) ? str_replace(',', '.', $data['longitude']) : null;
 		if (array_key_exists('latitude', $data))
 			$args['latitude'] = !empty($data['latitude']) ? str_replace(',', '.', $data['latitude']) : null;
-		if (array_key_exists('invprojectid', $data))
-			$args['invprojectid'] = $data['invprojectid'];
+		if (array_key_exists('projectid', $data))
+			$args['invprojectid'] = $data['projectid'];
 		if (array_key_exists('netnodeid', $data))
 			$args['netnodeid'] = $data['netnodeid'];
 		if (array_key_exists('status', $data))
@@ -262,6 +277,12 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
 		if (empty($args))
 			return null;
+
+		if (!empty($args['netdevicemodelid']))
+			$args = array_merge($args, $this->db->GetRow('SELECT p.name AS producer, m.name AS model
+				FROM netdevicemodels m
+				JOIN netdeviceproducers p on m.netdeviceproducerid = p.id
+				WHERE m.id = ?', array($args['netdevicemodelid'])));
 
         $res = $this->db->Execute('UPDATE netdevices SET ' . implode(' = ?, ', array_keys($args)) . ' = ?
         	WHERE id = ?', array_merge(array_values($args), array($data['id'])));
@@ -328,6 +349,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function NetDevAdd($data)
     {
+
         $args = array(
             'name'             => $data['name'],
             'description'      => empty($data['description']) ? '' : $data['description'],
@@ -345,15 +367,31 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
             'channelid'        => !empty($data['channelid']) ? $data['channelid'] : NULL,
             'longitude'        => !empty($data['longitude']) ? str_replace(',', '.', $data['longitude']) : NULL,
             'latitude'         => !empty($data['latitude'])  ? str_replace(',', '.', $data['latitude'])  : NULL,
-            'invprojectid'     => $data['invprojectid'],
+            'invprojectid'     => $data['projectid'],
             'netnodeid'        => $data['netnodeid'],
             'status'           => empty($data['status']) ? 0 : $data['status'],
-            'netdevicemodelid' => !empty($data['netdevicemodelid']) ? $data['netdevicemodelid'] : null,
+            'netdevicemodelid' => null,
             'address_id'       => ($data['address_id'] >= 0 ? $data['address_id'] : null),
             'ownerid'          => !empty($data['ownerid'])  ? $data['ownerid']    : null
         );
 
-        if ($this->db->Execute('INSERT INTO netdevices (name,
+		if (preg_match('/^[0-9]+$/', $data['producerid'])) {
+			if (preg_match('/^[0-9]+$/', $data['modelid']))
+				$args['netdevicemodelid'] = $data['modelid'];
+			else {
+				$args['netdevicemodelid'] = null;
+				$args['producer'] = $this->db->GetOne('SELECT name FROM netdeviceproducers WHERE id = ?', array($data['producerid']));
+			}
+		} else
+			$args['netdevicemodelid'] = null;
+
+		if (!empty($args['netdevicemodelid']))
+			$args = array_merge($args, $this->db->GetRow('SELECT p.name AS producer, m.name AS model
+				FROM netdevicemodels m
+				JOIN netdeviceproducers p ON m.netdeviceproducerid = p.id
+				WHERE m.id = ?', array($args['netdevicemodelid'])));
+
+		if ($this->db->Execute('INSERT INTO netdevices (name,
 				description, producer, model, serialnumber,
 				ports, purchasetime, guaranteeperiod, shortname,
 				nastype, clients, secret, community, channelid,
@@ -453,9 +491,22 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			ORDER BY name', array($id, $id, $id, $id, $id, $id, $id));
     }
 
-    public function GetNetDevList($order = 'name,asc', $search = array())
-    {
-        list($order, $direction) = sscanf($order, '%[^,],%s');
+	public function GetNetDevList($order = 'name,asc', $search = array()) {
+		if (isset($search['count']))
+			$count = $search['count'];
+		else
+			$count = false;
+		if (isset($search['offset']))
+			$offset = $search['offset'];
+		else
+			$offset = null;
+		if (isset($search['limit']))
+			$limit = $search['limit'];
+		else
+			$limit = null;
+		$short = isset($search['short']) && !empty($search['short']);
+
+		list($order, $direction) = sscanf($order, '%[^,],%s');
 
         ($direction == 'desc') ? $direction = 'desc' : $direction = 'asc';
 
@@ -531,11 +582,25 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 					$where[] = "d.$key = ''";
 				break;
 			case 'ownerid':
-				$where[] = 'ownerid = ' . $value;
+				$where[] = 'd.ownerid = ' . $value;
 				break;
 		}
 
-		$netdevlist = $this->db->GetAll('SELECT d.id, d.name,
+		if ($count) {
+			return $this->db->GetOne('SELECT COUNT(d.id)
+				FROM netdevices d
+				LEFT JOIN vaddresses addr       ON d.address_id = addr.id
+				LEFT JOIN invprojects p         ON p.id = d.invprojectid
+				LEFT JOIN netnodes n            ON n.id = d.netnodeid
+				LEFT JOIN location_streets lst  ON lst.id = addr.street_id
+				LEFT JOIN location_cities lc    ON lc.id = addr.city_id
+				LEFT JOIN location_boroughs lb  ON lb.id = lc.boroughid
+				LEFT JOIN location_districts ld ON ld.id = lb.districtid
+				LEFT JOIN location_states ls    ON ls.id = ld.stateid '
+				. (!empty($where) ? ' WHERE ' . implode(' AND ', $where) : ''));
+		}
+
+		$netdevlist = $this->db->GetAll('SELECT d.id, d.name' . ($short ? '' : ',
 				d.description, d.producer, d.model, d.serialnumber, d.ports, d.ownerid,
 				d.invprojectid, p.name AS project, d.status,
 				(SELECT COUNT(*) FROM nodes WHERE ipaddr <> 0 AND netdev=d.id AND ownerid IS NOT NULL)
@@ -552,7 +617,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 				(CASE WHEN lst.ident IS NULL
 					THEN (CASE WHEN addr.street = \'\' THEN \'99999\' ELSE \'99998\' END)
 					ELSE lst.ident END) AS street_ident,
-				addr.house as location_house, addr.flat as location_flat, addr.location
+				addr.house as location_house, addr.flat as location_flat, addr.location') . '
 			FROM netdevices d
 				LEFT JOIN vaddresses addr       ON d.address_id = addr.id
 				LEFT JOIN invprojects p         ON p.id = d.invprojectid
@@ -563,12 +628,21 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 				LEFT JOIN location_districts ld ON ld.id = lb.districtid
 				LEFT JOIN location_states ls    ON ls.id = ld.stateid '
 				. (!empty($where) ? ' WHERE ' . implode(' AND ', $where) : '')
-                . ($sqlord != '' ? $sqlord . ' ' . $direction : ''));
+                . ($sqlord != '' ? $sqlord . ' ' . $direction : '')
+				. (isset($limit) ? ' LIMIT ' . $limit : '')
+				. (isset($offset) ? ' OFFSET ' . $offset : ''));
 
-		if ($netdevlist) {
+		if (!$short && $netdevlist) {
 			$customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
 
+			$filecontainers = $this->db->GetAllByKey('SELECT fc.netdevid, '
+				. $this->db->GroupConcat("CASE WHEN fc.description = '' THEN '---' ELSE fc.description END") . ' AS descriptions
+			FROM filecontainers fc
+			WHERE fc.netdevid IS NOT NULL
+			GROUP BY fc.netdevid', 'netdevid');
+
 			foreach ($netdevlist as &$netdev) {
+				$netdev['customlinks'] = array();
 				if (!$netdev['location'] && $netdev['ownerid']) {
 					$netdev['location'] = $customer_manager->getAddressForCustomerStuff($netdev['ownerid']);
 				}
@@ -577,6 +651,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 						. $netdev['borough_ident'] . $netdev['borough_type'];
 				$netdev['simc'] = empty($netdev['city_ident']) ? null : $netdev['city_ident'];
 				$netdev['ulic'] = empty($netdev['street_ident']) ? null : $netdev['street_ident'];
+				$netdev['filecontainers'] = isset($filecontainers[$netdev['id']])
+					? explode(',', $filecontainers[$netdev['id']]['descriptions'])
+					: array();
 			}
 			unset($netdev);
 		}
@@ -611,6 +688,10 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         return $netdevs;
     }
 
+	public function GetNetDevName($id) {
+    	return $this->db->GetOne('SELECT name FROM netdevices WHERE id = ?', array($id));
+	}
+
     public function GetNotConnectedDevices($id)
     {
         return $this->db->GetAll('SELECT d.id, d.name, d.description,
@@ -624,9 +705,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			ORDER BY name', array($id, $id, $id, $id));
     }
 
-    public function GetNetDev($id)
-    {
-        $result = $this->db->GetRow('SELECT d.*, t.name AS nastypename, c.name AS channel, d.ownerid,
+	public function GetNetDev($id) {
+		$result = $this->db->GetRow('SELECT d.*, d.invprojectid AS projectid, t.name AS nastypename, c.name AS channel, d.ownerid,
+				producer, ndm.netdeviceproducerid AS producerid, model, d.netdevicemodelid AS modelid,
 				(CASE WHEN lst.name2 IS NOT NULL THEN ' . $this->db->Concat('lst.name2', "' '", 'lst.name') . ' ELSE lst.name END) AS street_name,
 				lt.name AS street_type, lc.name AS city_name,
 				lb.name AS borough_name, lb.type AS borough_type,
@@ -639,6 +720,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 				addr.postoffice AS location_postoffice,
 				addr.house as location_house, addr.flat as location_flat, addr.location
 			FROM netdevices d
+				LEFT JOIN netdevicemodels ndm      ON ndm.id = d.netdevicemodelid
 				LEFT JOIN vaddresses addr          ON addr.id = d.address_id
 				LEFT JOIN nastypes t               ON (t.id = d.nastype)
 				LEFT JOIN ewx_channels c           ON (d.channelid = c.id)
@@ -665,7 +747,12 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         elseif ($result['guaranteeperiod'] == NULL)
             $result['guaranteeperiod'] = -1;
 
-        return $result;
+		if ($result['ownerid']) {
+			$customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
+			$result['owner'] = $customer_manager->getCustomerName( $result['ownerid'] );
+		}
+
+		return $result;
     }
 
     public function NetDevDelLinks($id)
@@ -703,6 +790,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function DeleteNetDev($id)
     {
+		$file_manager = new LMSFileManager($this->db, $this->auth, $this->cache, $this->syslog);
+		$file_manager->DeleteFileContainers('netdevid', $id);
+
         $this->db->BeginTrans();
         if ($this->syslog) {
             $netlinks = $this->db->GetAll('SELECT id, src, dst FROM netlinks WHERE src = ? OR dst = ?', array($id, $id));
@@ -765,4 +855,209 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         return $result;
     }
 
+	public function GetProducers() {
+		return $this->db->GetAllByKey('SELECT id, name FROM netdeviceproducers ORDER BY name ASC', 'id');
+	}
+
+	public function GetModels($producerid = null) {
+		if (!empty($producerid))
+			return $this->db->GetAll('SELECT id, name FROM netdevicemodels ORDER BY name ASC',
+				array($producerid));
+
+		$models = $this->db->GetAll('SELECT m.id, p.id AS producerid, m.name
+			FROM netdevicemodels m
+			JOIN netdeviceproducers p ON p.id = m.netdeviceproducerid
+			ORDER BY p.id, m.name');
+		if (empty($models))
+			return array();
+
+		$result = array();
+		foreach ($models as $model) {
+			if (!isset($result[$model['producerid']]))
+				$result[$model['producerid']] = array();
+			$result[$model['producerid']][$model['id']] = $model;
+		}
+
+		return $result;
+	}
+
+	public function GetRadioSectors($netdevid, $technology = 0) {
+		$radiosectors = $this->db->GetAll('SELECT s.*, (CASE WHEN n.computers IS NULL THEN 0 ELSE n.computers END) AS computers,
+				((CASE WHEN l1.devices IS NULL THEN 0 ELSE l1.devices END)
+				+ (CASE WHEN l2.devices IS NULL THEN 0 ELSE l2.devices END)) AS devices
+			FROM netradiosectors s
+			LEFT JOIN (
+				SELECT linkradiosector AS rs, COUNT(*) AS computers
+				FROM nodes n WHERE n.ownerid IS NOT NULL AND linkradiosector IS NOT NULL
+				GROUP BY rs
+			) n ON n.rs = s.id
+			LEFT JOIN (
+				SELECT srcradiosector, COUNT(*) AS devices FROM netlinks GROUP BY srcradiosector
+			) l1 ON l1.srcradiosector = s.id
+			LEFT JOIN (
+				SELECT dstradiosector, COUNT(*) AS devices FROM netlinks GROUP BY dstradiosector
+			) l2 ON l2.dstradiosector = s.id
+			WHERE s.netdev = ?' . ($technology ? ' AND (technology = ' . intval($technology) . ' OR technology = 0)' : '') . '
+			ORDER BY s.name', array($netdevid));
+
+		if (!empty($radiosectors)) {
+			foreach ($radiosectors as &$radiosector)
+				if (!empty($radiosector['bandwidth']))
+					$radiosector['bandwidth'] *= 1000;
+			unset($radiosector);
+		}
+
+		return $radiosectors;
+	}
+
+	public function AddRadioSector($netdevid, array $radiosector) {
+		$args = array(
+			'name' => $radiosector['name'],
+			'azimuth' => $radiosector['azimuth'],
+			'width' => $radiosector['width'],
+			'altitude' => $radiosector['altitude'],
+			'rsrange' => $radiosector['rsrange'],
+			'license' => (strlen($radiosector['license']) ? $radiosector['license'] : null),
+			'technology' => intval($radiosector['technology']),
+			'type' => intval($radiosector['type']),
+			'frequency' => (strlen($radiosector['frequency']) ? $radiosector['frequency'] : null),
+			'frequency2' => (strlen($radiosector['frequency2']) ? $radiosector['frequency2'] : null),
+			'bandwidth' => (strlen($radiosector['bandwidth']) ? str_replace(',', '.', $radiosector['bandwidth'] / 1000) : null),
+			SYSLOG::RES_NETDEV => $netdevid,
+			'secret' => intval($radiosector['secret']),
+		);
+
+		$this->db->Execute('INSERT INTO netradiosectors (name, azimuth, width, altitude, rsrange, license, technology, type,
+			frequency, frequency2, bandwidth, netdev, secret)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			array_values($args));
+
+		$rsid = $this->db->GetLastInsertID('netradiosectors');
+
+		if ($rsid && $this->syslog) {
+			$args[SYSLOG::RES_RADIOSECTOR] = $rsid;
+			$this->syslog->AddMessage(SYSLOG::RES_RADIOSECTOR, SYSLOG::OPER_ADD, $args);
+		}
+
+		return $rsid;
+	}
+
+	public function DeleteRadioSector($id) {
+		if ($this->syslog)
+			$netdevid = $this->db->GetOne('SELECT netdev FROM netradiosectors WHERE id = ?',
+				array($id));
+
+		$res = $this->db->Execute('DELETE FROM netradiosectors WHERE id = ?', array($id));
+
+		if ($res && $this->syslog) {
+			$args = array(
+				SYSLOG::RES_RADIOSECTOR => $id,
+				SYSLOG::RES_NETDEV => $netdevid,
+			);
+			$this->syslog->AddMessage(SYSLOG::RES_RADIOSECTOR, SYSLOG::OPER_DELETE, $args);
+		}
+	}
+
+	public function UpdateRadioSector($id, array $radiosector) {
+		$args = array(
+			'name' => $radiosector['name'],
+			'azimuth' => $radiosector['azimuth'],
+			'width' => $radiosector['width'],
+			'altitude' => $radiosector['altitude'],
+			'rsrange' => $radiosector['rsrange'],
+			'license' => (strlen($radiosector['license']) ? $radiosector['license'] : null),
+			'technology' => intval($radiosector['technology']),
+			'type' => intval($radiosector['type']),
+			'secret' => $radiosector['secret'],
+			'frequency' => (strlen($radiosector['frequency']) ? $radiosector['frequency'] : null),
+			'frequency2' => (strlen($radiosector['frequency2']) ? $radiosector['frequency2'] : null),
+			'bandwidth' => (strlen($radiosector['bandwidth']) ? str_replace(',', '.', $radiosector['bandwidth'] / 1000) : null),
+			SYSLOG::RES_RADIOSECTOR => $id,
+		);
+
+		$res = $this->db->Execute('UPDATE netradiosectors SET name = ?, azimuth = ?, width = ?, altitude = ?,
+			rsrange = ?, license = ?, technology = ?, type = ?, secret = ?,
+			frequency = ?, frequency2 = ?, bandwidth = ? WHERE id = ?', array_values($args));
+
+		if ($res && $this->syslog) {
+			$args[SYSLOG::RES_NETDEV] = $this->db->GetOne('SELECT netdev FROM netradiosectors WHERE id = ?',
+				array($id));
+			$this->syslog->AddMessage(SYSLOG::RES_RADIOSECTOR, SYSLOG::OPER_UPDATE, $args);
+		}
+
+		return $res;
+	}
+
+	public function GetManagementUrls($type, $id) {
+		return $this->db->GetAll('SELECT id, url, comment FROM managementurls WHERE '
+			. ($type == self::NETDEV_URL ? 'netdevid' : 'nodeid') . ' = ? ORDER BY id',
+			array($id));
+	}
+
+	public function AddManagementUrl($type, $id, array $url) {
+		if ($type == self::NETDEV_URL) {
+			$args = array(
+				SYSLOG::RES_NETDEV => $id,
+				'url' => $url['url'],
+				'comment' => $url['comment'],
+			);
+			$this->db->Execute('INSERT INTO managementurls (netdevid, url, comment) VALUES (?, ?, ?)',
+				array_values($args));
+		} else {
+			$args = array(
+				SYSLOG::RES_NODE => $id,
+				'url' => $url['url'],
+				'comment' => $url['comment'],
+			);
+			$this->db->Execute('INSERT INTO managementurls (nodeid, url, comment) VALUES (?, ?, ?)',
+				array_values($args));
+		}
+
+		$urlid = $this->db->GetLastInsertID('managementurls');
+
+		if ($urlid && $this->syslog) {
+			$args[SYSLOG::RES_MGMTURL] = $urlid;
+			$this->syslog->AddMessage(SYSLOG::RES_MGMTURL, SYSLOG::OPER_ADD, $args);
+		}
+
+		return $urlid;
+	}
+
+	public function DeleteManagementUrl($type, $id) {
+		$res = $this->db->Execute('DELETE FROM managementurls WHERE id = ?', array($id));
+
+		if ($res && $this->syslog) {
+			$args = array(
+				SYSLOG::RES_MGMTURL => $id,
+				($type == self::NETDEV_URL ? SYSLOG::RES_NETDEV : SYSLOG::RES_NODE) => $id,
+			);
+			$this->syslog->AddMessage(SYSLOG::RES_MGMTURL, SYSLOG::OPER_DELETE, $args);
+		}
+
+		return $res;
+	}
+
+	public function updateManagementUrl($type, $id, array $url) {
+		$args = array(
+			'url' => $url['url'],
+			'comment' => $url['comment'],
+			SYSLOG::RES_MGMTURL => $id,
+		);
+
+		$res = $this->db->Execute('UPDATE managementurls SET url = ?, comment = ? WHERE id = ?',
+			array_values($args));
+
+		if ($res && $this->syslog) {
+			if ($type == self::NETDEV_URL)
+				$args[SYSLOG::RES_NETDEV] = $this->db->GetOne('SELECT netdevid FROM managementurls WHERE id = ?',
+					array($id));
+			else
+				$args[SYSLOG::RES_NODE] = $this->db->GetOne('SELECT nodeid FROM managementurls WHERE id = ?',
+					array($id));
+
+			$this->syslog->AddMessage(SYSLOG::RES_MGMTURL, SYSLOG::OPER_UPDATE, $args);
+		}
+
+		return $res;
+	}
 }

@@ -193,7 +193,7 @@ $menu = array(
 
 		'VoIP' => array(
 			'name' => trans('VoIP'),
-			'css' => 'lms-ui-icon-voip',
+			'css' => 'lms-ui-icon-phone',
 			'tip' => trans('VoIP Management'),
 			'accesskey' =>'v',
 			'prio' => 11,
@@ -218,7 +218,7 @@ $menu = array(
 				),
 				array(
 					'name' => trans('Subscription List'),
-					'link' => '?m=tarifflist&t=' . TARIFF_PHONE,
+					'link' => '?m=tarifflist&t=' . SERVICE_PHONE,
 					'tip' => trans('Phone tariff list'),
 					'prio' => 40,
 				),
@@ -251,7 +251,7 @@ $menu = array(
 
 		'netdevices' => array(
 			'name' => trans('Net Devices'),
-			'css' => 'lms-ui-icon-netdevice',
+			'css' => 'lms-ui-icon-netdev',
 			'link' =>'?m=netdevlist',
 			'tip' => trans('Network Devices Management'),
 			'accesskey' =>'o',
@@ -310,7 +310,7 @@ $menu = array(
 
 		'networks' => array(
 			'name' => trans('IP Networks'),
-			'css' => 'lms-ui-icon-network',
+			'css' => 'lms-ui-icon-ipnetwork',
 			'link' =>'?m=netlist',
 			'tip' => trans('IP Address Pools Management'),
 			'accesskey' =>'t',
@@ -330,7 +330,7 @@ $menu = array(
 				),
 				array(
 					'name' => trans('Search'),
-					'link' => '?m=netsearch',
+					'link' => '?m=netsearch&searchform=1',
 					'tip' => trans('Allows you to search for IP address pools'),
 					'prio' => 30,
 				),
@@ -582,6 +582,12 @@ $menu = array(
 					'tip' => trans('Allows you to send messages to customers'),
 					'prio' => 20,
 				),
+				array(
+					'name' => trans('<!message>Templates'),
+					'link' => '?m=messagetemplatelist',
+					'tip' => trans('Message template list'),
+					'prio' => 30,
+				)
 			),
 		),
 
@@ -848,7 +854,7 @@ if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.ewx_support', false)
 if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.logging', false))) {
 	$menu['log'] = array(
 		'name' => trans('Transaction Log'),
-		'css' => 'lms-ui-icon-log',
+		'css' => 'lms-ui-icon-archiveview',
 		'link' => '?m=archiveview',
 		'tip' => trans('Transaction Log Management'),
 		'accesskey' => 't',

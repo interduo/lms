@@ -59,6 +59,8 @@ switch($type)
 
 		$id = intval($_POST['customer']);
 
+		$aggregate_documents = isset($_POST['aggregate_documents']) && !empty($_POST['aggregate_documents']);
+
 		$layout['pagetitle'] = trans('Customer $a Balance Sheet ($b to $c)',$LMS->GetCustomerName($id), ($from ? $from : ''), $to);
 
 		$list['balance'] = 0;
@@ -68,11 +70,14 @@ switch($type)
 		$list['summary'] = 0;
 		$list['customerid'] = $id;
 
-		if($tslist = $DB->GetAll('SELECT c.id AS id, time, type, c.value AS value,
-				    taxes.label AS taxlabel, customerid, comment, name AS username
+		if($tslist = $DB->GetAll('SELECT c.id AS id, time, c.type, c.value AS value,
+				    taxes.label AS taxlabel, c.customerid, c.comment, vusers.name AS username,
+				    c.docid, d.number, d.cdate, d.type AS doctype, numberplans.template
 				    FROM cash c
+				    LEFT JOIN documents d ON d.id = c.docid
+				    LEFT JOIN numberplans ON numberplans.id = d.numberplanid
 				    LEFT JOIN taxes ON (c.taxid = taxes.id)
-				    LEFT JOIN vusers ON (vusers.id = userid)
+				    LEFT JOIN vusers ON (vusers.id = c.userid)
 				    WHERE c.customerid = ?
 					    AND NOT EXISTS (
 				                    SELECT 1 FROM customerassignments a
@@ -81,6 +86,12 @@ switch($type)
 				    ORDER BY time', array($id, $id))
 		)
 		{
+
+			if ($aggregate_documents) {
+				$tslist = $LMS->AggregateDocuments(array('customerid' => $id, 'list' => $tslist));
+				$tslist = $tslist['list'];
+			}
+
 			foreach($tslist as $row)
 				foreach($row as $column => $value)
 					$saldolist[$column][] = $value;
@@ -120,7 +131,7 @@ switch($type)
 				}
 			}
 
-			$list['total'] = sizeof($list['id']);
+			$list['total'] = count($list['id']);
 		}
 
 		$SMARTY->assign('balancelist', $list);
@@ -432,9 +443,11 @@ switch($type)
 			.(!empty($_POST['einvoice']) ? '&einvoice=' . intval($_POST['einvoice']) : '')
 			.(!empty($_POST['division']) ? '&divisionid='.intval($_POST['division']) : '')
 			.(!empty($_POST['customer']) ? '&customerid='.intval($_POST['customer']) : '')
-			.(!empty($_POST['group']) ? '&groupid='.intval($_POST['group']) : '')
+			.(!empty($_POST['group']) && is_array($_POST['group']) ? '&groupid[]='
+				. implode('&groupid[]=', Utils::filterIntegers($_POST['group'])) : '')
 			.(!empty($_POST['customer_type']) ? '&customertype='.intval($_POST['customer_type']) : '')
-			.(!empty($_POST['numberplan']) ? '&numberplanid='.intval($_POST['numberplan']) : '')
+			.(!empty($_POST['numberplan']) && is_array($_POST['numberplan']) ? '&numberplanid[]='
+				. implode('&numberplanid[]=', Utils::filterIntegers($_POST['numberplan'])) : '')
 			.(!empty($_POST['groupexclude']) ? '&groupexclude=1' : '')
 			.(!empty($_POST['autoissued']) ? '&autoissued=1' : '')
 			.(!empty($_POST['manualissued']) ? '&manualissued=1' : '')
@@ -655,7 +668,7 @@ switch($type)
 			$SMARTY->assign('reportlist', $reportlist);
 			$SMARTY->assign('total', $total);
 			$SMARTY->assign('taxes', $taxes);
-			$SMARTY->assign('taxescount', sizeof($taxes));
+			$SMARTY->assign('taxescount', count($taxes));
 		}
 
 		if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
@@ -820,7 +833,7 @@ switch($type)
 			{
 				// tutaj musimy troch� pokombinowa�, bo liczba
 				// rekord�w na stronie b�dzie zmienna
-				$tmp = is_array($row['title']) ? sizeof($row['title']) : 2;
+				$tmp = is_array($row['title']) ? count($row['title']) : 2;
 				$counter -= max($tmp,2);
 				if($counter<0)
 				{
@@ -851,8 +864,8 @@ switch($type)
 
 			$SMARTY->assign('pages', $pages);
 			$SMARTY->assign('totals', $totals);
-			$SMARTY->assign('pagescount', sizeof($pages));
-			$SMARTY->assign('reccount', sizeof($list));
+			$SMARTY->assign('pagescount', count($pages));
+			$SMARTY->assign('reccount', count($list));
 			if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
 				$output = $SMARTY->fetch('print/printreceiptlist-ext.html');
 				html2pdf($output, trans('Reports'), $layout['pagetitle']);

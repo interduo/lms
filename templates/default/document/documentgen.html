@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -38,7 +38,7 @@
 	}
 //-->
 </SCRIPT>
-<FORM name="documentgen" method="POST" action="?m=documentgen" enctype="multipart/form-data">
+<FORM name="documentgen" method="POST" id="documentgen-form" action="?m=documentgen" enctype="multipart/form-data">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
 	<COLGROUP>
@@ -82,8 +82,8 @@
 			{trans("Period:")}
 		</TD>
 		<TD>
-			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
-			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
+			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
+			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
 		</TD>
 	</TR>
 	<TR>
@@ -105,7 +105,7 @@
 			{trans("Type:")}
 		</TD>
 		<TD>
-			<SELECT SIZE="1" NAME="document[type]" {tip text="Select document type" trigger="type"} onchange="DocTypeChanged();">
+			<SELECT SIZE="1" NAME="document[type]" class="lms-ui-advanced-select" {tip text="Select document type" trigger="type"} onchange="DocTypeChanged();">
 				<OPTION VALUE="0">... {trans("select type")} ...</OPTION>
 				{foreach from=$_DOCTYPES key=key item=item}{if $key < 0 && in_array($key, $docrights)}
 				<OPTION VALUE="{$key}"{if $document.type==$key} SELECTED{/if}>{$item}</OPTION>
@@ -137,7 +137,7 @@
 			{trans("Files:")}
 		</TD>
 		<TD>
-			{fileupload id="attachments" fileupload=$fileupload}
+			{fileupload id="attachments" fileupload=$fileupload form="documentgen-form"}
 		</TD>
 	</TR>
 	<TR id="attachment-row"{if !$attachment_result} style="display: none;"{/if}>

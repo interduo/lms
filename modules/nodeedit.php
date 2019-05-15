@@ -76,10 +76,6 @@ $layout['pagetitle'] = trans('Node Edit: $a', $nodeinfo['name']);
 if (isset($_POST['nodeedit'])) {
 	$nodeedit = $_POST['nodeedit'];
 
-	$nodeedit['netid']      = $_POST['nodeeditnetid'];
-	$nodeedit['ipaddr']     = $_POST['nodeeditipaddr'];
-	$nodeedit['ipaddr_pub'] = $_POST['nodeeditipaddrpub'];
-
 	foreach ($nodeedit['macs'] as $key => $value)
 		$nodeedit['macs'][$key] = str_replace('-', ':', $value);
 
@@ -162,7 +158,7 @@ if (isset($_POST['nodeedit'])) {
 
 	if ($nodeedit['name'] == '')
 		$error['name'] = trans('Node name is required!');
-	elseif (!preg_match('/^[_a-z0-9-.]+$/i', $nodeedit['name']))
+	elseif (!preg_match('/' . ConfigHelper::getConfig('phpui.node_name_regexp', '^[_a-z0-9-.]+$') . '/i', $nodeedit['name']))
 		$error['name'] = trans('Specified name contains forbidden characters!');
 	elseif (strlen($nodeedit['name']) > 32)
 		$error['name'] = trans('Node name is too long (max.32 characters)!');
@@ -242,8 +238,10 @@ if (isset($_POST['nodeedit'])) {
 		$nodeedit = $LMS->ExecHook('node_edit_before', $nodeedit);
 
 		$ipi = $nodeedit['invprojectid'];
-		if ($ipi == '-1')
+		if ($ipi == '-1') {
+			$nodeedit['project'] = $nodeedit['projectname'];
 			$ipi = $LMS->AddProject($nodeedit);
+		}
 		if ($nodeedit['invprojectid'] == '-1' || intval($ipi)>0) {
 			$nodeedit['invprojectid'] = intval($ipi);
 		} else {
@@ -266,10 +264,11 @@ if (isset($_POST['nodeedit'])) {
 
 	$nodeinfo['name'] = $nodeedit['name'];
 	$nodeinfo['macs'] = $nodeedit['macs'];
-	$nodeinfo['ip'] = $nodeedit['ipaddr'];
+	$nodeinfo['ipaddr'] = $nodeedit['ipaddr'];
 	$nodeinfo['netid'] = $nodeedit['netid'];
 	$nodeinfo['wholenetwork'] = $nodeedit['wholenetwork'];
-	$nodeinfo['ip_pub'] = $nodeedit['ipaddr_pub'];
+	$nodeinfo['ipaddr_pub'] = $nodeedit['ipaddr_pub'];
+	$nodeinfo['pubnetid'] = $nodeedit['pubnetid'];
 	$nodeinfo['passwd'] = $nodeedit['passwd'];
 	$nodeinfo['access'] = $nodeedit['access'];
 	$nodeinfo['ownerid'] = $nodeedit['ownerid'];
@@ -286,6 +285,9 @@ if (isset($_POST['nodeedit'])) {
 	if ($nodeedit['ipaddr_pub'] == '0.0.0.0')
 		$nodeinfo['ipaddr_pub'] = '';
 } else {
+	$nodeinfo['ipaddr'] = $nodeinfo['ip'];
+	$nodeinfo['ipaddr_pub'] = $nodeinfo['ip_pub'];
+
 	if (empty($nodeinfo['netdev'])) {
 		$nodeinfo['linktype'] = intval(ConfigHelper::getConfig('phpui.default_linktype', LINKTYPE_WIRE));
 		$nodeinfo['linktechnology'] = intval(ConfigHelper::getConfig('phpui.default_linktechnology', 0));
@@ -325,6 +327,7 @@ $SMARTY->assign('networks', $LMS->GetNetworks(true));
 $SMARTY->assign('netdevices', $LMS->GetNetDevNames());
 $SMARTY->assign('nodegroups', $LMS->GetNodeGroupNamesByNode($nodeid));
 $SMARTY->assign('othernodegroups', $LMS->GetNodeGroupNamesWithoutNode($nodeid));
+$SMARTY->assign('mgmurls', $LMS->GetManagementUrls(LMSNetDevManager::NODE_URL, $nodeid));
 $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);

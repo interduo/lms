@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -32,7 +32,7 @@ if(!$LMS->NetworkExists($_GET['id']))
 if(isset($_GET['id']) && isset($_GET['networkset']))
 {
 	$LMS->NetworkSet($_GET['id']);
-	$SESSION->redirect('?m=netlist#'.$_GET['id']);
+	$SESSION->redirect('?' . $SESSION->get('backto'));
 }
 
 if($SESSION->is_set('ntlp.'.$_GET['id']) && ! isset($_GET['page']))
@@ -56,9 +56,15 @@ if(isset($_POST['networkdata']))
 	$networkdata['size'] = pow(2,32-$networkdata['prefix']);
 	$networkdata['addresslong'] = ip_long($networkdata['address']);
 	$networkdata['mask'] = prefix2mask($networkdata['prefix']);
+	$networkdata['snatlong'] = ip_long($networkdata['snat']);
 
 	if (empty($networkdata['hostid']))
 		$error['hostid'] = trans('Host should be selected!');
+
+	if (!empty($networkdata['snat'])) {
+		if(!check_ip($networkdata['snat']))
+			$error['snat'] = trans('Incorrect snat IP address!');
+	}
 
 	if(!check_ip($networkdata['address']))
 		$error['address'] = trans('Incorrect network IP address!');
@@ -219,6 +225,9 @@ if(isset($_POST['networkdata']))
 	$network['hostid'] = $networkdata['hostid'];
 	$network['ownerid'] = $networkdata['ownerid'];
 	$network['authtype'] = $networkdata['authtype'];
+	$network['snat'] = $networkdata['snat'];
+	$network['snatlong'] = $networkdata['snatlong'];
+	$network['pubnetid'] = $networkdata['pubnetid'];
 }
 
 $networks = $LMS->GetNetworks();
@@ -231,7 +240,7 @@ $layout['pagetitle'] = trans('Network Edit: $a',$network['name']);
 $SMARTY->assign('unlockedit',TRUE);
 $SMARTY->assign('network',$network);
 $SMARTY->assign('networks',$networks);
-$SMARTY->assign('netlistsize',sizeof($networks));
+$SMARTY->assign('netlistsize',count($networks));
 $SMARTY->assign('prefixlist', $LMS->GetPrefixList());
 $SMARTY->assign('hostlist', $LMS->DB->GetAll('SELECT id, name FROM hosts ORDER BY name'));
 $SMARTY->assign('error',$error);

@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -42,6 +42,9 @@
 {/block}
 {block name="customerdevices"}
 	{include file="customer/customerdevices.html"}
+{/block}
+{block name="customernetnodes"}
+	{include file="customer/customernetnodes.html"}
 {/block}
 {block name="customerassignments"}
 	{include file="customer/customerassignments.html"}

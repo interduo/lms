@@ -40,7 +40,7 @@ if ($api) {
 
 if (isset($netnodedata)) {
 	if ($netnodedata['name'] == '')
-		$error['name'] = trans('Net node name is required!');
+		$error['name'] = trans('Network node name is required!');
 
 	if ($api) {
 		if (isset($netnodedata['division'])) {
@@ -54,20 +54,12 @@ if (isset($netnodedata)) {
 	} elseif ($netnodedata['divisionid'] == '-1')
 		$error['divisionid'] = trans('Division is required!');
 
-	if ($api && isset($netnodedata['project'])) {
+	if (!strlen($netnodedata['projectid']) && !empty($netnodedata['project'])) {
 		$project = $LMS->GetProjectByName($netnodedata['project']);
 		if (empty($project)) {
-			$netnodedata['projectname'] = $netnodedata['project'];
-			$netnodedata['invprojectid'] = -1;
+			$netnodedata['projectid'] = -1;
 		} else
-			$netnodedata['invprojectid'] = $project['id'];
-	}
-
-	if ($netnodedata['invprojectid'] == '-1') { // new investment project
-		if (!strlen(trim($netnodedata['projectname'])))
-			$error['projectname'] = trans('Project name is required');
-		if ($LMS->ProjectByNameExists($netnodedata['projectname']))
-			$error['projectname'] = trans('Project with that name already exists');
+			$netnodedata['projectid'] = $project['id'];
 	}
 
 	if ($netnodedata['location_zip'] && !check_zip($netnodedata['location_zip'])) {
@@ -91,9 +83,14 @@ if (isset($netnodedata)) {
 		$netnodedata['location_street_name'] = $teryt['location_street_name'];
 	}
 
-    if (!$error) {
-		if (intval($netnodedata['invprojectid']) == -1)
-			$netnodedata['invprojectid'] = $LMS->AddProject($netnodedata);
+	if (intval($netnodedata['lastinspectiontime']) > time())
+		$error['lastinspectiontime'] = trans('Date from the future not allowed!');
+
+	if (!$error) {
+		if ($netnodedata['projectid'] == -1)
+			$netnodedata['projectid'] = $LMS->AddProject($netnodedata);
+		elseif (empty($netnodedata['projectid']))
+			$netnodedata['projectid'] = null;
 
 		$netnodeid = $LMS->NetNodeAdd($netnodedata);
 
@@ -120,6 +117,10 @@ if (isset($netnodedata)) {
 	$netnodedata['miar'] = 0;
 	$netnodedata['invprojectid'] = '-2'; // no investment project selected
 	$netnodedata['ownership'] = 0;
+	if (isset($_GET['customerid'])) {
+		$netnodedata['ownerid'] = $_GET['customerid'];
+		$netnodedata['ownership'] = 2;
+	}
 }
 
 $layout['pagetitle'] = trans('New Net Device Node');
@@ -128,6 +129,6 @@ $SMARTY->assign('netnode'  , $netnodedata);
 $SMARTY->assign('divisions', $LMS->GetDivisions());
 $SMARTY->assign('NNprojects', $LMS->GetProjects());
 
-$SMARTY->display('netnode/netnodeadd.html');
+$SMARTY->display('netnode/netnodemodify.html');
 
 ?>

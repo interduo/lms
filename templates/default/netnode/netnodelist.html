@@ -1,13 +1,12 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
-<script type="text/javascript" src="img/netnodehelper.js"></script>
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
 <FORM method="get" action="?m=netnodelist" name="choosefilter">
 <INPUT type="hidden" NAME="m" VALUE="netnodelist">
 <INPUT type="hidden" NAME="page" VALUE="1">
-<TABLE class="lmsbox">
+<TABLE class="lmsbox lms-ui-background-cycle">
 	<COLGROUP>
 		<COL style="width: 30%;">
 		<COL style="width: 20%;">
@@ -19,7 +18,7 @@
     <THEAD>
 	<TR {tip text="Click on column name to change sorting order"}>
 		<TD>
-			<IMG src="img/netdev.gif" ALT="">&nbsp;<A href="?m=netnodelist&o=name{if $listdata.direction == "asc" && $listdata.order == "name"},desc{/if}"><B>{trans("Name:")}</B></A> {if $listdata.order == "name"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}<BR>
+			<IMG src="img/netnode.png" ALT="">&nbsp;<A href="?m=netnodelist&o=name{if $listdata.direction == "asc" && $listdata.order == "name"},desc{/if}"><B>{trans("Name:")}</B></A> {if $listdata.order == "name"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}<BR>
 			<IMG src="img/producer.gif" ALT="">&nbsp;<A href="?m=netnodelist&o=type{if $listdata.direction == "asc" && $listdata.order == "type"},desc{/if}">{trans("Type:")}</A> {if $listdata.order == "type"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if} / 
 			<A href="?m=netnodelist&o=status{if $listdata.direction == "asc" && $listdata.order == "status"},desc{/if}">{trans("Status:")}</A> {if $listdata.order == "status"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if} 
 		</TD>
@@ -32,9 +31,9 @@
 		<TD class="text-center">
 			<A href="?m=netnodelist&o=id{if $listdata.direction == "asc" && $listdata.order == "id"},desc{/if}">ID:</A> {if $listdata.order == "id"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}
 		</TD>
-                <TD class="text-center">
-                        <A href="?m=netnodelist&o=lastinspectiontime{if $listdata.direction == "asc" && $listdata.order == "lastinspectiontime"},desc{/if}">{trans("Last inspection:")}</A> {if $listdata.order == "lastinspectiontime"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}
-                </TD>
+		<TD class="text-center">
+			<A href="?m=netnodelist&o=lastinspectiontime{if $listdata.direction == "asc" && $listdata.order == "lastinspectiontime"},desc{/if}">{trans("Last inspection:")}</A> {if $listdata.order == "lastinspectiontime"}<IMG src="img/{if $listdata.direction == "desc"}asc{else}desc{/if}_order.gif" alt="">{/if}
+		</TD>
 		<TD class="nobr">
 		</TD>
 	</TR>
@@ -85,26 +84,20 @@
 	</TR>
 	{if $listdata.total != 0}
 	<TR>
-		<TD class="pagination text-center" colspan="5">
+		<TD class="lms-ui-pagination" colspan="5">
 			{include file="scroller.html" loop=$nlist}
 		</TD>
-                <TD class="pagination text-right bold">
-                        {trans("Total:")} {$listdata.total|default:"0"}
-                </TD>
+		<TD class="lms-ui-pagination text-right bold">
+				{trans("Total:")} {$listdata.total|default:"0"}
+		</TD>
 	</TR>
 	{/if}
     </THEAD>
     <TBODY>
-	{cycle values="light,lucid" print=false}
-	{$prev_item=null}
 	{foreach $nlist as $item}
-	{if $item@iteration < $start || $item@iteration >= $start+$pagelimit}
-	{continue}
-	{/if}
-	{if $prev_item && $prev_item.ownerid && $prev_item.ownerid == $item.ownerid}{cycle print=false}{/if}
-	<TR class="highlight {cycle}">
-		<TD onClick="return self.location.href='?m=netnodeinfo&id={$item.id}';" class="valign-top">
-			<IMG src="img/netdev.gif" ALT=""> <a name="{$item.id}"><span class="bold">{$item.name}</span></A><BR>
+	<TR class="highlight" data-target-url="?m=netnodeinfo&id={$item.id}">
+		<TD class="valign-top">
+			<IMG src="img/netnode.png" ALT=""> <a name="{$item.id}"><span class="bold">{$item.name}</span></A><BR>
 			<IMG src="img/producer.gif" ALT=""> {$_NETELEMENTTYPES[$item.type]} / {$_NETELEMENTSTATUSES[$item.status]}
 		</TD>
 		<TD class="nobr">
@@ -118,17 +111,16 @@
 		<TD class="text-center">
 			{if ($item.invprojectid==1)} Brak {else}{$item.project}{/if}
 		</TD>
-		<TD onClick="return self.location.href='?m=netnodeinfo&id={$item.id}';" class="nobr text-center">
+		<TD class="nobr text-center">
 			({$item.id|string_format:"%04d"})
 		</TD>
 		<TD class="text-center">{$item.lastinspectiontime|date_format:"%x"}</TD>
-		<TD class="text-right nobr">
+		<TD class="lms-ui-buttons text-right nobr">
 			<a href="?m=netnodedel&id={$item.id}" onClick="return confirmLink(this, '{t a=$item.name}Are you sure, you want to remove net device node \'$a\' from database?{/t}')"><IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
 			<a href="?m=netnodeedit&id={$item.id}"><IMG src="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 			<a href="?m=netnodeinfo&id={$item.id}"><IMG src="img/info.gif" alt="{trans("Info")}" title="{trans("Info")}"></A>
 		</TD>
 	</TR>
-	{$prev_item=$item}
 	{foreachelse}
 	<TR>
 		<TD colspan="6" class="empty-table">
@@ -137,12 +129,12 @@
 	{/foreach}
 	</TBODY>
 	<TR>
-		<TD class="pagination text-center" colspan="5">
+		<TD class="lms-ui-pagination" colspan="5">
 			{if $listdata.total != 0}
 			{include file="scroller.html" loop=$nlist}
 			{/if}
 		</TD>
-		<TD class="pagination text-right bold">
+		<TD class="lms-ui-pagination text-right bold">
 			{trans("Total:")} {$listdata.total|default:"0"}
 		</TD>
 	</TR>

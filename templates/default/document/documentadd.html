@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -42,7 +42,7 @@
 	}
 //-->
 </script>
-<FORM name="documentadd" method="POST" action="?m=documentadd">
+<FORM name="documentadd" method="POST" id="documentadd-form" action="?m=documentadd">
 <INPUT type="submit" class="hiddenbtn">
 {if $customer.id}{$cid=$customer.id}{elseif $document.customerid}{$cid=$document.customerid}{else}{$cid=""}{/if}
 <TABLE class="lmsbox">
@@ -84,8 +84,8 @@
 			{trans("Period:")}
 		</TD>
 		<TD>
-			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
-			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="calendar" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
+			{trans("from:")} <INPUT type="TEXT" name="document[fromdate]" value="{if $document.fromdate}{$document.fromdate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter start date in YYYY/MM/DD format (optional)" trigger="fromdate"} size="10">&nbsp;
+			{trans("to:")} <INPUT type="TEXT" name="document[todate]" value="{if $document.todate}{$document.todate}{/if}" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter end date in YYYY/MM/DD format (optional)" trigger="todate"} size="10"><BR>
 		</TD>
 	</TR>
 	<TR>
@@ -107,7 +107,7 @@
 			{trans("Type:")}
 		</TD>
 		<TD>
-			<SELECT SIZE="1" NAME="document[type]" onchange="DocTypeChanged();" {tip text="Select document type" trigger="type"}>
+			<SELECT SIZE="1" NAME="document[type]" onchange="DocTypeChanged();" class="lms-ui-advanced-select" {tip text="Select document type" trigger="type"}>
 				<OPTION VALUE="0">... {trans("select type")} ...</OPTION>
 				{foreach from=$_DOCTYPES key=key item=item}{if $key < 0 && in_array($key, $docrights)}
 				<OPTION VALUE="{$key}"{if $document.type==$key} SELECTED{/if}>{$item}</OPTION>
@@ -142,7 +142,7 @@
 			{trans("Files:")}
 		</TD>
 		<TD>
-			{fileupload id="attachments" fileupload=$fileupload}
+			{fileupload id="attachments" fileupload=$fileupload form="documentadd-form"}
 		</TD>
 	</TR>
 	<TR id="attachment-row"{if !$attachment_result} style="display: none;"{/if}>
@@ -183,9 +183,13 @@
 	</TR>
 	<TR>
 		<TD colspan="3" class="buttons">
-			<A href="#" id="submit-button" class="lms-ui-submit-button">{trans("Submit")} <IMG SRC="img/save.gif" alt=""></A>
+			<A href="#" id="submit-button" class="lms-ui-button-submit">{trans("Submit")} <IMG SRC="img/save.gif" alt=""></A>
 			<A href="javascript: print_document();">{trans("Print")} <IMG SRC="img/print.gif" alt=""></A>
 			<A href="?m=documentlist">{trans("Cancel")} <IMG src="img/cancel.gif" alt=""></A><BR>
+			<label>
+				<input type="checkbox" id="new-window-toggle">
+				{trans("new window")}
+			</label>
 			<INPUT type="checkbox" name="document[reuse]" ID="reuse" value="ON" {if $document.reuse}checked{/if}> <label for="reuse">{trans("Display this form again, when that document is saved")}</label>
 		</TD>
 	</TR>
@@ -211,6 +215,14 @@
 			document.documentadd.submit();
 		});
 		{/if}
+
+		$('#new-window-toggle').click(function() {
+			if (this.checked) {
+				$('form[name="documentadd"]').attr('target', '_blank');
+			} else {
+				$('form[name="documentadd"]').removeAttr('target');
+			}
+		});
 	});
 	//setnumberplans();
 //-->

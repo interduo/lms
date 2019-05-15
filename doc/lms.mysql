@@ -31,9 +31,13 @@ DROP TABLE IF EXISTS up_help;
 DROP TABLE IF EXISTS up_customers;
 DROP TABLE IF EXISTS up_rights_assignments;
 DROP TABLE IF EXISTS up_rights;
+DROP TABLE IF EXISTS files;
+DROP TABLE IF EXISTS filecontainers;
 DROP TABLE IF EXISTS passwdhistory;
 DROP TABLE IF EXISTS userassignments;
 DROP TABLE IF EXISTS usergroups;
+DROP TABLE IF EXISTS rttemplatetypes;
+DROP TABLE IF EXISTS rttemplatequeues;
 DROP TABLE IF EXISTS templates;
 DROP TABLE IF EXISTS logmessagedata;
 DROP TABLE IF EXISTS logmessagekeys;
@@ -70,6 +74,7 @@ DROP TABLE IF EXISTS rtcategories;
 DROP TABLE IF EXISTS rtattachments;
 DROP TABLE IF EXISTS rtrights;
 DROP TABLE IF EXISTS rtmessages;
+DROP TABLE IF EXISTS rtticketlastview;
 DROP TABLE IF EXISTS rttickets;
 DROP TABLE IF EXISTS rtqueues;
 DROP TABLE IF EXISTS netlinks;
@@ -335,7 +340,7 @@ CREATE TABLE divisions (
 	id 		int(11) 	NOT NULL auto_increment,
 	shortname       varchar(255) 	NOT NULL DEFAULT '',
 	name        	text    	NOT NULL DEFAULT '',
-	ten		varchar(16)	NOT NULL DEFAULT '',
+	ten		varchar(50)	NOT NULL DEFAULT '',
 	regon		varchar(255)	NOT NULL DEFAULT '',
 	rbe			varchar(255)	NOT NULL DEFAULT '',
 	rbename		varchar(255)	NOT NULL DEFAULT '',
@@ -367,8 +372,8 @@ CREATE TABLE customers (
   name varchar(128) 	NOT NULL DEFAULT '',
   status smallint 	NOT NULL DEFAULT '0',
   type smallint		NOT NULL DEFAULT '0',
-  ten varchar(16) 	NOT NULL DEFAULT '',
-  ssn varchar(11) 	NOT NULL DEFAULT '',
+  ten varchar(50) 	NOT NULL DEFAULT '',
+  ssn varchar(50) 	NOT NULL DEFAULT '',
   regon varchar(255) 	NOT NULL DEFAULT '',
   rbe varchar(255)	NOT NULL DEFAULT '',
   rbename varchar(255)	NOT NULL DEFAULT '',
@@ -475,8 +480,8 @@ CREATE TABLE documents (
 	zip varchar(10) NULL DEFAULT NULL,
 	city varchar(32) NULL DEFAULT NULL,
 	countryid int(11) DEFAULT NULL,
-	ten varchar(16) NOT NULL DEFAULT '',
-	ssn varchar(11) NOT NULL DEFAULT '',
+	ten varchar(50) NOT NULL DEFAULT '',
+	ssn varchar(50) NOT NULL DEFAULT '',
 	paytime smallint NOT NULL DEFAULT '0',
 	paytype smallint DEFAULT NULL,
 	closed tinyint(1) NOT NULL DEFAULT '0',
@@ -498,11 +503,15 @@ CREATE TABLE documents (
 	fullnumber varchar(50) DEFAULT NULL,
 	cancelled smallint DEFAULT 0 NOT NULL,
 	published tinyint(1) NOT NULL DEFAULT 0,
+	comment text DEFAULT NULL,
 	cuserid int(11) DEFAULT NULL,
 	recipient_address_id int(11),
 	post_address_id int(11),
 	template varchar(255) DEFAULT NULL,
 	commitflags tinyint(1) NOT NULL DEFAULT 0,
+	archived tinyint(1) NOT NULL DEFAULT 0,
+	auserid int(11) DEFAULT NULL,
+	adate int(11) DEFAULT 0 NOT NULL,
 	PRIMARY KEY (id),
 	INDEX cdate (cdate),
 	INDEX numberplanid (numberplanid),
@@ -519,6 +528,8 @@ CREATE TABLE documents (
 	FOREIGN KEY (userid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT documents_cuserid_fkey
 	FOREIGN KEY (cuserid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	CONSTRAINT documents_auserid_fkey
+	FOREIGN KEY (auserid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT documents_numberplanid_fkey
 	FOREIGN KEY (numberplanid) REFERENCES numberplans (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT documents_divisionid_fkey
@@ -779,6 +790,12 @@ CREATE TABLE tariffs (
 	upceil int(11) 	NOT NULL DEFAULT '0',
 	downrate int(11) 	NOT NULL DEFAULT '0',
 	downceil int(11) 	NOT NULL DEFAULT '0',
+	down_burst_time smallint DEFAULT 0 NOT NULL,
+	down_burst_limit int(11) DEFAULT 0 NOT NULL,
+	down_burst_threshold int(11) DEFAULT 0 NOT NULL,
+	up_burst_time smallint DEFAULT 0 NOT NULL,
+	up_burst_limit int(11) DEFAULT 0 NOT NULL,
+	up_burst_threshold int(11) DEFAULT 0 NOT NULL,
 	climit int(11) 	NOT NULL DEFAULT '0',
 	plimit int(11) 	NOT NULL DEFAULT '0',
 	dlimit int(11) 	NOT NULL DEFAULT '0',
@@ -786,6 +803,12 @@ CREATE TABLE tariffs (
 	upceil_n int(11)        	DEFAULT NULL,
 	downrate_n int(11)      	DEFAULT NULL,
 	downceil_n int(11)     	DEFAULT NULL,
+	down_burst_time_n smallint DEFAULT NULL,
+	down_burst_limit_n int(11) DEFAULT NULL,
+	down_burst_threshold_n int(11) DEFAULT NULL,
+	up_burst_time_n smallint DEFAULT NULL,
+	up_burst_limit_n int(11) DEFAULT NULL,
+	up_burst_threshold_n int(11) DEFAULT NULL,
 	climit_n int(11)      	DEFAULT NULL,
 	plimit_n int(11)        	DEFAULT NULL,
 	domain_limit int(11)  	DEFAULT NULL,
@@ -931,6 +954,8 @@ CREATE TABLE voip_number_assignments (
 	number_id     int(11) NOT NULL,
 	assignment_id int(11) NOT NULL,
 	PRIMARY KEY (id),
+	CONSTRAINT voip_number_assignments_assignment_id
+		UNIQUE KEY (assignment_id, number_id),
 	FOREIGN KEY (number_id)     REFERENCES voip_numbers (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY (assignment_id) REFERENCES assignments  (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
@@ -948,7 +973,7 @@ CREATE TABLE invoicecontents (
 	taxid int(11) NOT NULL,
 	prodid varchar(255) NOT NULL DEFAULT '',
 	content varchar(16) NOT NULL DEFAULT '',
-	count decimal(9,2) NOT NULL DEFAULT '0',
+	count decimal(9,3) NOT NULL DEFAULT '0',
 	description text NOT NULL DEFAULT '',
 	tariffid int(11) DEFAULT NULL,
 	INDEX docid (docid),
@@ -1050,12 +1075,14 @@ CREATE TABLE cash (
   itemid smallint NOT NULL DEFAULT '0',
   importid int(11) DEFAULT NULL,
   sourceid int(11) DEFAULT NULL,
+  linktechnology int(11) DEFAULT NULL,
   PRIMARY KEY  (id),
   INDEX customerid (customerid),
   INDEX docid (docid),
   INDEX time (time),
   INDEX importid (importid),
   INDEX sourceid (sourceid),
+  INDEX cash_linktechnology_idx (linktechnology),
   CONSTRAINT cash_customerid_fkey
   	FOREIGN KEY (customerid) REFERENCES customers (id) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT cash_userid_fkey
@@ -1144,6 +1171,7 @@ CREATE TABLE networks (
   id int(11) NOT NULL auto_increment,
   name varchar(128) NOT NULL DEFAULT '',
   address int(16) unsigned NOT NULL DEFAULT '0',
+  snat int(16) unsigned DEFAULT NULL,
   mask varchar(16) NOT NULL DEFAULT '',
   gateway varchar(16) NOT NULL DEFAULT '',
   interface varchar(16) NOT NULL DEFAULT '',
@@ -1158,10 +1186,13 @@ CREATE TABLE networks (
   vlanid smallint DEFAULT NULL,
   hostid int(11) DEFAULT NULL,
   authtype tinyint(1) NOT NULL DEFAULT '0',
+  pubnetid int(11) DEFAULT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY name (name),
   UNIQUE KEY address (address, hostid),
-  FOREIGN KEY (hostid) REFERENCES hosts (id) ON DELETE SET NULL ON UPDATE CASCADE
+  FOREIGN KEY (hostid) REFERENCES hosts (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT networks_pubnetid_fkey
+    FOREIGN KEY (pubnetid) REFERENCES networks (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -1199,11 +1230,14 @@ CREATE TABLE netnodes (
 	divisionid int(11) DEFAULT NULL,
 	address_id int(11) DEFAULT NULL,
 	info text DEFAULT NULL,
+	ownerid int(11) DEFAULT NULL,
 	PRIMARY KEY (id),
 	CONSTRAINT netnodes_address_id_fkey
 		FOREIGN KEY (address_id) REFERENCES addresses (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	FOREIGN KEY (invprojectid) REFERENCES invprojects (id) ON DELETE SET NULL ON UPDATE CASCADE,
-	FOREIGN KEY (divisionid) REFERENCES divisions (id) ON DELETE SET NULL ON UPDATE CASCADE
+	FOREIGN KEY (divisionid) REFERENCES divisions (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	CONSTRAINT netnodes_ownerid_fkey
+		FOREIGN KEY (ownerid) REFERENCES customers (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=INNODB;
 
 # --------------------------------------------------------
@@ -1278,6 +1312,7 @@ CREATE TABLE netdevices (
 CREATE TABLE netradiosectors (
 	id int(11) NOT NULL auto_increment,
 	name varchar(64) NOT NULL,
+	type int(11) DEFAULT 0 NOT NULL,
 	azimuth decimal(9,2) DEFAULT 0 NOT NULL,
 	width decimal(9,2) DEFAULT 0 NOT NULL,
 	altitude smallint DEFAULT 0 NOT NULL,
@@ -1288,6 +1323,7 @@ CREATE TABLE netradiosectors (
 	frequency2 decimal(9,5) DEFAULT NULL,
 	bandwidth decimal(9,5) DEFAULT NULL,
 	netdev int(11) NOT NULL,
+	secret varchar(64) DEFAULT NULL,
 	PRIMARY KEY (id),
 	INDEX netdev (netdev),
 	FOREIGN KEY (netdev) REFERENCES netdevices (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -1498,13 +1534,9 @@ CREATE TABLE promotionschemas (
     data text           DEFAULT NULL,
     promotionid int(11) DEFAULT NULL,
     disabled tinyint(1) DEFAULT '0' NOT NULL,
-    continuation tinyint(1) DEFAULT NULL,
-    ctariffid int(11) DEFAULT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY promotionid (promotionid, name),
-    INDEX ctariffid (ctariffid),
-    FOREIGN KEY (promotionid) REFERENCES promotions (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (ctariffid) REFERENCES tariffs (id) ON DELETE RESTRICT ON UPDATE CASCADE
+    FOREIGN KEY (promotionid) REFERENCES promotions (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -1604,6 +1636,8 @@ CREATE TABLE nodesessions (
 	terminatecause varchar(32) NOT NULL DEFAULT '',
 	type smallint		NOT NULL DEFAULT '0',
 	PRIMARY KEY (id),
+	nasipaddr int(16) unsigned	DEFAULT NULL,
+	nasport text		DEFAULT NULL,
 	INDEX customerid (customerid),
 	INDEX nodeid (nodeid),
 	INDEX tag (tag),
@@ -1674,13 +1708,18 @@ CREATE TABLE rtqueues (
   newmessagebody text NOT NULL DEFAULT '',
   resolveticketsubject varchar(255) NOT NULL DEFAULT '',
   resolveticketbody text NOT NULL DEFAULT '',
+  verifierticketsubject varchar(255) NOT NULL DEFAULT '',
+  verifierticketbody text NOT NULL DEFAULT '',
   deleted tinyint(1) NOT NULL DEFAULT '0',
   deltime int(11) NOT NULL DEFAULT '0',
   deluserid int(11) DEFAULT NULL,
+  verifierid int(11) DEFAULT NULL,
   PRIMARY KEY (id),
   UNIQUE KEY name (name),
   CONSTRAINT rtqueues_deluserid_fkey
-	FOREIGN KEY (deluserid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+	FOREIGN KEY (deluserid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT rtqueues_verifierid_fkey
+    FOREIGN KEY (verifierid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -1710,6 +1749,14 @@ CREATE TABLE rttickets (
   address_id int(11) DEFAULT NULL,
   nodeid int(11) DEFAULT NULL,
   netnodeid int(11) DEFAULT NULL,
+  netdevid int(11) DEFAULT NULL,
+  verifierid int(11) DEFAULT NULL,
+  verifier_rtime int(11) DEFAULT NULL,
+  deadline int(11) DEFAULT NULL,
+  service int(11) DEFAULT NULL,
+  type int(11) DEFAULT NULL,
+  parentid int(11) DEFAULT NULL,
+  invprojectid int(11) DEFAULT NULL,
   PRIMARY KEY (id),
   INDEX queueid (queueid),
   INDEX customerid (customerid),
@@ -1730,7 +1777,31 @@ CREATE TABLE rttickets (
   CONSTRAINT rttickets_owner_fkey
 	FOREIGN KEY (owner) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT rttickets_requestor_userid_fkey
-	FOREIGN KEY (requestor_userid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE
+	FOREIGN KEY (requestor_userid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT rttickets_netdevid_fkey
+	FOREIGN KEY (netdevid) REFERENCES netdevices (id) ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT rttickets_verifierid_fkey
+        FOREIGN KEY (verifierid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT rttickets_invprojectid_fkey
+        FOREIGN KEY (invprojectid) REFERENCES invprojects (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT rttickets_parentid_fkey
+        FOREIGN KEY (parentid) REFERENCES rttickets (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table  rtticketlastview
+#
+CREATE TABLE rtticketlastview (
+	ticketid int(11) NOT NULL,
+	userid int(11) NOT NULL,
+	vdate int(11) NOT NULL,
+	INDEX vdate (vdate),
+	UNIQUE KEY rtticketlastview_ticketid_key (ticketid, userid),
+	CONSTRAINT rtticketlastview_ticketid_fkey
+		FOREIGN KEY (ticketid) REFERENCES rttickets (id) ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT rtticketlastview_userid_fkey
+		FOREIGN KEY (userid) REFERENCES users (id) ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -1917,7 +1988,7 @@ CREATE TABLE records (
   domain_id       INT(11) DEFAULT NULL,
   name            VARCHAR(255) DEFAULT NULL,
   type            VARCHAR(10) DEFAULT NULL,
-  content         VARCHAR(65535) DEFAULT NULL,
+  content         text DEFAULT NULL,
   ttl             INT(11) DEFAULT NULL,
   prio            INT(11) DEFAULT NULL,
   change_date     INT(11) DEFAULT NULL,
@@ -2063,9 +2134,9 @@ CREATE TABLE events (
     description text NOT NULL DEFAULT '',
     note text NOT NULL DEFAULT '',
     date int(11) NOT NULL DEFAULT '0',
-    begintime smallint(4) NOT NULL DEFAULT '0',
+    begintime int(11) NOT NULL DEFAULT '0',
     enddate int(11) NOT NULL DEFAULT '0',
-    endtime smallint(4) NOT NULL DEFAULT '0',
+    endtime int(11) NOT NULL DEFAULT '0',
     userid int(11) DEFAULT NULL,
     customerid int(11) DEFAULT NULL,
     private tinyint(1) NOT NULL DEFAULT '0',
@@ -2410,6 +2481,36 @@ CREATE TABLE templates (
 	UNIQUE KEY name (type, name)
 ) ENGINE=InnoDB;
 
+# ---------------------------------------------------
+#
+# Structure of table "rttemplatetypes"
+#
+CREATE TABLE rttemplatetypes (
+	id          int(11) NOT NULL auto_increment,
+	templateid  int(11) NOT NULL,
+	messagetype int(11) NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE KEY rttemplatetypes_templateid_key (templateid, messagetype),
+	CONSTRAINT rttemplatetypes_templateid_fkey
+		FOREIGN KEY (templateid) REFERENCES templates (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# ---------------------------------------------------
+#
+# Structure of table "rttemplatequeues"
+#
+CREATE TABLE rttemplatequeues (
+	id          int(11) NOT NULL auto_increment,
+	templateid  int(11) NOT NULL,
+	queueid  int(11) NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE KEY rttemplatequeues_templateid_key (templateid, queueid),
+	CONSTRAINT rttemplatequeues_templateid_fkey
+		FOREIGN KEY (templateid) REFERENCES templates (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT rttemplatequeues_queueid_fkey
+		FOREIGN KEY (queueid) REFERENCES rtqueues (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 # --------------------------------------------------------
 #
 # Structure of table usergroups
@@ -2447,6 +2548,42 @@ CREATE TABLE passwdhistory (
 	hash varchar(255) DEFAULT '' NOT NULL,
 	FOREIGN KEY (userid) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY (id)
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table filecontainers
+#
+CREATE TABLE filecontainers (
+	id int(11) NOT NULL AUTO_INCREMENT,
+	creationdate int(11) NOT NULL DEFAULT 0,
+	creatorid int(11) DEFAULT NULL,
+	description text NOT NULL,
+	netdevid int(11) DEFAULT NULL,
+	netnodeid int(11) DEFAULT NULL,
+	PRIMARY KEY (id),
+	CONSTRAINT filecontainers_creatorid_fkey
+		FOREIGN KEY (creatorid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	CONSTRAINT filecontainers_netdevid_fkey
+		FOREIGN KEY (netdevid) REFERENCES netdevices (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT filecontainers_netnodeid_fkey
+		FOREIGN KEY (netnodeid) REFERENCES netnodes (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table files
+#
+CREATE TABLE files (
+	id int(11) NOT NULL AUTO_INCREMENT,
+	containerid int(11) NOT NULL,
+	filename varchar(255) NOT NULL,
+	contenttype varchar(255) NOT NULL,
+	md5sum varchar(32) NOT NULL,
+	PRIMARY KEY (id),
+	INDEX md5sum (md5sum),
+	UNIQUE KEY files_containerid_key (containerid, md5sum),
+	FOREIGN KEY (containerid) REFERENCES filecontainers (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -2584,39 +2721,55 @@ CREATE VIEW vnodetariffs_allsuspended AS
 
 CREATE VIEW vnodetariffs_tariffs AS
 	SELECT n.id AS nodeid,
-		SUM(t.downrate) AS downrate,
-		SUM(t.downceil) AS downceil,
-		SUM(t.uprate) AS uprate,
-		SUM(t.upceil) AS upceil,
-		SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
-		SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
-		SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
-		SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n
+		   SUM(t.downrate) AS downrate,
+		   SUM(t.downceil) AS downceil,
+		   SUM(t.down_burst_time) AS down_burst_time,
+		   SUM(t.down_burst_threshold) AS down_burst_threshold,
+		   SUM(t.down_burst_limit) AS down_burst_limit,
+		   SUM(t.uprate) AS uprate,
+		   SUM(t.upceil) AS upceil,
+		   SUM(t.up_burst_time) AS up_burst_time,
+		   SUM(t.up_burst_threshold) AS up_burst_threshold,
+		   SUM(t.up_burst_limit) AS up_burst_limit,
+		   SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
+		   SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
+		   SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
+		   SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
+		   SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
+		   SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
+		   SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n,
+		   SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
+		   SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
+		   SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
 	FROM nodes n
-	JOIN nodeassignments na ON na.nodeid = n.id
-	JOIN assignments a ON a.id = na.assignmentid
-	JOIN tariffs t ON t.id = a.tariffid
-	LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = n.ownerid
+		JOIN nodeassignments na ON na.nodeid = n.id
+		JOIN assignments a ON a.id = na.assignmentid
+		JOIN tariffs t ON t.id = a.tariffid
+		LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = n.ownerid
 	WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
-		AND a.datefrom <= UNIX_TIMESTAMP()
-		AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
-		AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
+		  AND a.datefrom <= UNIX_TIMESTAMP()
+		  AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
+		  AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
 	GROUP BY n.id;
 
 CREATE VIEW vnodetariffs AS
 	SELECT n.*,
 		t.downrate, t.downceil,
+		t.down_burst_time, t.down_burst_threshold, t.down_burst_limit,
 		t.uprate, t.upceil,
+		t.up_burst_time, t.up_burst_threshold, t.up_burst_limit,
 		t.downrate_n, t.downceil_n,
+		t.down_burst_time_n, t.down_burst_threshold_n, t.down_burst_limit_n,
 		t.uprate_n, t.upceil_n,
+		t.up_burst_time_n, t.up_burst_threshold_n, t.up_burst_limit_n,
 		m.mac,
 		a.city_id as location_city, a.street_id as location_street,
 		a.house as location_house, a.flat as location_flat,
 		a.location
 	FROM nodes n
-	JOIN vnodes_mac m ON m.nodeid = n.id
-	LEFT JOIN vaddresses a ON n.address_id = a.id
-	JOIN vnodetariffs_tariffs t ON t.nodeid = n.id
+		JOIN vnodes_mac m ON m.nodeid = n.id
+		LEFT JOIN vaddresses a ON n.address_id = a.id
+		JOIN vnodetariffs_tariffs t ON t.nodeid = n.id
 	WHERE n.ipaddr <> 0 OR n.ipaddr_pub <> 0;
 
 CREATE VIEW vnodealltariffs_nodes AS
@@ -2629,46 +2782,70 @@ CREATE VIEW vnodealltariffs_nodes AS
 
 CREATE VIEW vnodealltariffs_tariffs AS
 	SELECT n.id AS nodeid, SUM(t.downrate) AS downrate, SUM(t.downceil) AS downceil,
-		SUM(t.uprate) AS uprate, SUM(t.upceil) AS upceil,
-		SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
-		SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
-		SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
-		SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n
+		   SUM(t.down_burst_time) AS down_burst_time,
+		   SUM(t.down_burst_threshold) AS down_burst_threshold,
+		   SUM(t.down_burst_limit) AS down_burst_limit,
+		   SUM(t.uprate) AS uprate, SUM(t.upceil) AS upceil,
+		   SUM(t.up_burst_time) AS up_burst_time,
+		   SUM(t.up_burst_threshold) AS up_burst_threshold,
+		   SUM(t.up_burst_limit) AS up_burst_limit,
+		   SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
+		   SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
+		   SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
+		   SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
+		   SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
+		   SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
+		   SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n,
+		   SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
+		   SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
+		   SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
 	FROM assignments a
-	JOIN tariffs t ON t.id = a.tariffid
-	JOIN vnodealltariffs_nodes n ON n.ownerid = a.customerid
-	LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = a.customerid
+		JOIN tariffs t ON t.id = a.tariffid
+		JOIN vnodealltariffs_nodes n ON n.ownerid = a.customerid
+		LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = a.customerid
 	WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
-		AND a.datefrom <= UNIX_TIMESTAMP()
-		AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
-		AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
-		AND n.id NOT IN (SELECT nodeid FROM nodeassignments)
-		AND a.id NOT IN (SELECT assignmentid FROM nodeassignments)
+		  AND a.datefrom <= UNIX_TIMESTAMP()
+		  AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
+		  AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
+		  AND n.id NOT IN (SELECT nodeid FROM nodeassignments)
+		  AND a.id NOT IN (SELECT assignmentid FROM nodeassignments)
 	GROUP BY n.id;
 
 CREATE VIEW vnodealltariffs AS
 	SELECT n.*,
 		COALESCE(t1.downrate, t2.downrate, 0) AS downrate,
 		COALESCE(t1.downceil, t2.downceil, 0) AS downceil,
+		COALESCE(t1.down_burst_time, t2.down_burst_time, 0) AS down_burst_time,
+		COALESCE(t1.down_burst_threshold, t2.down_burst_threshold, 0) AS down_burst_threshold,
+		COALESCE(t1.down_burst_limit, t2.down_burst_limit, 0) AS down_burst_limit,
 		COALESCE(t1.uprate, t2.uprate, 0) AS uprate,
 		COALESCE(t1.upceil, t2.upceil, 0) AS upceil,
+		COALESCE(t1.up_burst_time, t2.up_burst_time, 0) AS up_burst_time,
+		COALESCE(t1.up_burst_threshold, t2.up_burst_threshold, 0) AS up_burst_threshold,
+		COALESCE(t1.up_burst_limit, t2.up_burst_limit, 0) AS up_burst_limit,
 		COALESCE(t1.downrate_n, t2.downrate_n, 0) AS downrate_n,
 		COALESCE(t1.downceil_n, t2.downceil_n, 0) AS downceil_n,
+		COALESCE(t1.down_burst_time_n, t2.down_burst_time_n, 0) AS down_burst_time_n,
+		COALESCE(t1.down_burst_threshold_n, t2.down_burst_threshold_n, 0) AS down_burst_threshold_n,
+		COALESCE(t1.down_burst_limit_n, t2.down_burst_limit_n, 0) AS down_burst_limit_n,
 		COALESCE(t1.uprate_n, t2.uprate_n, 0) AS uprate_n,
 		COALESCE(t1.upceil_n, t2.upceil_n, 0) AS upceil_n,
+		COALESCE(t1.up_burst_time_n, t2.up_burst_time_n, 0) AS up_burst_time_n,
+		COALESCE(t1.up_burst_threshold_n, t2.up_burst_threshold_n, 0) AS up_burst_threshold_n,
+		COALESCE(t1.up_burst_limit_n, t2.up_burst_limit_n, 0) AS up_burst_limit_n,
 		m.mac,
 		a.city_id as location_city, a.street_id as location_street,
 		a.house as location_house, a.flat as location_flat,
 		a.location
 	FROM nodes n
-	JOIN vnodes_mac m ON m.nodeid = n.id
-	LEFT JOIN vaddresses a ON a.id = n.address_id
-	JOIN vnodetariffs_tariffs t1 ON t1.nodeid = n.id
-	LEFT JOIN vnodealltariffs_tariffs t2 ON t2.nodeid = n.id
+		JOIN vnodes_mac m ON m.nodeid = n.id
+		LEFT JOIN vaddresses a ON a.id = n.address_id
+		JOIN vnodetariffs_tariffs t1 ON t1.nodeid = n.id
+		LEFT JOIN vnodealltariffs_tariffs t2 ON t2.nodeid = n.id
 	WHERE (n.ipaddr <> 0 OR n.ipaddr_pub <> 0)
-		AND ((t1.nodeid IS NOT NULL AND t2.nodeid IS NULL)
-			OR (t1.nodeid IS NULL AND t2.nodeid IS NOT NULL)
-			OR (t1.nodeid IS NULL AND t2.nodeid IS NULL));
+		  AND ((t1.nodeid IS NOT NULL AND t2.nodeid IS NULL)
+			   OR (t1.nodeid IS NULL AND t2.nodeid IS NOT NULL)
+			   OR (t1.nodeid IS NULL AND t2.nodeid IS NULL));
 
 CREATE VIEW vmacs AS
     SELECT n.*, m.mac, m.id AS macid, a.city_id as location_city, a.street_id as location_street,
@@ -2865,6 +3042,7 @@ INSERT INTO uiconfig (section, var, value, description, disabled) VALUES
 ('phpui','messagelist_pagelimit','100','',0),
 ('phpui','recordlist_pagelimit','100','',0),
 ('phpui','cashreglog_pagelimit','100','',0),
+('phpui','networklist_pagelimit','100','',0),
 ('phpui','reload_type','sql','',0),
 ('phpui','reload_execcmd','/bin/true','',0),
 ('phpui','reload_sqlquery','','',0),
@@ -2977,6 +3155,7 @@ URL: %url
 ('userpanel','debug_email','','',0),
 ('userpanel','lms_url','','',0),
 ('userpanel','hide_nodesbox','0','',0),
+('userpanel', 'hide_documentbox', '0', '', 0),
 ('userpanel','logout_url','','',0),
 ('userpanel','owner_stats','1','',0),
 ('userpanel','default_categories','1','',0),
@@ -2995,7 +3174,12 @@ URL: %url
 ('userpanel', 'google_recaptcha_sitekey', '', '', 0),
 ('userpanel', 'google_recaptcha_secret', '', '', 0),
 ('userpanel', 'allow_reopen_tickets_newer_than', '0', '', 0),
+('userpanel', 'pin_changes', 'true', '', 0),
 ('userpanel', 'show_last_years', '5', '', 0),
+('userpanel', 'aggregate_documents', '0', '', 0),
+('userpanel', 'speed_unit_type', '1000', '', 0),
+('userpanel', 'speed_unit_aggregation_threshold', '5', '', 0),
+('userpanel', 'shortcut_icon', '', '', 0),
 ('directories','userpanel_dir','userpanel','',0);
 
 INSERT INTO invprojects (name, type) VALUES ('inherited', 1);
@@ -3327,4 +3511,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2018022607');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2019042400');

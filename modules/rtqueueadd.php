@@ -23,6 +23,8 @@
  *
  *  $Id$
  */
+$userlist = $LMS->getUserList();
+unset($userlist['total']);
 
 if(isset($_POST['queue']))
 {
@@ -61,7 +63,12 @@ if(isset($_POST['queue']))
 	elseif (!$queue['resolveticketsubject'] && $queue['resolveticketbody'])
 		$error['resolveticketsubject'] = trans('Resolve ticket subject should not be empty if you set resolve ticket body!');
 
-	$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+	if ($queue['verifierticketsubject'] && !$queue['verifierticketbody'])
+		$error['verifierticketbody'] = trans('Verifier ticket body should not be empty if you set verifier ticket subject!');
+	elseif (!$queue['verifierticketsubject'] && $queue['verifierticketbody'])
+		$error['verifierticketsubject'] = trans('Verifier ticket subject should not be empty if you set verifier ticket body!');
+
+	$categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 	if (isset($queue['categories'])) {
 		foreach ($categories as &$category)
 			if (isset($queue['categories'][$category['id']]))
@@ -71,12 +78,13 @@ if(isset($_POST['queue']))
 
 	if (!$error) {
 		$DB->Execute('INSERT INTO rtqueues (name, email, description, newticketsubject, newticketbody,
-				newmessagesubject, newmessagebody, resolveticketsubject, resolveticketbody)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+				newmessagesubject, newmessagebody, resolveticketsubject, resolveticketbody, verifierticketsubject, verifierticketbody, verifierid)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				array(trim($queue['name']), $queue['email'], $queue['description'],
 					$queue['newticketsubject'], $queue['newticketbody'],
 					$queue['newmessagesubject'], $queue['newmessagebody'],
-					$queue['resolveticketsubject'], $queue['resolveticketbody']));
+					$queue['resolveticketsubject'], $queue['resolveticketbody'], $queue['verifierticketsubject'],
+					$queue['verifierticketbody'], !empty($queue['verifierid']) ? $queue['verifierid'] : NULL ));
 
 		$id = $DB->GetLastInsertId('rtqueues');
 
@@ -94,7 +102,7 @@ if(isset($_POST['queue']))
 		$SESSION->redirect('?m=rtqueueinfo&id='.$id);
 	}
 } else
-	$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+	$categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 
 $users = $LMS->GetUserNames();
 
@@ -111,6 +119,7 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $SMARTY->assign('queue', $queue);
 $SMARTY->assign('categories', $categories);
+$SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('error', $error);
 $SMARTY->display('rt/rtqueueadd.html');
 

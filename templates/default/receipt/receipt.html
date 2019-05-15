@@ -10,6 +10,10 @@
 			{$receipt.d_name}<br>
 			{$receipt.d_address}<br>
 			{$receipt.d_zip} {$receipt.d_city}
+			{if !empty($receipt.countryid) && !empty($receipt.d_countryid)
+				&& $receipt.countryid != $receipt.d_countryid}
+			<br>{$receipt.d_country}
+			{/if}
 		</td>
 		<td colspan="2" width="34%" class="headgrey hdf" align="center" nowrap>
 			{if $receipt.type == "out"}
@@ -17,7 +21,7 @@
 			{else}
 			{trans("Proof of Payment")}
 			{/if}
-			<br><font class="sdr">{trans("Receipt")}</font>
+			<br><span class="sdr">{trans("Receipt")}</span>
 		</td>
 		<td colspan="2" width="32%" class="ftopu shdf" align="center">
 			{if $receipt.type == "out"}{trans("CR-out")}{else}{trans("CR-in")}{/if}
@@ -39,17 +43,28 @@
 				<td width="1%" valign="top" nowrap>
 					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}
 				</td>
-				<td width="99%" class="sdr"><b>{$receipt.name}{if $receipt.address}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}{/if}</b></td>
+				<td width="99%" class="sdr">
+					<b>
+						{$receipt.name}
+						{if $receipt.address}
+						<br>{$receipt.zip} {$receipt.city}, {$receipt.address}
+						{/if}
+						{if !empty($receipt.countryid) && !empty($receipt.d_countryid)
+						&& $receipt.countryid != $receipt.d_countryid}
+						<br>{$receipt.country}
+						{/if}
+					</b>
+				</td>
 			    </tr>
 			</table>
 		</td>
 		<td width="16%" align="center" class="fall headgrey hdf" nowrap>
 			{if $receipt.type == "out"}{trans("Has")}{else}{trans("Owing")}{/if}
-			<br><font class="sdr">{trans("Cash")}</font>
+			<br><span class="sdr">{trans("Cash")}</span>
 		</td>
 		<td width="16%" align="center" class="fall headgrey hdf" nowrap>
 			{if $receipt.type == "out"}{trans("Owing")}{else}{trans("Has")}{/if}
-			<br><font class="sdr">{trans("Account<!singular:noun>")}</font>
+			<br><span class="sdr">{trans("Account<!singular:noun>")}</span>
 		</td>
 	</tr>
 	<tr class="grey">
@@ -135,7 +150,7 @@
 	</tr>
 	<tr>
 		<td colspan="6" align="right">
-			<font class="small">Copyright &copy; 2001-{$smarty.now|date_format:'%Y'} LMS Developers</font>
+			<span class="small">Copyright &copy; 2001-{$smarty.now|date_format:'%Y'} LMS Developers</span>
 		</td>
 	</tr>
 </table>
@@ -155,6 +170,10 @@
 			{$receipt.d_name}<br>
 			{$receipt.d_address}<br>
 			{$receipt.d_zip} {$receipt.d_city}
+			{if !empty($receipt.countryid) && !empty($receipt.d_countryid)
+			&& $receipt.countryid != $receipt.d_countryid}
+			<br>{$receipt.d_country}
+			{/if}
 		</td>
 		<td colspan="2" width="34%" class="headgrey hdf" align="center" nowrap>
 			{if $receipt.type == "out"}
@@ -162,7 +181,7 @@
 			{else}
 			{trans("Proof of Payment")}
 			{/if}
-			<br><font class="sdr">{trans("Receipt")}</font>
+			<br><span class="sdr">{trans("Receipt")}</span>
 		</td>
 		<td colspan="2" width="32%" class="ftopu shdf" align="center">
 			{if $receipt.type == "out"}{trans("CR-out")}{else}{trans("CR-in")}{/if}
@@ -182,18 +201,30 @@
 			<table width="100%">
 			    <tr>
 				<td width="1%" valign="top" nowrap>
-					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}</td>
-				<td width="99%" class="sdr"><b>{$receipt.name}{if $receipt.address}<br>{$receipt.zip} {$receipt.city}, {$receipt.address}{/if}</b></td>
+					{if $receipt.type == "out"}{trans("To whom:")}{else}{trans("From who:")}{/if}
+				</td>
+				<td width="99%" class="sdr">
+					<b>
+						{$receipt.name}
+						{if $receipt.address}
+						<br>{$receipt.zip} {$receipt.city}, {$receipt.address}
+						{/if}
+						{if !empty($receipt.countryid) && !empty($receipt.d_countryid)
+						&& $receipt.countryid != $receipt.d_countryid}
+						<br>{$receipt.country}
+						{/if}
+					</b>
+				</td>
 			    </tr>
 			</table>
 		</td>
 		<td width="16%" align="center" class="fall headgrey hdf" nowrap>
 			{if $receipt.type == "out"}{trans("Has")}{else}{trans("Owing")}{/if}
-			<br><font class="sdr">{trans("Cash")}</font>
+			<br><span class="sdr">{trans("Cash")}</span>
 		</td>
 		<td width="16%" align="center" class="fall headgrey hdf" nowrap>
 			{if $receipt.type == "out"}{trans("Owing")}{else}{trans("Has")}{/if}
-			<br><font class="sdr">{trans("Account<!singular:noun>")}</font>
+			<br><span class="sdr">{trans("Account<!singular:noun>")}</span>
 		</td>
 	</tr>
 	<tr class="grey">
@@ -277,7 +308,7 @@
 	</tr>
 	<tr>
 		<td colspan="6" align="right">
-			<font class="small">Copyright &copy; 2001-{$smarty.now|date_format:'%Y'} LMS Developers</font>
+			<span class="small">Copyright &copy; 2001-{$smarty.now|date_format:'%Y'} LMS Developers</span>
 		</td>
 	</tr>
 </table>

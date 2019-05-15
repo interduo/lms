@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,12 +24,26 @@
  *  $Id$
  */
 
-$layout['pagetitle'] = trans('Queues List');
+if (isset($_POST['deleted']))
+	$filter['deleted'] = $_POST['deleted'];
+elseif (!isset($filter['deleted']))
+	$filter['deleted'] = true;
 
-$queues = $LMS->GetQueueList();
+$SESSION->saveFilter($filter);
+
+$filter['stats'] = true;
+$filter['only_accessible'] = false;
+$queues = $LMS->GetQueueList($filter);
+
+$layout['pagetitle'] = trans('Queues List');
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
+$SESSION->remove('backid');
+
+$SMARTY->assign('filter', $filter);
 $SMARTY->assign('queues', $queues);
+$SMARTY->assign('error', $error);
 $SMARTY->display('rt/rtqueuelist.html');
+
 ?>

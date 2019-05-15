@@ -1,29 +1,32 @@
 <!--// $Id$ //-->
-<TABLE class="lmsbox lms-ui-sortable" id="customermessages">
-	<COLGROUP>
-		<COL style="width: 99%;">
-		<COL style="width: 1%;">
-	</COLGROUP>
-	<THEAD>
-	<TR class="hand lmsbox-titlebar" data-lmsbox-content="messagespanel">
-		<TD class="bold">
-			<IMG src="img/mailsms.gif" alt="">
-			{trans("Customer Messages:")}
-		</TD>
-		<TD class="text-right nobr">
+
+{js}
+
+<form method="post" name="customermessages" id="customermessages-form" action="?m=messagedel">
+</form>
+
+{tab_container id="customermessages"}
+
+	{tab_header content_id="messagespanel"}
+		{tab_header_cell icon="lms-ui-icon-message"}
+			<strong>{trans("Customer Messages:")}</strong>
+		{/tab_header_cell}
+		{tab_header_cell}
 			<A href="?m=messageadd&customerid={$customerinfo.id}">{trans("New Message")} &raquo;</A>
-			<A href="?m=messagelist&cid={$customerinfo.id}">{trans("All Messages")} &raquo;</A>&nbsp;
-		</TD>
-	</TR>
-	</THEAD>
-	<TBODY class="lms-ui-multi-check">
-	<TR id="messagespanel"  style="display: none;" class="dark">
-		<TD colspan="2">
-			<form method="post" name="customermessages" action="?m=messagedel">
-			<TABLE id="customermessages-datatable" class="lmsbox-inner{if !empty($messagelist)} lms-ui-datatable{/if}"{if !empty($messagelist)}{if $limit} data-page-length="{$limit}"{/if} data-order='[[ 0, "desc" ]]' style="display: none;"{/if} width="100%">
+			<A href="?m=messagelist&cid={$customerinfo.id}">{trans("All Messages")} &raquo;</A>
+		{/tab_header_cell}
+	{/tab_header}
+
+	{tab_contents id="messagespanel"}
+
+		{tab_table}
+			<TABLE id="customermessages-datatable" class="lmsbox-inner{if !empty($messagelist)} lms-ui-datatable{/if}"
+					{if !empty($messagelist)}{if $limit} data-page-length="{$limit}"{/if}
+					data-order='[[ 0, "desc" ]]' style="display: none;"{/if} width="100%">
 				<COLGROUP>
 					<COL style="width: 1%;">
 					<COL style="width: 95%;">
+					<COL style="width: 1%;">
 					<COL style="width: 1%;">
 					<COL style="width: 1%;">
 					<COL style="width: 1%;">
@@ -36,6 +39,9 @@
 					</TH>
 					<TH class="bold nobr">
 						{trans("Subject:")}
+					</TH>
+					<TH class="bold nobr">
+						{trans("User:")}
 					</TH>
 					<TH class="nobr">
 						{trans("Destination:")}
@@ -51,21 +57,24 @@
 				</THEAD>
 				<TBODY>
 				{foreach $messagelist as $item}
-				<TR class="{if $item.status==$smarty.const.MSG_ERROR} alert{elseif $item.status==$smarty.const.MSG_SENT} blend{elseif $item.status==$smarty.const.MSG_DELIVERED} green{/if}">
+				<TR class="{if $item.status==$smarty.const.MSG_ERROR} lms-ui-error{elseif $item.status==$smarty.const.MSG_SENT} blend{elseif $item.status==$smarty.const.MSG_DELIVERED} green{/if}">
 					<TD class="nobr" onClick="return self.location.href='?m=messageinfo&id={$item.id}'">
 						{$item.cdate|date_format:"%Y/%m/%d"}
 					</TD>
 					<TD class="bold" onClick="return self.location.href='?m=messageinfo&id={$item.id}'">
 						{if $item.type == $smarty.const.MSG_MAIL}
-						<img src="img/email.gif" alt="email">
+							<i class="lms-ui-icon-mail fa-fw"></i>
 						{elseif $item.type == $smarty.const.MSG_WWW}
-						<img src="img/network.gif" alt="www">
+							<i class="lms-ui-icon-web fa-fw"></i>
 						{elseif $item.type == $smarty.const.MSG_USERPANEL || $item.type == $smarty.const.MSG_USERPANEL_URGENT}
-						<img src="img/cms.gif" alt="userpanel">
+							<i class="lms-ui-icon-userpanel fa-fw"></i>
 						{else}
-						<img src="img/sms.gif" alt="sms">
+							<i class="lms-ui-icon-sms fa-fw"></i>
 						{/if}
 						{$item.subject}
+					</TD>
+					<TD class="text-center nobr" onClick="return self.location.href='?m=messageinfo&id={$item.id}'">
+						<a href="?m=userinfo&id={$item.userid}">{$item.username}</a>
 					</TD>
 					<TD class="text-right nobr" onClick="return self.location.href='?m=messageinfo&id={$item.id}'">
 						{$item.destination}
@@ -77,59 +86,34 @@
 						{if $item.status == $smarty.const.MSG_SENT  && ($item.type == $smarty.const.MSG_USERPANEL || $item.type == $smarty.const.MSG_USERPANEL_URGENT) && $item.lastdate}{$item.lastdate|date_format:"%Y/%m/%d %H:%M"}{else} - {/if}
 					</TD>
 					<TD class="text-right nobr">
-						<A onclick="return confirmLink(this, '{trans("Are you sure, you want to delete that message?")}')" href="?m=messagedel&id={$item.id}">
-							<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}">
-						</A>
-						<input type="checkbox" class="lms-ui-multi-check" name="marks[{$item.id}]" value="{$item.id}">
+						{button type="link" icon="delete" class="delete-message" href="?m=messagedel&id={$item.id}"
+							tip="Delete"}
+						<input type="checkbox" class="lms-ui-multi-check" name="marks[{$item.id}]" value="{$item.id}"
+							form="customermessages-form">
 					</TD>
 				</TR>
 				{foreachelse}
 				<TR>
-					<TD class="empty-table" colspan="6">
+					<TD class="empty-table" colspan="7">
 						<P>{trans("There are no messages in database.")}</P>
 					</TD>
 				</TR>
 				{/foreach}
 				</TBODY>
 			</TABLE>
-			<TABLE class="lmsbox-inner">
-				<COLGROUP>
-					<COL style="width: 100%;">
-				</COLGROUP>
-				<TBODY>
-				<TR class="ftop">
-					<TD class="buttons">
-						<A id="delete-messages">{trans("Delete")} <img src="img/delete.gif" alt="{trans("Delete")}"></A>
-						<label>
-							{trans("Check All")}
-							<input type="checkbox" class="lms-ui-multi-check-all">
-						</label>
-					</TD>
-				</TR>
-				<script type="text/javascript">
-				<!--
-					$(function() {
-						$('#delete-messages').click(function(e) {
-							if (!$(this).closest('tbody.lms-ui-multi-check').find('input:checked').length
-								|| !confirm('{trans("Are you sure, you want to delete all selected messages?")}'))
-								return false;
-							console.log('click');
-							$('form[name=customermessages]').attr('action', function(index, attr) { return attr + '&is_sure=1'; })
-								.submit();
-						});
-					});
-				//-->
-				</script>
-				</TBODY>
-			</TABLE>
-			</form>
-		</TD>
-	</TR>
-	</TBODY>
-</TABLE>
-<SCRIPT type="text/javascript">
-<!--
-	if (getCookie('messagespanel') == '1')
-		document.getElementById('messagespanel').style.display = '';
-//-->
-</SCRIPT>
+		{/tab_table}
+
+		{tab_button_panel}
+			{tab_buttons}
+				{button icon="delete" id="delete-messages" label="Delete"}
+			{/tab_buttons}
+			{tab_buttons}
+				<label>
+					{trans("Check All")}
+					<input type="checkbox" class="lms-ui-multi-check-all">
+				</label>
+			{/tab_buttons}
+		{/tab_button_panel}
+
+	{/tab_contents}
+{/tab_container}

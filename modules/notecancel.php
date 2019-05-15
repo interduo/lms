@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2018 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -26,7 +26,7 @@
 
 $id = intval($_GET['id']);
 
-if ($id && $_GET['is_sure'] == '1') {
+if ($id) {
 	if (isset($_GET['recover'])) {
 		$DB->Execute('UPDATE documents SET cancelled = 0 WHERE id = ?', array($id));
 
@@ -44,8 +44,8 @@ if ($id && $_GET['is_sure'] == '1') {
 		}
 		if ($SYSLOG) {
 			$args = array(
-				SYSLOG::RES_DOC => $document['id'],
-				SYSLOG::RES_CUST => $document['customerid'],
+				SYSLOG::RES_DOC => $note['id'],
+				SYSLOG::RES_CUST => $note['customerid'],
 				SYSLOG::RES_USER => Auth::GetCurrentUser()
 			);
 			$SYSLOG->AddMessage(SYSLOG::RES_DOC, SYSLOG::OPER_UPDATE, $args);
@@ -53,6 +53,10 @@ if ($id && $_GET['is_sure'] == '1') {
 	} else {
 		if ($LMS->isDocumentPublished($id) && !ConfigHelper::checkConfig('privileges.superuser'))
 			return;
+
+		if ($LMS->isArchiveDocument($id))
+			return;
+
 		$DB->Execute('UPDATE documents SET cancelled = 1 WHERE id = ?', array($id));
 		$DB->Execute('DELETE FROM cash WHERE docid = ?', array($id));
 		$document = $DB->GetRow('SELECT * FROM documents WHERE id = ?', array($id));

@@ -62,10 +62,6 @@ if (isset($_POST['nodedata']))
 {
 	$nodedata = $_POST['nodedata'];
 
-	$nodedata['netid']      = $_POST['nodedatanetid'];
-	$nodedata['ipaddr']     = $_POST['nodedataipaddr'];
-	$nodedata['ipaddr_pub'] = $_POST['nodedataipaddr_pub'];
-
 	foreach($nodedata['macs'] as $key => $value)
 		$nodedata['macs'][$key] = str_replace('-',':',$value);
 
@@ -80,11 +76,14 @@ if (isset($_POST['nodedata']))
 			$SESSION->redirect('?m=nodelist');
 		}
 
+	if ($nodedata['wholenetwork'] && empty($nodedata['netid']))
+		$error['netid'] = trans('Please choose network');
+
 	if ($nodedata['name']=='')
 		$error['name'] = trans('Node name is required!');
 	else if (strlen($nodedata['name']) > 32)
 		$error['name'] = trans('Node name is too long (max.32 characters)!');
-	else if (!preg_match('/^[_a-z0-9-.]+$/i', $nodedata['name']))
+	else if (!preg_match('/' . ConfigHelper::getConfig('phpui.node_name_regexp', '^[_a-z0-9-.]+$') . '/i', $nodedata['name']))
 		$error['name'] = trans('Specified name contains forbidden characters!');
 	else if ($LMS->GetNodeIDByName($nodedata['name']))
 		$error['name'] = trans('Specified name is in use!');
@@ -244,8 +243,10 @@ if (isset($_POST['nodedata']))
         $nodedata = $LMS->ExecHook('node_add_before', $nodedata);
 
 		$ipi = $nodedata['invprojectid'];
-		if ($ipi == '-1')
+		if ($ipi == '-1') {
+			$nodedata['project'] = $nodedata['projectname'];
 			$ipi = $LMS->AddProject($nodedata);
+		}
 
 		if ($nodedata['invprojectid'] == '-1' || intval($ipi)>0)
 			$nodedata['invprojectid'] = intval($ipi);

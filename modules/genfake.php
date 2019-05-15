@@ -1909,32 +1909,44 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 	$tariffdata = array( 'name' => 'Lite', 'description' => 'Lite Tariff', 
 			    'value' => '30', 'taxid' => '1', 'prodid' => '', 
 			    'uprate' => '64', 'upceil' => '64', 
-			    'downrate' => '128', 'downceil' => '128', 
+			    'downrate' => '128', 'downceil' => '128',
+			    'down_burst_time' => 0, 'down_burst_limit' => 0, 'down_burst_threshold' => 0,
+				'down_burst_time_n' => null, 'down_burst_limit_n' => null, 'down_burst_threshold_n' => null,
+				'up_burst_time' => 0, 'up_burst_limit' => 0, 'up_burst_threshold' => 0,
+				'up_burst_time_n' => null, 'up_burst_limit_n' => null, 'up_burst_threshold_n' => null,
 			    'climit' => '0', 'plimit' => '0', 'dlimit' => 0,
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET, 'authtype' => 0);
+			    'type' => SERVICE_INTERNET, 'authtype' => 0);
 	$t1 = $LMS->TariffAdd($tariffdata);
 	$tariffdata = array( 'name' => 'Standart', 'description' => 'Standart Tariff', 
 			    'value' => '60', 'taxid' => '2', 'prodid' => '', 
 			    'uprate' => '128', 'upceil' => '128', 
-			    'downrate' => '256', 'downceil' => '256', 
+			    'downrate' => '256', 'downceil' => '256',
+				'down_burst_time' => 0, 'down_burst_limit' => 0, 'down_burst_threshold' => 0,
+				'down_burst_time_n' => null, 'down_burst_limit_n' => null, 'down_burst_threshold_n' => null,
+				'up_burst_time' => 0, 'up_burst_limit' => 0, 'up_burst_threshold' => 0,
+				'up_burst_time_n' => null, 'up_burst_limit_n' => null, 'up_burst_threshold_n' => null,
 			    'climit' => '0', 'plimit' => '0', 'dlimit' => 0,
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET, 'authtype' => 0);
+			    'type' => SERVICE_INTERNET, 'authtype' => 0);
 	$t2 = $LMS->TariffAdd($tariffdata);
 	$tariffdata = array( 'name' => 'Gold', 'description' => 'Gold Tariff', 
 			    'value' => '120', 'taxid' => '3', 'prodid' => '', 
 			    'uprate' => '256', 'upceil' => '256', 
-			    'downrate' => '512', 'downceil' => '512', 
+			    'downrate' => '512', 'downceil' => '512',
+				'down_burst_time' => 0, 'down_burst_limit' => 0, 'down_burst_threshold' => 0,
+				'down_burst_time_n' => null, 'down_burst_limit_n' => null, 'down_burst_threshold_n' => null,
+				'up_burst_time' => 0, 'up_burst_limit' => 0, 'up_burst_threshold' => 0,
+				'up_burst_time_n' => null, 'up_burst_limit_n' => null, 'up_burst_threshold_n' => null,
 			    'climit' => '0', 'plimit' => '0', 'dlimit' => 0,
 			    'sh_limit' => 0, 'www_limit' => 0, 'mail_limit' => 0, 'sql_limit' => 0, 'ftp_limit' => 0,
 			    'quota_sh_limit' => 0, 'quota_www_limit' => 0, 'quota_mail_limit' => 0, 'quota_sql_limit' => 0, 'quota_ftp_limit' => 0,
 			    'domain_limit' => 0, 'alias_limit' => 0,
-			    'type' => TARIFF_INTERNET, 'authtype' => 0);
+			    'type' => SERVICE_INTERNET, 'authtype' => 0);
 	$t3 = $LMS->TariffAdd($tariffdata);
 	echo ($t1 && $t2 && $t3) ? ' [OK]<BR>' : ' <span style="color: red;">[FAIL]</span><br>';
 
@@ -1976,12 +1988,12 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 	echo '<B>'.trans('Generating customers...').'</B>';	flush();
 	$startip = ip_long('192.168.0.0')+1;
 	$cnt = 0;
-	$lnsize = sizeof($lastnames);
-	$nsize = sizeof($names);
-	$nodsize = sizeof($nodenames);
-	$ppsize = sizeof($phoneprefix);
-	$ssize = sizeof($streets);
-	$esize = sizeof($emaildomains);
+	$lnsize = count($lastnames);
+	$nsize = count($names);
+	$nodsize = count($nodenames);
+	$ppsize = count($phoneprefix);
+	$ssize = count($streets);
+	$esize = count($emaildomains);
 	for($i = 0; $i < sprintf('%d',$_GET['l']); $i++)
 	{
 		$customeradd = array();
@@ -2078,7 +2090,7 @@ if(isset($_GET['l']) && sprintf('%d',$_GET['l']) > 0 && sprintf('%d',$_GET['l'])
 	echo ' [OK]<BR>';
 	echo '<B>'.trans('Generating network hardware and connections...').'</B>'; flush();
 	$nodes = $DB->GetOne('SELECT count(id) FROM vnodes');
-	$sprod = sizeof($producer);
+	$sprod = count($producer);
 	$i = 0;
 	while($nodes)
 	{

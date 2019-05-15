@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -39,59 +39,80 @@ if ($action == 'tariff' && !empty($_POST['form'])) {
 	$schema = explode(';', $schema);
 
 	$optional = $label = 0;
+
+	if ($assignmentid) {
+		$form = $form[$assignmentid];
+		$assignment_part = '[' . $assignmentid . ']';
+	} else {
+		foreach ($form as $key => $val)
+			if (preg_match('/^[0-9]+$/', $key))
+				unset($form[$key]);
+		$assignment_part = '';
+	}
+
 	foreach ($form as $key => $value) {
-		$form[$key] = trim($value);
-
-		if (preg_match($regexp, $key, $m)) {
-			// periods
-			if (strpos($m[1], 'period') !== false) {
-				$val = intval($form[$key]);
-				$skey = $m[2]-1;
-
-				if (empty($val))
-					$data[$m[2]]['period'] = $val;
-				else if (!array_key_exists($val, $mons))
-					$error[$key] = trans('Incorrect value!');
-				else if ($schema[$skey] && ($schema[$skey] % $mons[$val]))
-					$error[$key] = trans('Not possible to use this period here!');
-				else
-					$data[$m[2]]['period'] = $val;
-			}
-			// values
-			else {
-				if (!strlen($form[$key]))
-					$data[$m[2]]['value'] = 'NULL';
-				else if (!preg_match('/^[-]?[0-9.,]+$/', $form[$key]))
-					$error[$key] = trans('Incorrect value!');
-				else
-					$data[$m[2]]['value'] = str_replace(',', '.', $form[$key]);
-			}
-		} elseif (preg_match($regexp2, $key)) {
-			if (preg_match('/opt$/', $key) && intval($value))
+		if (!is_array($value))
+			$value = trim($value);
+		switch ($key) {
+			case 'optional':
 				$optional = 1;
-			elseif (preg_match('/sel$/', $key)) {
-				if ($value == '-1') {
-					if ($key == 'tariffsel')
-						if (!strlen($form['tariffnewsel']))
-							$error['tariffnewsel'] = trans('Incorrect value!');
-						else
-							$label = $form['tariffnewsel'];
-					elseif ($key == 'sel')
-						if (!strlen($form['newsel']))
-							$error['newsel'] = trans('Incorrect value!');
-						else
-							$label = $form['newsel'];
-				} elseif ($value == '0')
+				break;
+			case 'selectable':
+				if (intval($value) == -1)
+					if (!strlen($form['label']))
+						$error['form' . $assignment_part . '[label]'] = trans('Incorrect value!');
+					else
+						$label = $form['label'];
+				elseif (empty($value))
 					$label = null;
 				else
 					$label = $value;
-			}
+				break;
+			case 'period':
+				foreach ($value as $pkey => $pvalue) {
+					$pvalue = trim($pvalue);
+					$skey = $pkey - 1;
+					if (empty($pvalue))
+						$data[$pkey]['period'] = $pvalue;
+					elseif (!isset($mons[$pvalue]))
+						$error['form' . $assignment_part . '[period][' . $pkey . ']'] = trans('Incorrent value!');
+					elseif ($schema[$skey] && $schema[$skey] % $mons[$pvalue])
+						$error['form' . $assignment_part . '[period][' . $pkey . ']'] = trans('Not possible to use this period here!');
+					else
+						$data[$pkey]['period'] = $pvalue;
+				}
+				break;
+			case 'value':
+				foreach ($value as $vkey => $vvalue) {
+					$vvalue = trim($vvalue);
+					if (!strlen($vvalue))
+						$data[$vkey]['value'] = 'NULL';
+					elseif (!preg_match('/^[-]?[0-9.,]+$/', $vvalue))
+						$error['form' . $assignment_part . '[value][' . $vkey . ']'] = trans('Incorrect value!');
+					else
+						$data[$vkey]['value'] = str_replace(',', '.', $vvalue);
+				}
+				break;
+			case 'users':
+				foreach ($value as $ukey => $users) {
+					if (!empty($users) && !is_array($users)) {
+						$error['form' . $assignment_part . '[users][' . $ukey . '][]'] = trans('Incorrect value!');
+						continue;
+					}
+					$users = Utils::filterIntegers($users);
+					if (empty($users)) {
+						$error['form' . $assignment_part . '[users][' . $ukey . '][]'] = trans('Incorrect value!');
+						continue;
+					}
+					$data[$ukey]['users'] = $users;
+				}
+				break;
 		}
 	}
 
 	if (!$error) {
 		foreach ($data as $idx => $d)
-			$data[$idx] = $d['value'].(!empty($d['period']) ? ':'.intval($d['period']) : '');
+			$data[$idx] = $d['value'] . ':' . (empty($d['period']) ? '' : empty($d['period'])) . ':' . (empty($d['users']) ? '' : implode(',', $d['users']));
 		$datastr = implode(';', $data);
 
 		$promotionid = $DB->GetOne('SELECT promotionid FROM promotionschemas WHERE id = ?',
@@ -205,9 +226,6 @@ if (isset($_POST['schema'])) {
 		array($schema['name'], $oldschema['promotionid'], $schema['id'])))
 		$error['name'] = trans('Specified name is in use!');
 
-	if (empty($schema['continuation']) && !empty($schema['ctariffid']))
-		$error['ctariffid'] = trans('Additional subscription is useless when contract prolongation is not set!');
-
 	if (!$error) {
 		$data = array();
 		foreach ($schema['periods'] as $period)
@@ -222,12 +240,9 @@ if (isset($_POST['schema'])) {
 			'name' => $schema['name'],
 			'description' => $schema['description'],
 			'data' => implode(';', $data),
-			'continuation' => !empty($schema['continuation']) ? 1 : 0,
-			SYSLOG::RES_TARIFF => !empty($schema['ctariffid']) ? $schema['ctariffid'] : null,
 			SYSLOG::RES_PROMOSCHEMA => $schema['id']
 		);
-		$DB->Execute('UPDATE promotionschemas SET name = ?, description = ?, data = ?,
-			continuation = ?, ctariffid = ?
+		$DB->Execute('UPDATE promotionschemas SET name = ?, description = ?, data = ?
 			WHERE id = ?', array_values($args));
 
 		if ($SYSLOG) {
@@ -243,10 +258,11 @@ if (isset($_POST['schema'])) {
 			WHERE a.promotionschemaid = ?', array($schema['id']));
 
 		if (!empty($tariffs)) {
-			$data_cnt = count($data)+1; // +1 for activation item
+			$data_cnt = count($data) + 2; // +1 for activation item, +1 for continuation item
 			foreach ($tariffs as $tariff) {
 				$tdata = explode(';', $tariff['data']);
 				$tdata_cnt = count($tdata);
+				$last_data = array_pop($tdata);
 				// nothing's changed
 				if ($tdata_cnt == $data_cnt)
 					continue;
@@ -257,6 +273,8 @@ if (isset($_POST['schema'])) {
 				// removed periods
 				else
 					$tdata = array_slice($tdata, 0, $data_cnt);
+
+				$tdata[] = $last_data;
 
 				$args = array(
 					'data' => implode(';', $tdata),
@@ -290,7 +308,6 @@ $layout['pagetitle'] = trans('Schema Edit: $a', $oldschema['name']);
 
 $SMARTY->assign('error', $error);
 $SMARTY->assign('schema', $schema);
-$SMARTY->assign('tariffs', $LMS->GetTariffs());
 $SMARTY->display('promotion/promotionschemaedit.html');
 
 ?>

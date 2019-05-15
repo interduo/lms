@@ -1,14 +1,17 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
-{if $pin_min_size == $pin_max_size}
-{$pin_tip=trans("Enter \$a characters PIN code", $pin_min_size)}
-{else}
-{$pin_tip=trans("Enter \$a to \$b characters PIN code", $pin_min_size, $pin_max_size)}
+{$pin_tip = ConfigHelper::getConfig('phpui.pin_restriction_description')}
+{if !$pin_tip}
+	{if $pin_min_size == $pin_max_size}
+		{$pin_tip=trans("Enter \$a characters PIN code", $pin_min_size)}
+	{else}
+		{$pin_tip=trans("Enter \$a to \$b characters PIN code", $pin_min_size, $pin_max_size)}
+	{/if}
 {/if}
 <H1>{$layout.pagetitle}</H1>
-<script type="text/javascript" src="img/location_box_expandable.js"></script>
+<script type="text/javascript" src="js/location_box_expandable.js"></script>
 <SCRIPT type="text/javascript">
 <!--
 	function randomize() {
@@ -125,7 +128,7 @@
 				{$addr_counter = 0}
 
 				<tr>
-					<td style="width: 1%;" class="valign-top"><img src="img/home.gif" alt="" title="{trans('billing address')}"></td>
+					<td style="width: 1%;" class="valign-top"><i class="lms-ui-icon-home fa-fw" title="{trans('billing address')}"></i></td>
 					<td style="width: 99%;">
 						{$addr_found = 0}
 						{foreach $customeradd.addresses as $v}
@@ -258,6 +261,9 @@
 							<TR>
 								<TD style="width: 1%;" class="nobr">{trans("ICN")}:</TD>
 								<TD style="width: 99%;">
+									{if $customeradd.icnwarning}
+									<INPUT type="hidden" name="customeradd[icnwarning]" value="1">
+									{/if}
 									<INPUT type="text" size="30" value="{$customeradd.icn}" name="customeradd[icn]" {tip text="Enter Identity Card Number (optional)" trigger="icn"}>
 								</TD>
 							</TR>
@@ -355,7 +361,7 @@
 										<input type="checkbox" name="customeradd[cutoffstopindefinitely]" value="1" onchange="$('#cutoffstop').css('display', this.checked ? 'none' : '');"{if $customeradd.cutoffstopindefinitely} checked{/if}>
 										{trans("indefinitely")}
 									</label>&nbsp;
-									<INPUT type="text" name="customeradd[cutoffstop]" id="cutoffstop" {if $customeradd.cutoffstopindefinitely}style="display: none;"{elseif $customeradd.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="calendar" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
+									<INPUT type="text" name="customeradd[cutoffstop]" id="cutoffstop" {if $customeradd.cutoffstopindefinitely}style="display: none;"{elseif $customeradd.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="lms-ui-date" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
 								</TD>
 							</TR>
 						</TABLE>
@@ -457,7 +463,7 @@
 		$('[name^="customeradd[emails]"][value="16"]').off('click').click(function() {
 			var checked = $(this).prop('checked');
 			if (!$('#chkinvoicenotice').prop('checked') && checked) {
-				alert('{trans("Customer has not checked \'electronic invoice\' consent and you are trying to mark this mail contact for invoice sending!")}');
+				alertDialog($t("Customer has not checked 'electronic invoice' consent and you are trying to mark this mail contact for invoice sending!"), this);
 			}
 		});
 	}

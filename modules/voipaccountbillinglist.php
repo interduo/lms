@@ -50,7 +50,19 @@ $params['frangeto']   = sessionHandler('frangeto', 'vblfrangeto');
 $params['ftype']      = sessionHandler('ftype', 'vblftype');
 $params['fstatus']    = sessionHandler('fstatus', 'vblfstatus');
 
+$params['count'] = true;
+$total = intval($LMS->getVoipBillings($params));
+
+$page  = !isset($_GET['page']) ? 1 : intval($_GET['page']);
+$limit = intval(ConfigHelper::getConfig('phpui.billinglist_pagelimit', 100));
+$offset = ($page - 1) * $limit;
+
+$params['count'] = false;
+$params['offset'] = $offset;
+$params['limit'] = $limit;
 $bill_list = $LMS->getVoipBillings($params);
+
+$pagination = LMSPaginationFactory::getPagination($page, $total, $limit, ConfigHelper::checkConfig('phpui.short_pagescroller'));
 
 // CALL BILLING RANGE
 if (!empty($params['frangefrom']))
@@ -83,11 +95,6 @@ $voipaccountlist = $LMS->GetVoipAccountList('owner', NULL, NULL);
 unset($voipaccountlist['total']);
 unset($voipaccountlist['order']);
 unset($voipaccountlist['direction']);
-
-$page  = !$_GET['page'] ? 1 : intval($_GET['page']);
-$total = intval(count($bill_list));
-$limit = intval(ConfigHelper::getConfig('phpui.billinglist_pagelimit', 100));
-$pagination = LMSPaginationFactory::getPagination($page, $total, $limit, ConfigHelper::checkConfig('phpui.short_pagescroller'));
 
 $order = explode(',', $params['o']);
 if (empty($order[1]) || $order[1] != 'desc')

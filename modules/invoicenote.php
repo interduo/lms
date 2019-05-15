@@ -28,10 +28,14 @@ $action = isset($_GET['action']) ? $_GET['action'] : NULL;
 
 if (isset($_GET['id']) && $action == 'init')
 {
-	if ($LMS->isDocumentReferenced($_GET['id']))
-		$SESSION->redirect('?m=invoicelist');
-
-	$invoice = $LMS->GetInvoiceContent($_GET['id']);
+	$docid = $LMS->GetDocumentLastReference($_GET['id']);
+	$invoice = $LMS->GetInvoiceContent($docid);
+	if ($invoice['doctype'] == DOC_CNOTE) {
+		$invoice['number'] = $invoice['invoice']['number'];
+		$invoice['template'] = $invoice['invoice']['template'];
+		$invoice['numberplanid'] = $invoice['invoice']['numberplanid'];
+		$invoice['cdate'] = $invoice['invoice']['cdate'];
+	}
 
 	if (!empty($invoice['cancelled']))
 		$SESSION->redirect('?m=invoicelist');
@@ -51,14 +55,17 @@ if (isset($_GET['id']) && $action == 'init')
 		$nitem['discount']	= str_replace(',', '.', $item['pdiscount']);
 		$nitem['pdiscount']	= str_replace(',', '.', $item['pdiscount']);
 		$nitem['vdiscount']	= str_replace(',', '.', $item['vdiscount']);
-		$nitem['jm']		= str_replace(',', '.', $item['content']);
+		$nitem['content']		= str_replace(',', '.', $item['content']);
 		$nitem['valuenetto']	= str_replace(',', '.', $item['basevalue']);
-		$nitem['valuebrutto']	= str_replace(',', '.', $item['value']);
+		// if position count is 0 (deleted position) then count value brutto based on value netto and tax value
+		$nitem['valuebrutto']	= str_replace(',', '.',
+			empty($item['count']) ? round(($item['basevalue'] * ($item['taxvalue'] + 100)) / 100, 2) : $item['value']);
 		$nitem['s_valuenetto']	= str_replace(',', '.', $item['totalbase']);
 		$nitem['s_valuebrutto']	= str_replace(',', '.', $item['total']);
 		$nitem['tax']		= isset($taxeslist[$item['taxid']]) ? $taxeslist[$item['taxid']]['label'] : 0;
 		$nitem['taxid']		= $item['taxid'];
 		$nitem['itemid']	= $item['itemid'];
+		$nitem['deleted'] = empty($item['total']);
 		$invoicecontents[$nitem['itemid']] = $nitem;
 	}
 	$invoice['content'] = $invoicecontents;
@@ -90,6 +97,14 @@ if (isset($_GET['id']) && $action == 'init')
 	$cnote['deadline'] = $cnote['cdate'] + $cnote['paytime'] * 86400;
 
 	$cnote['use_current_division'] = true;
+
+	$hook_data = array(
+		'invoice' => $invoice,
+		'cnote' => $cnote,
+	);
+	$hook_data = $LMS->ExecuteHook('invoicenote_init', $hook_data);
+	$invoice = $hook_data['invoice'];
+	$cnote = $hook_data['cnote'];
 
 	$SESSION->save('cnote', $cnote);
 	$SESSION->save('invoice', $invoice);
@@ -142,46 +157,38 @@ switch($action)
 
 		$currtime = time();
 
-		if($cnote['sdate'])
-		{
-			list($syear, $smonth, $sday) = explode('/', $cnote['sdate']);
-			if(checkdate($smonth, $sday, $syear))
-			{
-				$sdate = mktime(23, 59, 59, $smonth, $sday, $syear);
-				$cnote['sdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $smonth, $sday, $syear);
-				if($sdate < $invoice['sdate'])
-				{
-					$error['sdate'] = trans('Credit note sale date cannot be earlier than invoice sale date!');
+		if (ConfigHelper::checkPrivilege('invoice_consent_date'))
+			if ($cnote['cdate']) {
+				list ($year, $month, $day) = explode('/', $cnote['cdate']);
+				if (checkdate($month, $day, $year)) {
+					$cnote['cdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $month, $day, $year);
+					if ($cnote['cdate'] < $invoice['cdate'])
+						$error['cdate'] = trans('Credit note date cannot be earlier than invoice date!');
+				} else {
+					$error['cdate'] = trans('Incorrect date format! Using current date.');
+					$cnote['cdate'] = $currtime;
 				}
-			}
-			else
-			{
-				$error['sdate'] = trans('Incorrect date format! Using current date.');
-				$cnote['sdate'] = $currtime;
-			}
-		}
-		else
-			$cnote['sdate'] = $currtime;
-
-		if($cnote['cdate'])
-		{
-			list($year, $month, $day) = explode('/', $cnote['cdate']);
-			if(checkdate($month, $day, $year))
-			{
-				$cnote['cdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $month, $day, $year);
-				if($cnote['cdate'] < $invoice['cdate'])
-				{
-					$error['cdate'] = trans('Credit note date cannot be earlier than invoice date!');
-				}
-			}
-			else
-			{
-				$error['cdate'] = trans('Incorrect date format! Using current date.');
+			} else
 				$cnote['cdate'] = $currtime;
-			}
-		}
 		else
-			$cnote['cdate'] = $currtime;
+			$cnote['cdate'] = $invoice['cdate'];
+
+		if (ConfigHelper::checkPrivilege('invoice_sale_date'))
+			if ($cnote['sdate']) {
+				list ($syear, $smonth, $sday) = explode('/', $cnote['sdate']);
+				if (checkdate($smonth, $sday, $syear)) {
+					$sdate = mktime(23, 59, 59, $smonth, $sday, $syear);
+					$cnote['sdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $smonth, $sday, $syear);
+					if ($sdate < $invoice['sdate'])
+						$error['sdate'] = trans('Credit note sale date cannot be earlier than invoice sale date!');
+				} else {
+					$error['sdate'] = trans('Incorrect date format! Using current date.');
+					$cnote['sdate'] = $currtime;
+				}
+			} else
+				$cnote['sdate'] = $currtime;
+		else
+			$cnote['sdate'] = $invoice['sdate'];
 
 		if ($cnote['deadline']) {
 			list ($dyear, $dmonth, $dday) = explode('/', $cnote['deadline']);
@@ -227,7 +234,15 @@ switch($action)
 		if (empty($contents) || empty($cnote))
 			break;
 
+		$error = array();
+
 		$SESSION->restore('invoiceid', $invoice['id']);
+
+		if (!ConfigHelper::checkPrivilege('invoice_consent_date'))
+			$cnote['cdate'] = $invoice['cdate'];
+
+		if (!ConfigHelper::checkPrivilege('invoice_sale_date'))
+			$cnote['sdate'] = $invoice['sdate'];
 
 		$invoicecontents = $invoice['content'];
 		$newcontents = r_trim($_POST);
@@ -236,7 +251,7 @@ switch($action)
 			$idx = $item['itemid'];
 			$contents[$idx]['taxid'] = isset($newcontents['taxid'][$idx]) ? $newcontents['taxid'][$idx] : $item['taxid'];
 			$contents[$idx]['prodid'] = isset($newcontents['prodid'][$idx]) ? $newcontents['prodid'][$idx] : $item['prodid'];
-			$contents[$idx]['jm'] = isset($newcontents['jm'][$idx]) ? $newcontents['jm'][$idx] : $item['jm'];
+			$contents[$idx]['content'] = isset($newcontents['content'][$idx]) ? $newcontents['content'][$idx] : $item['content'];
 			$contents[$idx]['count'] = isset($newcontents['count'][$idx]) ? $newcontents['count'][$idx] : $item['count'];
 
 			$contents[$idx]['discount'] = str_replace(',', '.', isset($newcontents['discount'][$idx]) ? $newcontents['discount'][$idx] : $item['discount']);
@@ -256,13 +271,15 @@ switch($action)
 			$contents[$idx]['valuenetto'] = $newcontents['valuenetto'][$idx] != '' ? $newcontents['valuenetto'][$idx] : $item['valuenetto'];
 			$contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto']);
 			$contents[$idx]['valuenetto'] = f_round($contents[$idx]['valuenetto']);
-			$contents[$idx]['count'] = f_round($contents[$idx]['count']);
+			$contents[$idx]['count'] = f_round($contents[$idx]['count'], 3);
 			$contents[$idx]['pdiscount'] = f_round($contents[$idx]['pdiscount']);
 			$contents[$idx]['vdiscount'] = f_round($contents[$idx]['vdiscount']);
 			$taxvalue = $taxeslist[$contents[$idx]['taxid']]['value'];
 
 			if ($contents[$idx]['valuenetto'] != $item['valuenetto'])
 				$contents[$idx]['valuebrutto'] = $contents[$idx]['valuenetto'] * ($taxvalue / 100 + 1);
+			elseif (f_round($contents[$idx]['valuebrutto']) == f_round($item['valuebrutto']))
+				$contents[$idx]['valuebrutto'] = $item['valuebrutto'];
 
 			if ((isset($item['deleted']) && $item['deleted']) || empty($contents[$idx]['count'])) {
 				$contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto']);
@@ -272,11 +289,20 @@ switch($action)
 				$contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']), 2);
 				$contents[$idx]['valuebrutto'] = f_round(($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']) / $contents[$idx]['count']);
 				$contents[$idx]['count'] = 0;
-			} elseif (($contents[$idx]['valuenetto'] != $item['valuenetto'])
-					|| ($contents[$idx]['valuebrutto'] != $item['valuebrutto'])) {
-				$contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] * $contents[$idx]['count']
-					- $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']), 2);
-				$contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
+			} elseif ($contents[$idx]['valuenetto'] != $item['valuenetto']
+					|| $contents[$idx]['valuebrutto'] != $item['valuebrutto']
+					|| (empty($invoicecontents['count']) && !empty($contents[$idx]['count']))) {
+				if (empty($invoicecontents[$idx]['count']) && !empty($contents[$idx]['count']))
+					// cash value for recovered/restored invoice position
+					$contents[$idx]['cash'] = f_round(-1 * $contents[$idx]['valuebrutto'] * $contents[$idx]['count'], 2);
+				else
+					$contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] * $contents[$idx]['count']
+						- $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']), 2);
+
+				// determine new brutto value only if invoice position is NOT recovered/restored
+				if (!empty($invoicecontents[$idx]['count']) || empty($contents[$idx]['count']))
+					$contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
+
 				$contents[$idx]['count'] = f_round($contents[$idx]['count'] - $invoicecontents[$idx]['count'], 3);
 			} else {
 				$contents[$idx]['cash'] = 0;
@@ -289,6 +315,17 @@ switch($action)
 		}
 
 		$cnote['paytime'] = round(($cnote['deadline'] - $cnote['cdate']) / 86400);
+
+		$hook_data = array(
+			'invoice' => $invoice,
+			'contents' => $contents,
+		);
+		$hook_data = $LMS->ExecuteHook('invoicenote_save_validation', $hook_data);
+		if (isset($hook_data['error']) && is_array($hook_data['error']))
+			$error = array_merge($error, $hook_data['error']);
+
+		if (!empty($error))
+			break;
 
 		$DB->BeginTrans();
 		$DB->LockTables(array('documents', 'numberplans', 'divisions', 'vdivisions'));
@@ -426,7 +463,7 @@ switch($action)
 				'value' => $item['valuebrutto'],
 				SYSLOG::RES_TAX => $item['taxid'],
 				'prodid' => $item['prodid'],
-				'content' => $item['jm'],
+				'content' => $item['content'],
 				'count' => $item['count'],
 				'pdiscount' => $item['pdiscount'],
 				'vdiscount' => $item['vdiscount'],
@@ -462,6 +499,13 @@ switch($action)
 			}
 		}
 
+		$hook_data = array(
+			'cnote' => $cnote,
+			'invoice' => $invoice,
+			'contents' => $contents,
+		);
+		$hook_data = $LMS->ExecuteHook('invoicenote_save_after_submit', $hook_data);
+
 		$DB->CommitTrans();
 
 		$SESSION->remove('invoice');
@@ -490,12 +534,21 @@ if ($action != '')
 	$SESSION->redirect('?m=invoicenote');
 }
 
+$hook_data = array(
+	'contents' => $contents,
+	'invoice' => $invoice,
+);
+$hook_data = $LMS->ExecuteHook('invoicenote_before_display', $hook_data);
+$contents = $hook_data['contents'];
+$invoice = $hook_data['invoice'];
+
 $SMARTY->assign('error', $error);
 $SMARTY->assign('contents', $contents);
 $SMARTY->assign('cnote', $cnote);
 $SMARTY->assign('invoice', $invoice);
+$SMARTY->assign('refdoc', $invoice);
 $SMARTY->assign('taxeslist', $taxeslist);
 $SMARTY->assign('numberplanlist', $numberplanlist);
-$SMARTY->display('invoice/invoicenote.html');
+$SMARTY->display('invoice/invoicenotemodify.html');
 
 ?>

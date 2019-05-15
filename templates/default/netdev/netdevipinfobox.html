@@ -13,7 +13,7 @@
     <thead>
 		<tr>
 			<td width="1%">
-				<img src="img/ip.gif" class="CopyIp" data-clipboard-text="{$nodeipdata.id|string_format:"%04d"}" alt="">
+				<img src="img/ip.gif" class="lms-ui-button-clipboard" data-clipboard-text="{$nodeipdata.id|string_format:"%04d"}" alt="">
 			</td>
 			<td width="99%" colspan="2" class="bold">
 				{$nodeipdata.name} ({$nodeipdata.id|string_format:"%04d"})
@@ -46,7 +46,7 @@
 								</tr>
 								<tr>
 									<td>
-										<img src="img/ip.gif" class="CopyIp" data-clipboard-text="{$nodeipdata.ip}" alt="">
+										<img src="img/ip.gif" class="lms-ui-button-clipboard" data-clipboard-text="{$nodeipdata.ip}" alt="">
 									</td>
 									<td>
 										{trans("IP address:")}
@@ -59,7 +59,7 @@
 								{if $nodeipdata.ip_pub != "0.0.0.0"}
 								<tr>
 									<td>
-										<img src="img/ip_pub.gif" class="CopyIp" data-clipboard-text="{$nodeinfo.ip_pub}" alt="">
+										<img src="img/ip_pub.gif" class="lms-ui-button-clipboard" data-clipboard-text="{$nodeinfo.ip_pub}" alt="">
 									</td>
 									<td>
 										{trans("Pub. IP address:")}
@@ -70,20 +70,18 @@
 								</tr>
 								{/if}
 
-								{assign var="counter" value=0}
-								{foreach from=$nodeipdata.macs item=item}
+								{foreach $nodeipdata.macs as $item}
 								<tr>
 									<td>
-										<a href="javascript:changeMacFormat('mac{$counter}');"><img src="img/mac.gif" alt=""></a>
+										<a href="javascript:changeMacFormat('mac{$item@index}');" title="{trans("Change the format of presentation of the MAC address.")}"><img src="img/mac.gif" alt=""></a>
 									</td>
 									<td>
 										{trans("MAC address:")}
 									</td>
 									<td>
-										<span id="mac{$counter}">{$item.mac}</span> {if $item.producer}({$item.producer}){/if}<BR>
+										<span id="mac{$item@index}">{if empty($item.mac)}{trans("<!mac>- none -")}{else}{$item.mac}{/if}</span> {if $item.producer}({$item.producer}){/if}<BR>
 									</td>
 								</tr>
-								{math equation="x+1" x=$counter assign="counter"}
 								{/foreach}
 
 								{if $nodeipdata.passwd}
@@ -193,7 +191,7 @@
 										{if $disable_active_links}
 											<img src="img/{if !$nodeipdata.access}no{/if}access.gif" alt="">
 										{else}
-											<a href="?m=netdevedit&id={$netdevinfo.id}&action=ipset&ip={$nodeipdata.id}"><img src="img/{if !$nodeipdata.access}no{/if}access.gif" alt=""></a>
+											<a href="?m=netdevedit&id={$netdev.id}&action=ipset&ip={$nodeipdata.id}"><img src="img/{if !$nodeipdata.access}no{/if}access.gif" alt=""></a>
 										{/if}
 									</td>
 									<td>
@@ -236,21 +234,18 @@
 		</tr>
 		<tr>
 			<td width="100%" colspan="3" class="text-right">
-				<a href="?m=netdevedit&id={$netdevinfo.id}&action=editip&ip={$nodeipdata.id}" ACCESSKEY="E">{trans("Edit")} <img src="img/edit.gif" alt=""></a>
-				<a href="?m=netdevedit&id={$netdevinfo.id}&action=ipdel&ip={$nodeipdata.id}" onClick="return confirmLink(this, '{t a=$nodeipdata.name}Are you sure, you want to delete address \'$a\' from database?{/t}')">{trans("Delete")} <img src="img/delete.gif" alt=""></A>
+				<a href="?m=netdevedit&id={$netdev.id}&action=editip&ip={$nodeipdata.id}" ACCESSKEY="E">{trans("Edit")} <img src="img/edit.gif" alt=""></a>
+				<a href="?m=netdevedit&id={$netdev.id}&action=ipdel&ip={$nodeipdata.id}" onClick="return confirmLink(this, '{t a=$nodeipdata.name}Are you sure, you want to delete address \'$a\' from database?{/t}')">{trans("Delete")} <img src="img/delete.gif" alt=""></A>
 			</td>
 		</tr>
     </tbody>
 </table>
 
-<script src="img/clipboard.min.js"></script>
 <script type="text/javascript">
 <!--
-    new Clipboard('.CopyIp');
-
     {if !$disable_active_links}
     $( function() {
-        var link = '?m=netdevedit&id={$netdevinfo.id}';
+        var link = '?m=netdevedit&id={$netdev.id}';
         var nodeid = {$nodeipdata.id};
 
         $( '.authtype' ).click( function() {

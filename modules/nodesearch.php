@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -21,8 +21,47 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
  *  USA.
  *
- *  $Id: nodesearch.php,v 1.46 2012/01/02 11:01:35 alec Exp $
+ *  $Id$
  */
+
+if (isset($_GET['ajax'])) {
+	$search = urldecode(trim($_GET['what']));
+
+	switch ($_GET['mode']) {
+		case 'netdev':
+			$candidates = $DB->GetAll('SELECT
+					nd.name AS item,
+					n.ipaddr,
+					COUNT(nd.id) AS entries
+				FROM netdevices nd
+				LEFT JOIN nodes n ON n.netdev = nd.id AND n.ownerid IS NULL
+				WHERE LOWER(nd.name) ?LIKE? LOWER(' . $DB->Escape('%' . $search . '%') . ')
+					OR INET_NTOA(n.ipaddr) ?LIKE? (' . $DB->Escape('%' . $search . '%') . ')
+				GROUP BY item, n.ipaddr
+				ORDER BY entries DESC, item ASC
+				LIMIT 15');
+			break;
+	}
+
+	$result = array();
+
+	if ($candidates)
+		foreach ($candidates as $idx => $row) {
+			$name = $row['ipaddr']
+				&& preg_match('/' . str_replace('.','\\.', $search) . '/', long_ip($row['ipaddr']))
+				? long_ip($row['ipaddr']) : $row['item'];
+			$name_class = '';
+			$description = $row['entries'] . ' ' . trans('entries');
+			$description_class = '';
+			$action = '';
+
+			$result[$row['item']] = compact('name', 'name_long', 'name_class', 'description', 'description_class', 'action');
+		}
+	header('Content-Type: application/json');
+	if (!empty($result))
+		echo json_encode(array_values($result));
+	exit;
+}
 
 function get_loc_boroughs($districtid) {
 	global $DB, $BOROUGHTYPES;
@@ -85,6 +124,34 @@ function connect_nodes($nodeids, $deviceid, $linktype, $linktechnology, $linkspe
 	return $JSResponse;
 }
 
+function assign_nodes($nodeids, $nodegroupid) {
+	$JSResponse = new xajaxResponse();
+
+	$DB = LMSDB::getInstance();
+
+	foreach ($nodeids as $nodeid)
+		$DB->Execute("INSERT INTO nodegroupassignments (nodeid, nodegroupid) VALUES (?, ?)",
+			array($nodeid, $nodegroupid));
+
+	$JSResponse->call('operation_finished');
+
+	return $JSResponse;
+}
+
+function unassign_nodes($nodeids, $nodegroupid) {
+	$JSResponse = new xajaxResponse();
+
+	$DB = LMSDB::getInstance();
+
+	foreach ($nodeids as $nodeid)
+		$DB->Execute("DELETE FROM nodegroupassignments WHERE nodeid = ? AND nodegroupid = ?",
+			array($nodeid, $nodegroupid));
+
+	$JSResponse->call('operation_finished');
+
+	return $JSResponse;
+}
+
 function macformat($mac) {
 	$res = str_replace('-', ':', $mac);
 	// allow eg. format "::ab:3::12", only whole addresses
@@ -138,64 +205,92 @@ $nodesearch['mac'] = macformat($nodesearch['mac']);
 $LMS->InitXajax();
 
 if (isset($_GET['search'])) {
-	$LMS->RegisterXajaxFunction('connect_nodes');
+	$LMS->RegisterXajaxFunction(array('connect_nodes', 'assign_nodes', 'unassign_nodes'));
 	$SMARTY->assign('xajax', $LMS->RunXajax());
 
-	$layout['pagetitle'] = trans('Nodes Search Results');
+	$error = null;
 
-	$nodelist = $LMS->GetNodeList($o, $nodesearch, $k);
+	if (!empty($nodesearch['lastonlinebefore'])) {
+		$lastonlinebefore = datetime_to_timestamp($nodesearch['lastonlinebefore']);
+		if (empty($lastonlinebefore))
+			$error['lastonlinebefore'] = trans('Enter date in YYYY/MM/DD hh:mm format (empty field means ignore) or click to choose it from calendar');
+	}
 
-	$listdata['total'] = $nodelist['total'];
-	$listdata['order'] = $nodelist['order'];
-	$listdata['direction'] = $nodelist['direction'];
-	$listdata['totalon'] = $nodelist['totalon'];
-	$listdata['totaloff'] = $nodelist['totaloff'];
+	if (!empty($nodesearch['lastonlineafter'])) {
+		$lastonlineafter = datetime_to_timestamp($nodesearch['lastonlineafter']);
+		if (empty($lastonlineafter))
+			$error['lastonlineafter'] = trans('Enter date in YYYY/MM/DD hh:mm format (empty field means ignore) or click to choose it from calendar');
+	}
 
-	unset($nodelist['total']);
-	unset($nodelist['order']);
-	unset($nodelist['direction']);
-	unset($nodelist['totalon']);
-	unset($nodelist['totaloff']);
+	if (!$error) {
+		if (isset($lastonlinebefore))
+			$nodesearch['lastonlinebefore'] = $lastonlinebefore;
+		if (isset($lastonlineafter))
+			$nodesearch['lastonlineafter'] = $lastonlineafter;
 
-	if ($SESSION->is_set('nslp') && !isset($_GET['page']))
-		$SESSION->restore('nslp', $_GET['page']);
+		$nodelist = $LMS->GetNodeList(array('order' => $o, 'search' => $nodesearch, 'sqlskey' => $k));
 
-	$page = (!isset($_GET['page']) ? 1 : $_GET['page']);
+		$layout['pagetitle'] = trans('Nodes Search Results');
 
-	$pagelimit = ConfigHelper::getConfig('phpui.nodelist_pagelimit', $listdata['total']);
-	$start = ($page - 1) * $pagelimit;
-	$SESSION->save('nslp', $page);
+		$listdata['total'] = $nodelist['total'];
+		$listdata['order'] = $nodelist['order'];
+		$listdata['direction'] = $nodelist['direction'];
+		$listdata['totalon'] = $nodelist['totalon'];
+		$listdata['totaloff'] = $nodelist['totaloff'];
 
-	$SMARTY->assign('page', $page);
-	$SMARTY->assign('pagelimit', $pagelimit);
-	$SMARTY->assign('start', $start);
-	$SMARTY->assign('nodelist', $nodelist);
-	$SMARTY->assign('listdata', $listdata);
+		unset($nodelist['total']);
+		unset($nodelist['order']);
+		unset($nodelist['direction']);
+		unset($nodelist['totalon']);
+		unset($nodelist['totaloff']);
 
-	$netdevlist = $LMS->GetNetDevList();
-	unset($netdevlist['total']);
-	unset($netdevlist['order']);
-	unset($netdevlist['direction']);
-	$SMARTY->assign('netdevlist', $netdevlist);
+		if ($SESSION->is_set('nslp') && !isset($_GET['page']))
+			$SESSION->restore('nslp', $_GET['page']);
 
-	if (isset($_GET['print']))
-		$SMARTY->display('print/printnodelist.html');
-	elseif ($listdata['total'] == 1)
-		$SESSION->redirect('?m=nodeinfo&id=' . $nodelist[0]['id']);
-	else
-		$SMARTY->display('node/nodesearchresults.html');
+		$page = (!isset($_GET['page']) ? 1 : $_GET['page']);
+
+		$pagelimit = ConfigHelper::getConfig('phpui.nodelist_pagelimit', $listdata['total']);
+		$start = ($page - 1) * $pagelimit;
+		$SESSION->save('nslp', $page);
+
+		$SMARTY->assign('page', $page);
+		$SMARTY->assign('pagelimit', $pagelimit);
+		$SMARTY->assign('start', $start);
+		$SMARTY->assign('nodelist', $nodelist);
+		$SMARTY->assign('listdata', $listdata);
+
+		$netdevlist = $LMS->GetNetDevList();
+		unset($netdevlist['total']);
+		unset($netdevlist['order']);
+		unset($netdevlist['direction']);
+		$SMARTY->assign('netdevlist', $netdevlist);
+
+		if (isset($_GET['print']))
+			$SMARTY->display('print/printnodelist.html');
+		elseif ($listdata['total'] == 1)
+			$SESSION->redirect('?m=nodeinfo&id=' . $nodelist[0]['id']);
+		else {
+			$SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());
+			$SMARTY->display('node/nodesearchresults.html');
+		}
+		$SESSION->close();
+		die;
+	} else {
+		$SMARTY->assign('error', $error);
+		$SMARTY->assign('nodesearch', $nodesearch);
+	}
 }
-else {
-	$LMS->RegisterXajaxFunction('select_location');
-	$SMARTY->assign('xajax', $LMS->RunXajax());
 
-	$layout['pagetitle'] = trans('Nodes Search');
+$LMS->RegisterXajaxFunction('select_location');
+$SMARTY->assign('xajax', $LMS->RunXajax());
 
-	$SESSION->remove('nslp');
+$layout['pagetitle'] = trans('Nodes Search');
 
-	$SMARTY->assign('states', $DB->GetAll('SELECT id, name, ident FROM location_states ORDER BY name'));
-	$SMARTY->assign('k', $k);
+$SESSION->remove('nslp');
 
-	$SMARTY->display('node/nodesearch.html');
-}
+$SMARTY->assign('states', $DB->GetAll('SELECT id, name, ident FROM location_states ORDER BY name'));
+$SMARTY->assign('k', $k);
+
+$SMARTY->display('node/nodesearch.html');
+
 ?>

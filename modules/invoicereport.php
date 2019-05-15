@@ -68,10 +68,10 @@ $listdata = array('tax' => 0, 'brutto' => 0);
 $invoicelist = array();
 $taxeslist = array();
 $taxes = array();
-if ($doctype == 'invoices')
-	$taxescount = 0;
-else
+if (in_array(DOC_DNOTE, $doctypes))
 	$taxescount = -1;
+else
+	$taxescount = 0;
 
 if(!empty($_POST['group']))
 {
@@ -129,10 +129,23 @@ switch ($_POST['sorttype']) {
 		$wherecol = 'd.cdate';
 }
 
-if (in_array($_POST['doctype'], array('invoices', 'notes')))
-	$doctype = $_POST['doctype'];
-else
-	$doctype = 'invoices';
+$doctypes = array();
+if (!empty($_POST['doctype']) && is_array($_POST['doctype'])) {
+	foreach ($_POST['doctype'] as $doctype)
+		switch ($doctype) {
+			case 'invoices':
+				$doctypes[] = DOC_INVOICE;
+				break;
+			case 'cnotes':
+				$doctypes[] = DOC_CNOTE;
+				break;
+			case 'dnotes':
+				$doctypes[] = DOC_DNOTE;
+				break;
+		}
+}
+if (empty($doctypes))
+	$doctypes = array(DOC_INVOICE, DOC_CNOTE);
 
 if (!empty($_POST['numberplanid'])) {
 	if (is_array($_POST['numberplanid'])) {
@@ -143,25 +156,20 @@ if (!empty($_POST['numberplanid'])) {
 }
 
 // we can't simply get documents with SUM(value*count)
-// because we need here incoices-like round-off
+// because we need here invoices-like round-off
 
-// get documents items numeric values for calculations
-if ($doctype == 'invoices')
-	$args = array(DOC_INVOICE, DOC_CNOTE);
-else
-	$args = array(DOC_DNOTE, DOC_DNOTE);
-$args[] = $unixfrom;
-$args[] = $unixto;
+$args = array($doctypes, $unixfrom, $unixto);
 
-$items = $DB->GetAll('SELECT c.docid, c.itemid,' . ($doctype == 'invoices' ? ' c.taxid, c.count,' : '1 AS count,') . ' c.value,
+$items = $DB->GetAll('SELECT c.docid, c.itemid,' . (in_array(DOC_DNOTE, $doctypes) ? '1 AS count,' : ' c.taxid, c.count,') . ' -cash.value AS value,
 	d.number, d.cdate, d.sdate, d.paytime, d.customerid, d.reference,
 	d.name, d.address, d.zip, d.city, d.ten, d.ssn, n.template
 	    FROM documents d
-		' . ($doctype == 'invoices' ? 'LEFT JOIN invoicecontents c ON c.docid = d.id'
-			: 'LEFT JOIN debitnotecontents c ON c.docid = d.id') . '
+		' . (in_array(DOC_DNOTE, $doctypes) ? 'LEFT JOIN debitnotecontents c ON c.docid = d.id'
+			: 'LEFT JOIN invoicecontents c ON c.docid = d.id
+				LEFT JOIN cash ON cash.docid = d.id AND cash.itemid = c.itemid') . '
 	    LEFT JOIN numberplans n ON d.numberplanid = n.id' .
 	    ( $ctype != -1 ? ' LEFT JOIN customers cu ON d.customerid = cu.id ' : '' )
-	    . ' WHERE cancelled = 0 AND (d.type = ? OR d.type = ?) AND (' . $wherecol . ' BETWEEN ? AND ?) '
+	    . ' WHERE cancelled = 0 AND d.type IN ? AND (' . $wherecol . ' BETWEEN ? AND ?) '
 	    .(isset($numberplans) ? 'AND d.numberplanid IN (' . $numberplans . ')' : '')
 	    .(isset($divwhere) ? $divwhere : '')
 	    .(isset($groupwhere) ? $groupwhere : '')
@@ -202,44 +210,14 @@ if ($items) {
 		if(!isset($invoicelist[$idx]['tax'])) $invoicelist[$idx]['tax'] = 0;
 		if(!isset($invoicelist[$idx]['brutto'])) $invoicelist[$idx]['brutto'] = 0;
 
-		if($row['reference'])
-		{
-			// I think we can simply do query here instead of building
-			// big sql join in $items query, we've got so many credit notes?
-			$item = $DB->GetRow('SELECT taxid, value, count
-						FROM invoicecontents
-						WHERE docid=? AND itemid=?',
-						array($row['reference'], $row['itemid']));
-
-			$row['value'] += $item['value'];
-			$row['count'] += $item['count'];
-
-			set_taxes($item['taxid']);
-
-			$refitemsum = $item['value'] * $item['count'];
-			$refitemval = round($refitemsum / ($taxes[$item['taxid']]['value']+100) * 100, 2);
-			$refitemtax = $refitemsum - $refitemval;
-
-			$invoicelist[$idx][$item['taxid']]['tax'] -= $refitemtax;
-			$invoicelist[$idx][$item['taxid']]['val'] -= $refitemval;
-			$invoicelist[$idx]['tax'] -= $refitemtax;
-			$invoicelist[$idx]['brutto'] -= $refitemsum;
-
-			$listdata[$item['taxid']]['tax'] -= $refitemtax;
-			$listdata[$item['taxid']]['val'] -= $refitemval;
-			$listdata['tax'] -= $refitemtax;
-			$listdata['brutto'] -= $refitemsum;
-		}
-
-		$sum = $row['value'] * $row['count'];
-		$val = ($sum / ($taxes[$taxid]['value'] + 100)) * 100;
-		$tax = round($sum - $val, 2);
+		$val = ($row['value'] / ($taxes[$taxid]['value'] + 100)) * 100;
+		$tax = round($row['value'] - $val, 2);
 		$val = round($val, 2);
 
 		$invoicelist[$idx][$taxid]['tax'] += $tax;
 		$invoicelist[$idx][$taxid]['val'] += $val;
 		$invoicelist[$idx]['tax'] += $tax;
-		$invoicelist[$idx]['brutto'] += $sum;
+		$invoicelist[$idx]['brutto'] += $row['value'];
 
 		if(!isset($listdata[$taxid]))
 		{
@@ -250,7 +228,7 @@ if ($items) {
 		$listdata[$taxid]['tax'] += $tax;
 		$listdata[$taxid]['val'] += $val;
 		$listdata['tax'] += $tax;
-		$listdata['brutto'] += $sum;
+		$listdata['brutto'] += $row['value'];
 	}
 
 	// get used tax rates for building report table
@@ -264,7 +242,7 @@ if ($items) {
 }
 
 $SMARTY->assign('listdata', $listdata);
-$SMARTY->assign('doctype', $doctype);
+$SMARTY->assign('doctypes', $doctypes);
 $SMARTY->assign('taxes', $taxeslist);
 $SMARTY->assign('taxescount', $taxescount);
 $SMARTY->assign('layout', $layout);
@@ -274,7 +252,7 @@ if(isset($_POST['extended']))
 {
 	$pages = array();
 	$totals = array();
-	$reccount = sizeof($invoicelist);
+	$reccount = count($invoicelist);
 
 	// hidden option: records count for one page of printout
 	// I thinks 20 records is fine, but someone needs 19.
@@ -319,7 +297,7 @@ if(isset($_POST['extended']))
 	$SMARTY->assign('pages', $pages);
 	$SMARTY->assign('rows', $rows);
 	$SMARTY->assign('totals', $totals);
-	$SMARTY->assign('pagescount', sizeof($pages));
+	$SMARTY->assign('pagescount', count($pages));
 	$SMARTY->assign('reccount', $reccount);
 	if (strtolower(ConfigHelper::getConfig('phpui.report_type')) == 'pdf') {
 		$SMARTY->assign('printcustomerid', $_POST['printcustomerid']);

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,6 +23,11 @@
  *
  *  $Id$
  */
+
+/*use setasign\Fpdi\Tcpdf\Fpdi;
+use setasign\Fpdi\PdfParser\StreamReader;*/
+
+include(LIB_DIR . DIRECTORY_SEPARATOR . 'FPDI' . DIRECTORY_SEPARATOR . 'VarStream.php');
 
 function invoice_body($document, $invoice) {
 	$document->Draw($invoice);
@@ -49,6 +54,97 @@ function parse_address($address) {
 	}
 
 	return $m;
+}
+
+function try_generate_archive_invoices($ids) {
+	global $LMS, $invoice_type, $which, $document, $classname, $dontpublish;
+
+	$SMARTY = LMSSmarty::getInstance();
+
+	$archive_stats = $LMS->GetTradeDocumentArchiveStats($ids);
+
+	if (($invoice_type == 'pdf' && ($archive_stats['html'] > 0 || $archive_stats['rtype'] == 'html'))
+		|| ($invoice_type == 'html' && ($archive_stats['pdf'] > 0 || $archive_stats['rtype'] == 'pdf')))
+		die('Currently you can only print many documents of type text/html or application/pdf!');
+
+	if (!empty($archive_stats) && $archive_stats['archive'] > 0 && !in_array(trans('DUPLICATE'), $which)) {
+		if ($archive_stats['rtype'] && $archive_stats['rtype'] != $invoice_type)
+			$invoice_type = $archive_stats['rtype'];
+
+		$attachment_name = 'invoices.' . ($invoice_type == 'pdf' ? 'pdf' : 'html');
+		header('Content-Type: ' . ($invoice_type == 'pdf' ? 'application/pdf' : 'text/html'));
+		header('Content-Disposition: attachment; filename="' . $attachment_name . '"');
+		header('Pragma: public');
+
+		if ($invoice_type == 'pdf') {
+			$pdf = new FPDI();
+//			$pdf = new Fpdi();
+			$pdf->setPrintHeader(false);
+			$pdf->setPrintFooter(false);
+		}
+
+		foreach ($ids as $idx => $invoiceid) {
+			if ($LMS->isArchiveDocument($invoiceid)) {
+				$file = $LMS->GetArchiveDocument($invoiceid);
+			} else {
+				$count = count($which);
+				$i = 0;
+
+				if (!$document)
+					if ($invoice_type == 'pdf')
+						$document = new $classname(trans('Invoices'));
+					else
+						$document = new LMSHtmlInvoice($SMARTY);
+
+				$invoice = $LMS->GetInvoiceContent($invoiceid);
+				$invoice['dontpublish'] = $dontpublish;
+				foreach ($which as $type) {
+					$i++;
+					if ($i == $count)
+						$invoice['last'] = true;
+					$invoice['type'] = $type;
+					invoice_body($document, $invoice);
+				}
+				$file['data'] = $document->WriteToString();
+
+				unset($document);
+				$document = null;
+			}
+
+			if ($invoice_type == 'pdf') {
+				$pageCount = $pdf->setSourceFile(VarStream::createReference($file['data']));
+				//$pageCount = $pdf->setSourceFile(StreamReader::createByString($file['data']));
+				for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+					// import a page
+					$templateId = $pdf->importPage($pageNo);
+					// get the size of the imported page
+					$size = $pdf->getTemplateSize($templateId);
+
+					// create a page (landscape or portrait depending on the imported page size)
+					if ($size['w'] > $size['h'])
+						$pdf->AddPage('L', array($size['w'], $size['h']));
+					else
+						$pdf->AddPage('P', array($size['w'], $size['h']));
+					//$pdf->AddPage($size['orientation'], $size);
+
+					// use the imported page
+					$pdf->useTemplate($templateId);
+				}
+			} else {
+				echo $file['data'];
+				if ($idx < count($ids) - 1)
+					echo '<div style="page-break-after: always;">&nbsp;</div>';
+			}
+		}
+
+		if ($invoice_type == 'pdf')
+			$pdf->Output();
+
+		if (!$dontpublish && !empty($ids))
+			$LMS->PublishDocuments($ids);
+
+		die;
+	}
 }
 
 switch ( intval($_GET['customertype']) ) {
@@ -96,37 +192,110 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	$SESSION->restore('ilm', $ilm);
 	$SESSION->remove('ilm');
 
-	if (isset($_POST['marks']))
-		foreach ($_POST['marks'] as $idx => $mark)
-			$ilm[$idx] = intval($mark);
+	if (isset($_POST['marks'])) {
+		if (isset($_POST['marks']['invoice']))
+			$marks = $_POST['marks']['invoice'];
+		else
+			$marks = $_POST['marks'];
+	} else
+		$marks = array();
 
-	if (sizeof($ilm))
-		foreach ($ilm as $mark)
-			$ids[] = $mark;
+	$ids = Utils::filterIntegers($marks);
 
-	if (!isset($ids)) {
+	if (empty($ids)) {
 		$SESSION->close();
 		die;
 	}
 
+	if (isset($_GET['cash']))
+		$ids = $LMS->GetDocumentsForBalanceRecords($ids, array(DOC_INVOICE, DOC_CNOTE, DOC_INVOICE_PRO));
+
 	$layout['pagetitle'] = trans('Invoices');
 
-	if (isset($_GET['cash'])) {
-		$ids = $DB->GetCol('SELECT DISTINCT docid
-			FROM cash, documents
-			WHERE docid = documents.id AND (documents.type = ? OR documents.type = ?)
-				AND cash.id IN ('.implode(',', $ids).')
-			ORDER BY docid',
-			array(DOC_INVOICE, DOC_CNOTE));
+	$which = array();
+
+	if (!empty($_GET['original'])) $which[] = trans('ORIGINAL');
+	if (!empty($_GET['copy'])) $which[] = trans('COPY');
+	if (!empty($_GET['duplicate'])) {
+		$which[] = trans('DUPLICATE');
+		$duplicate_date = isset($_GET['duplicate-date']) ? intval($_GET['duplicate-date']) : 0;
+	} else
+		$duplicate_date = 0;
+
+	if (!count($which)) $which[] = trans('ORIGINAL');
+
+	try_generate_archive_invoices($ids);
+
+	$count = count($ids) * count($which);
+	$i = 0;
+
+	foreach ($ids as $idx => $invoiceid) {
+		$invoice = $LMS->GetInvoiceContent($invoiceid);
+		if (count($ids) == 1)
+			$docnumber = docnumber(array(
+				'number' => $invoice['number'],
+				'template' => $invoice['template'],
+				'cdate' => $invoice['cdate'],
+				'customerid' => $invoice['customerid'],
+			));
+
+		$invoice['dontpublish'] = $dontpublish;
+		foreach ($which as $type) {
+			$i++;
+			if ($i == $count) $invoice['last'] = TRUE;
+			$invoice['type'] = $type;
+			$invoice['duplicate-date'] = $duplicate_date;
+
+			invoice_body($document, $invoice);
+		}
 	}
+} elseif (isset($_GET['fetchallinvoices'])) {
+	$layout['pagetitle'] = trans('Invoices');
+
+	$datefrom = intval($_GET['from']);
+	$dateto = intval($_GET['to']);
+	$einvoice = intval($_GET['einvoice']);
+	$ids = $DB->GetCol('SELECT id FROM documents d
+				WHERE cdate >= ? AND cdate <= ? AND (type = ? OR type = ?) AND d.cancelled = 0'
+				.($einvoice ? ' AND d.customerid IN (SELECT id FROM customers WHERE ' . ($einvoice == 1 ? 'einvoice = 1' : 'einvoice = 0 OR einvoice IS NULL') . ')' : '')
+				.($ctype !=  -1 ? ' AND d.customerid IN (SELECT id FROM customers WHERE type = ' . intval($ctype) .')' : '')
+				.(!empty($_GET['divisionid']) ? ' AND d.divisionid = ' . intval($_GET['divisionid']) : '')
+				.(!empty($_GET['customerid']) ? ' AND d.customerid = '.intval($_GET['customerid']) : '')
+				.(!empty($_GET['numberplanid']) ? ' AND d.numberplanid' . (is_array($_GET['numberplanid'])
+						? ' IN (' . implode(',', Utils::filterIntegers($_GET['numberplanid'])) . ')'
+						: ' = ' . intval($_GET['numberplanid']))
+					: '')
+				.(!empty($_GET['autoissued']) ? ' AND d.userid IS NULL' : '')
+				.(!empty($_GET['manualissued']) ? ' AND d.userid IS NOT NULL' : '')
+				.(!empty($_GET['groupid']) ?
+				' AND ' . (!empty($_GET['groupexclude']) ? 'NOT' : '') . '
+					EXISTS (SELECT 1 FROM customerassignments a
+					WHERE a.customerid = d.customerid AND a.customergroupid' . (is_array($_GET['groupid'])
+						? ' IN (' . implode(',', Utils::filterIntegers($_GET['groupid'])) . ')'
+						: ' = ' . intval($_GET['groupid'])) . ')'
+					: '')
+				.' AND NOT EXISTS (
+					SELECT 1 FROM customerassignments a
+					JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
+					WHERE e.userid = lms_current_user() AND a.customerid = d.customerid)'
+				.' ORDER BY CEIL(cdate/86400), id',
+				array($datefrom, $dateto, DOC_INVOICE, DOC_CNOTE));
+	if (!$ids) {
+		$SESSION->close();
+		die;
+	}
+
+	$which = array();
 
 	if (!empty($_GET['original'])) $which[] = trans('ORIGINAL');
 	if (!empty($_GET['copy'])) $which[] = trans('COPY');
 	if (!empty($_GET['duplicate'])) $which[] = trans('DUPLICATE');
 
-	if (!sizeof($which)) $which[] = trans('ORIGINAL');
+	if (!count($which)) $which[] = trans('ORIGINAL');
 
-	$count = sizeof($ids) * sizeof($which);
+	try_generate_archive_invoices($ids);
+
+	$count = count($ids) * count($which);
 	$i = 0;
 
 	foreach ($ids as $idx => $invoiceid) {
@@ -147,44 +316,8 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 			invoice_body($document, $invoice);
 		}
 	}
-} elseif (isset($_GET['fetchallinvoices'])) {
-	$layout['pagetitle'] = trans('Invoices');
 
-	$datefrom = intval($_GET['from']);
-	$dateto = intval($_GET['to']);
-	$einvoice = intval($_GET['einvoice']);
-	$ids = $DB->GetCol('SELECT id FROM documents d
-				WHERE cdate >= ? AND cdate <= ? AND (type = ? OR type = ?) AND d.cancelled = 0'
-				.($einvoice ? ' AND d.customerid IN (SELECT id FROM customers WHERE ' . ($einvoice == 1 ? 'einvoice = 1' : 'einvoice = 0 OR einvoice IS NULL') . ')' : '')
-				.($ctype !=  -1 ? ' AND d.customerid IN (SELECT id FROM customers WHERE type = ' . intval($ctype) .')' : '')
-				.(!empty($_GET['divisionid']) ? ' AND d.divisionid = ' . intval($_GET['divisionid']) : '')
-				.(!empty($_GET['customerid']) ? ' AND d.customerid = '.intval($_GET['customerid']) : '')
-				.(!empty($_GET['numberplanid']) ? ' AND d.numberplanid = '.intval($_GET['numberplanid']) : '')
-				.(!empty($_GET['autoissued']) ? ' AND d.userid IS NULL' : '')
-				.(!empty($_GET['manualissued']) ? ' AND d.userid IS NOT NULL' : '')
-				.(!empty($_GET['groupid']) ?
-				' AND '.(!empty($_GET['groupexclude']) ? 'NOT' : '').'
-					EXISTS (SELECT 1 FROM customerassignments a
-					WHERE a.customergroupid = '.intval($_GET['groupid']).'
-						AND a.customerid = d.customerid)' : '')
-				.' AND NOT EXISTS (
-					SELECT 1 FROM customerassignments a
-					JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
-					WHERE e.userid = lms_current_user() AND a.customerid = d.customerid)'
-				.' ORDER BY CEIL(cdate/86400), id',
-				array($datefrom, $dateto, DOC_INVOICE, DOC_CNOTE));
-	if (!$ids) {
-		$SESSION->close();
-		die;
-	}
-
-	if (!empty($_GET['original'])) $which[] = trans('ORIGINAL');
-	if (!empty($_GET['copy'])) $which[] = trans('COPY');
-	if (!empty($_GET['duplicate'])) $which[] = trans('DUPLICATE');
-
-	if (!sizeof($which)) $which[] = trans('ORIGINAL');
-
-	$count = sizeof($ids) * sizeof($which);
+	$count = count($ids) * count($which);
 	$i = 0;
 
 	if ($jpk) {
@@ -755,17 +888,28 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
 	if (!empty($_GET['copy'])) $which[] = trans('COPY');
 	if (!empty($_GET['duplicate'])) $which[] = trans('DUPLICATE');
 
-	if (!sizeof($which)) {
+	if (!count($which)) {
 		$tmp = explode(',', ConfigHelper::getConfig('invoices.default_printpage'));
 		foreach ($tmp as $t)
 			if (trim($t) == 'original') $which[] = trans('ORIGINAL');
 			elseif (trim($t) == 'copy') $which[] = trans('COPY');
 			elseif (trim($t) == 'duplicate') $which[] = trans('DUPLICATE');
 
-		if (!sizeof($which)) $which[] = trans('ORIGINAL');
+		if (!count($which)) $which[] = trans('ORIGINAL');
 	}
 
-	$count = sizeof($which);
+	if ($invoice['archived'] && !in_array(trans('DUPLICATE'), $which)) {
+		$invoice = $LMS->GetArchiveDocument($_GET['id']);
+		if ($invoice) {
+			header('Content-Type: ' . $invoice['content-type']);
+			header('Content-Disposition: inline; filename=' . $invoice['filename']);
+			echo $invoice['data'];
+		}
+		$SESSION->close();
+		die;
+	}
+
+	$count = count($which);
 	$i = 0;
 
 	$invoice['dontpublish'] = $dontpublish;
@@ -817,6 +961,6 @@ if ($jpk) {
 	$document->WriteToBrowser($attachment_name);
 
 if (!$dontpublish && isset($ids) && !empty($ids))
-	$DB->Execute('UPDATE documents SET published = 1 WHERE id IN (' . implode(',', $ids) . ')');
+	$LMS->PublishDocuments($ids);
 
 ?>

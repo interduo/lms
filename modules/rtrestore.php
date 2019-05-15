@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -42,7 +42,6 @@ if ($maction == 'restore')
 if ($taction == 'restore')
 {
 	$ticket = intval($_GET['id']);
-	$queue = $DB->GetOne('SELECT queueid FROM rttickets WHERE id = ?', array($ticket));
 	$del = 1;
 	$nodel = 0;
 	$deltime = 0;
@@ -53,7 +52,8 @@ if ($taction == 'restore')
 	$DB->Execute('UPDATE rtmessages SET deleted=?, deluserid=? WHERE deleted=? and deltime = ? and ticketid = ?', array($nodel, $deluserid, $del, $deltime, $ticket));
 	$DB->CommitTrans();
 
-	$SESSION->redirect('?m=rtqueueview&id=' . $queue);
+	$SESSION->redirect('?m=rtqueueview'
+		. ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
 }
 
 if ($qaction == 'restore')

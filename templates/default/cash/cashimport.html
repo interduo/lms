@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -105,7 +105,7 @@
 	{/if}
     </TBODY>
     <TFOOT>
-	<TR class="dark">
+	<TR class="lms-ui-button-panel">
 		<TD class="nobr" colspan="3">
 			<label>
 				<INPUT type="checkbox" name="allbox" class="lms-ui-multi-check-all" value="1">
@@ -228,7 +228,7 @@
 	</TR>
     </THEAD>
     <TBODY>
-	<TR class="dark">
+	<TR class="lms-ui-button-panel">
 		<TD>
 			<TABLE id="cashimport-packages-datatable"{if !empty($sourcefiles)} class="lms-ui-datatable lms-ui-datatable-column-search lms-ui-datatable-column-toggle" data-order='[[ 0, "desc" ]]' data-page-length="25" data-state-save="true" style="display: none;"{/if} width="100%">
 				<COLGROUP>

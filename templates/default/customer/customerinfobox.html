@@ -28,7 +28,7 @@
 		<TD WIDTH="1%">
 			<IMG src="img/{$_CSTATUSES[$customerinfo.status].img}" alt="">
 		</TD>
-		<TD WIDTH="99%" class="bold">
+		<TD WIDTH="99%" class="bold lms-ui-customer-status-{$_CSTATUSES[$customerinfo.status].alias}">
 			{$_CSTATUSES[$customerinfo.status].singularlabel}
 		</TD>
 	</TR>
@@ -54,7 +54,7 @@
 	{foreach $customerinfo.addresses as $v}
 		{if $v.location_address_type == $smarty.const.BILLING_ADDRESS}
 		<tr>
-			<td style="width: 1%;"><img src="img/home.gif" alt="" title="{trans('billing address')}"></td>
+			<td style="width: 1%;"><i class="lms-ui-icon-home fa-fw" title="{trans('billing address')}"></i></td>
 			<td style="width: 99%;">
 				<span title="{trans('billing address')}">{if $v.teryt}{t a=$v.location}$a (TERRIT){/t}{else}{$v.location}{/if}</span>
 			</td>
@@ -102,7 +102,10 @@
 		<TD style="width: 1%;"></TD>
 		<TD style="width: 99%;" class="nobr">
 			<fieldset style="width: 1%;" class="nobr">
-				<legend class="bold"><IMG SRC="{$properties.ui.legend.icon}" ALT=""> {$properties.ui.legend.text}</legend>
+				<legend class="bold">
+					<i class="{$properties.ui.legend.icon}"></i>
+					{$properties.ui.legend.text}
+				</legend>
 				<TABLE>
 					{foreach $customerinfo[$type|cat:"s"] as $contact}
 					<TR{if ($contact.type & $smarty.const.CONTACT_DISABLED) == $smarty.const.CONTACT_DISABLED} class="blend"{/if}>
@@ -122,10 +125,16 @@
 {if $customerinfo.pin}
 	<TR>
 		<TD WIDTH="1%">
-			<IMG SRC="img/pin.gif" ALT="">
+			<IMG SRC="img/pin.gif" class="lms-ui-button-clipboard" data-clipboard-text="{$customerinfo.pin}" ALT="">
 		</TD>
 		<TD WIDTH="99%">
-			{$customerinfo.pin}
+			{if ConfigHelper::checkConfig('phpui.protect_passwords')}
+				<button class="lms-ui-button-clipboard lms-ui-button" data-clipboard-text="{$customerinfo.pin}">
+					<i></i> {trans("Copy")}
+				</button>
+			{else}
+				{$customerinfo.pin}
+			{/if}
 		</TD>
 	</TR>
 {/if}
@@ -231,7 +240,7 @@
                 {if $customerinfo.cutoffstop > $smarty.now}
 			    <TR>
 			        <TD colspan="2">
-			            <span class="alert">
+			            <span class="lms-ui-error">
 			            {if $customerinfo.cutoffstop == intval(pow(2, 31) - 1)}
 			            {trans("Cutoff suspended indefinitely")}
 			            {else}
@@ -352,7 +361,7 @@
 		</TD>
 		<TD WIDTH="98%">
 			{if $customerinfo.balance < 0}
-			<span class="alert">{$customerinfo.balance|money_format}</span>
+			<span class="lms-ui-error">{$customerinfo.balance|money_format}</span>
 			{if $instantpayment}
 			<FORM name="instantpayment" method="POST" action="?m=balanceadd&id={$customerinfo.id}&receipt=1">
 				<script type="text/javascript">
@@ -431,7 +440,9 @@
 				<A href="?m=domainlist&amp;c={$customerinfo.id}">{trans("Domains")} ({$customerstats['domains']})</A> <IMG src="img/network.gif" alt="{trans("Domains")}">
 				<A href="?m=trafficprint&amp;type=customertraffic&amp;customer={$customerinfo.id}" target="_blank">{trans("Stats")} <IMG src="img/traffic.gif" alt="{trans("Stats")}"></A>
 				<A href="?m=customeredit&amp;id={$customerinfo.id}" ACCESSKEY="E">{trans("Edit")} <IMG src="img/edit.gif" alt="{trans("Edit")}"></A>
+				{if ConfigHelper::checkPrivilege('customer_removal')}
 				<A href="?m=customerdel&amp;id={$customerinfo.id}">{trans("Delete")} <img src="img/delete.gif" alt="{trans("Delete")}"></A>
+				{/if}
 			{/if}
 			{if $info_link}
 				<A href="?m=customerinfo&amp;id={$customerinfo.id}">{trans("Info")} <img src="img/info.gif" alt="{trans("Info")}"></A>

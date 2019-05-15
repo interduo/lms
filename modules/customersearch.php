@@ -72,10 +72,13 @@ else
 	$state = $_POST['s'];
 $SESSION->save('csls', $state);
 
-if(!isset($_POST['n']))
+if (!isset($_POST['n']))
 	$SESSION->restore('csln', $network);
 else
-	$network = $_POST['n'];
+	if ($_POST['n'] == 'all')
+		$network = array();
+	else
+		$network = Utils::filterIntegers($_POST['n']);
 $SESSION->save('csln', $network);
 
 if(!isset($_POST['g']))
@@ -105,8 +108,9 @@ $SESSION->save('csld', $division);
 if(isset($_GET['search']))
 {
 	$layout['pagetitle'] = trans('Customer Search Results');
-	$customerlist = $LMS->GetCustomerList(compact("order", "state", "network", "customergroup", "search", "time", "sqlskey", "nodegroup", "division"));
-	
+	$customerlist = $LMS->GetCustomerList(compact("order", "state", "network", "customergroup", "search",
+		"time", "sqlskey", "nodegroup", "division", "balance", "balance_relation"));
+
 	$listdata['total'] = $customerlist['total'];
 	$listdata['direction'] = $customerlist['direction'];
 	$listdata['order'] = $customerlist['order'];
@@ -114,7 +118,7 @@ if(isset($_GET['search']))
 	$listdata['over'] = $customerlist['over'];
 	$listdata['state'] = $state;
 	$listdata['network'] = $network;
-	$listdata['customergroup'] = $customergroup;
+	$listdata['customergroup'] = empty($customergroup) ? array() : array($customergroup);
 	$listdata['nodegroup'] = $nodegroup;
 	$listdata['division'] = $division;
 
@@ -162,9 +166,9 @@ if(isset($_GET['search']))
 else
 {
 	$layout['pagetitle'] = trans('Customer Search');
-	
+
 	$SESSION->remove('cslp');
-	
+
 	$SMARTY->assign('networks', $LMS->GetNetworks());
 	$SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
 	$SMARTY->assign('nodegroups', $LMS->GetNodeGroupNames());

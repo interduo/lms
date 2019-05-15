@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,6 +23,8 @@
  *
  *  $Id$
  */
+
+check_file_uploads();
 
 $SMARTY->setDefaultResourceType('file');
 
@@ -103,71 +105,76 @@ if (isset($_POST['document'])) {
 
 		$result = $LMS->ValidateAssignment($selected_assignment);
 		extract($result);
+
+		if (!$LMS->CheckSchemaModifiedValues($a))
+			$error['promotion-select'] = trans('Illegal promotion schema period value modification!');
 	} else
 		$selected_assignment = null;
 
 	$files = array();
 
-	if ($document['reference']) {
-		$document['reference'] = $DB->GetRow('SELECT id, type, fullnumber, cdate FROM documents
-			WHERE id = ?', array($document['reference']));
-	}
-	$SMARTY->assignByRef('document', $document);
-
-	if ($document['templ']) {
-		foreach ($documents_dirs as $doc)
-			if (file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'])) {
-				$doc_dir = $doc;
-				$template_dir = $doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'];
-				break;
-			}
-
-		$result = '';
-		$script_result = '';
-
-		// read template information
-		include($template_dir . DIRECTORY_SEPARATOR . 'info.php');
-
-		// call plugin
-		if (!empty($engine['plugin'])) {
-			if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
-			. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.php'))
-				include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
-					. DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
-			if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
-				. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.js'))
-				$script_result = '<script src="' . $_SERVER['REQUEST_URI'] . '&template=' . $engine['name'] . '"></script>';
+	if (!isset($_GET['ajax'])) {
+		if ($document['reference']) {
+			$document['reference'] = $DB->GetRow('SELECT id, type, fullnumber, cdate FROM documents
+				WHERE id = ?', array($document['reference']));
 		}
-		// get plugin content
-		$SMARTY->assign('plugin_result', $result);
-		$SMARTY->assign('script_result', $script_result);
-		$SMARTY->assign('attachment_result', GenerateAttachmentHTML($template_dir, $engine,
-			isset($document['attachments']) ? $document['attachments'] : array()));
+		$SMARTY->assignByRef('document', $document);
 
-		// run template engine
-		if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
-			. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php'))
-			require_once($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
-				. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php');
-		else
-			require_once(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
-				. 'default' . DIRECTORY_SEPARATOR . 'engine.php');
+		if ($document['templ']) {
+			foreach ($documents_dirs as $doc)
+				if (file_exists($doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'])) {
+					$doc_dir = $doc;
+					$template_dir = $doc . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $document['templ'];
+					break;
+				}
 
-		if (!empty($output)) {
-			$file = DOC_DIR . DIRECTORY_SEPARATOR . 'tmp.file';
-			$fh = fopen($file, 'w');
-			fwrite($fh, $output);
-			fclose($fh);
+			$result = '';
+			$script_result = '';
 
-			$files[] = array(
-				'md5sum' => md5_file($file),
-				'type' => $engine['content_type'],
-				'name' => $engine['output'],
-				'tmpname' => $file,
-				'main' => true,
-			);
-		} else if (empty($error))
-			$error['templ'] = trans('Problem during file generation!');
+			// read template information
+			include($template_dir . DIRECTORY_SEPARATOR . 'info.php');
+
+			// call plugin
+			if (!empty($engine['plugin'])) {
+				if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.php'))
+					include($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . $engine['name']
+						. DIRECTORY_SEPARATOR . $engine['plugin'] . '.php');
+				if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. $engine['name'] . DIRECTORY_SEPARATOR . $engine['plugin'] . '.js'))
+					$script_result = '<script src="' . $_SERVER['REQUEST_URI'] . '&template=' . $engine['name'] . '"></script>';
+			}
+			// get plugin content
+			$SMARTY->assign('plugin_result', $result);
+			$SMARTY->assign('script_result', $script_result);
+			$SMARTY->assign('attachment_result', GenerateAttachmentHTML($template_dir, $engine,
+				isset($document['attachments']) ? $document['attachments'] : array()));
+
+			// run template engine
+			if (file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+				. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php'))
+				require_once($doc_dir . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. $engine['engine'] . DIRECTORY_SEPARATOR . 'engine.php');
+			else
+				require_once(DOC_DIR . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR
+					. 'default' . DIRECTORY_SEPARATOR . 'engine.php');
+
+			if (!empty($output)) {
+				$file = DOC_DIR . DIRECTORY_SEPARATOR . 'tmp.file';
+				$fh = fopen($file, 'w');
+				fwrite($fh, $output);
+				fclose($fh);
+
+				$files[] = array(
+					'md5sum' => md5_file($file),
+					'type' => $engine['content_type'],
+					'name' => $engine['output'],
+					'tmpname' => $file,
+					'main' => true,
+				);
+			} else if (empty($error))
+				$error['templ'] = trans('Problem during file generation!');
+		}
 	}
 
 	$result = handle_file_uploads('attachments', $error);
@@ -201,39 +208,9 @@ if (isset($_POST['document'])) {
 		$error['files'] = trans('You must to specify file for upload or select document template!');
 
 	if (!$error) {
-		foreach ($files as &$file) {
-			$file['path'] = DOC_DIR . DIRECTORY_SEPARATOR . substr($file['md5sum'], 0, 2);
-			$file['newfile'] = $file['path'] . DIRECTORY_SEPARATOR . $file['md5sum'];
-
-			// If we have a file with specified md5sum, we assume
-			// it's here because of some error. We can replace it with
-			// the new document file
-			// why? document attachment can be shared between different documents.
-			// we should rather use the other message digest in such case!
-			$filename = empty($file['tmpname']) ? $file['name'] : $file['tmpname'];
-			if ($LMS->DocumentAttachmentExists($file['md5sum'])
-				&& (filesize($file['newfile']) != filesize($filename)
-					|| hash_file('sha256', $file['newfile']) != hash_file('sha256', $filename))) {
-				$error['files'] = trans('Specified file exists in database!');
-				break;
-			}
-		}
-		unset($file);
-		if (!$error) {
-			foreach ($files as $file) {
-				@mkdir($file['path'], 0700);
-				if (empty($file['tmpname'])) {
-					if (!@copy($file['name'], $file['newfile'])) {
-						$error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
-						break;
-					}
-				} elseif (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
-					$error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
-					break;
-				}
-			}
+		$error = $LMS->AddDocumentFileAttachments($files);
+		if (empty($error) && !empty($tmppath))
 			rrmdir($tmppath);
-		}
 	}
 
 	if (!$error) {
@@ -348,6 +325,7 @@ if (isset($_POST['document'])) {
 				$selected_assignment['commited'] = isset($document['closed']) ? 1 : 0;
 
 				if (is_array($selected_assignment['stariffid'][$schemaid])) {
+					$modifiedvalues = $a['values'][$schemaid];
 					$copy_a = $selected_assignment;
 					$snodes = $selected_assignment['snodes'][$schemaid];
 					$sphones = $selected_assignment['sphones'][$schemaid];
@@ -357,6 +335,7 @@ if (isset($_POST['document'])) {
 							continue;
 
 						$copy_a['promotiontariffid'] = $v;
+						$copy_a['modifiedvalues'] = isset($modifiedvalues[$label][$v]) ? $modifiedvalues[$label][$v] : array();
 						$copy_a['nodes'] = $snodes[$label];
 						$copy_a['phones'] = $sphones[$label];
 						$tariffid = $LMS->AddAssignment($copy_a);

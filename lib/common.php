@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -385,7 +385,7 @@ function rmkdir($dir)
 		$dir = getcwd() . DIRECTORY_SEPARATOR . $dir;
 	$directories = explode(DIRECTORY_SEPARATOR, $dir);
 	$makedirs = 0;
-	for($i=1;$i<sizeof($directories);$i++)
+	for($i=1;$i<count($directories);$i++)
 	{
 		$cdir = '';
 		for($j=1;$j<$i+1;$j++)
@@ -498,6 +498,19 @@ function setunits($data)  // for traffic data
 	return array($number, $unit);
 }
 
+function convert_to_units($value, $threshold = 5, $multiplier = 1000) {
+	$unit_suffix = ($multiplier == 1024 ? 'ibit' : 'bit');
+	$threshold = floatval($threshold);
+	$multiplier = floatval($multiplier);
+	if ($value < $multiplier * $multiplier * $threshold)
+		$result = round($value / $multiplier, 2) . ' k' . $unit_suffix;
+	elseif ($value < $multiplier * $multiplier * $multiplier * $threshold)
+		$result = round($value / $multiplier / $multiplier, 2) . ' M' . $unit_suffix;
+	else
+		$result = round($value / $multiplier / $multiplier / $multiplier, 2) . ' G' . $unit_suffix;
+	return str_replace(',', '.', $result);
+}
+
 function r_trim($array)
 {
 	foreach($array as $key => $value)
@@ -591,10 +604,10 @@ function docnumber($number = null, $template = null, $cdate = null, $ext_num = '
 }
 
 // our finance round
-function f_round($value)
+function f_round($value, $precision = 2)
 {
 	$value = str_replace(',','.', $value);
-	$value = round ( (float) $value, 2);
+	$value = round ( (float) $value, $precision);
 	return $value;
 }
 
@@ -997,13 +1010,16 @@ function date_to_timestamp($date) {
 	return mktime(0, 0, 0, $m['month'], $m['day'], $m['year']);
 }
 
-function datetime_to_timestamp($datetime) {
+function datetime_to_timestamp($datetime, $midnight = false) {
 	if (!preg_match('/^(?<year>[0-9]{4})\/(?<month>[0-9]{2})\/(?<day>[0-9]{2})\s+(?<hour>[0-9]{2}):(?<minute>[0-9]{2})(?::(?<second>[0-9]{2}))?$/', $datetime, $m)
 		|| !checkdate($m['month'], $m['day'], $m['year']) || $m['hour'] > 23 || $m['minute'] > 59 || (isset($m['second']) && $m['second'] > 59))
 		return null;
 	if (!isset($m['second']))
 		$m['second'] = 0;
-	return mktime($m['hour'], $m['minute'], $m['second'], $m['month'], $m['day'], $m['year']);
+	if ($midnight)
+		return mktime(0, 0, 0, $m['month'], $m['day'], $m['year']);
+	else
+		return mktime($m['hour'], $m['minute'], $m['second'], $m['month'], $m['day'], $m['year']);
 }
 
 function getdir($pwd = './', $pattern = '^.*$') {
@@ -1103,6 +1119,17 @@ function check_url($url) {
 	if (!isset($components['host']) || !isset($components['scheme']))
 		return false;
 	return true;
+}
+
+function check_file_uploads() {
+	if (isset($_GET['fileupload']) && !isset($_POST['fileupload'])) {
+		$result = array(
+			'error' => trans('General file upload error - files are too large probably!'),
+		);
+		header('Content-type: application/json');
+		print json_encode($result);
+		die;
+	}
 }
 
 function handle_file_uploads($elemid, &$error) {

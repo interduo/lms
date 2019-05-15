@@ -37,8 +37,8 @@ $tariff['promotions'] = $DB->GetAll('SELECT DISTINCT p.name, p.id
     FROM promotionassignments a
     JOIN promotionschemas s ON (s.id = a.promotionschemaid)
     JOIN promotions p ON (p.id = s.promotionid)
-    WHERE a.tariffid = ? OR s.ctariffid = ?
-    ORDER BY p.name', array($tariff['id'], $tariff['id']));
+    WHERE a.tariffid = ?
+    ORDER BY p.name', array($tariff['id']));
 
 if (!empty($tariff['numberplanid']))
 	$tariff['numberplan'] = $DB->GetRow('SELECT template, period FROM numberplans WHERE id = ?', array($tariff['numberplanid']));
@@ -48,7 +48,7 @@ $layout['pagetitle'] = trans('Subscription Info: $a',$tariff['name']);
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 // if selected tariff is phone tariff then load prefixes assigned to this tariff
-if ($tariff['type'] == TARIFF_PHONE) {
+if ($tariff['type'] == SERVICE_PHONE) {
 	$SMARTY->assign('voip_fields', $DB->GetRow("SELECT
                                                     vt.name as pricelist, vt.id as pricelist_id,
                                                     vr.name as rule_name, vr.id as rule_name_id

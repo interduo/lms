@@ -60,7 +60,7 @@ class LMSTariffTagManager extends LMSManager implements LMSTariffTagManagerInter
                 $totalcount += $row['tariffscount'];
             }
 
-            $tarifftaglist['total'] = sizeof($tarifftaglist);
+            $tarifftaglist['total'] = count($tarifftaglist);
             $tarifftaglist['totalcount'] = $totalcount;
         }
 

@@ -3,7 +3,7 @@
     <THEAD>
 	<TR{if $devicepanel} class="hand" onClick="showOrHide('devicepanel');"{/if}>
 		<TD WIDTH="1%">
-			<IMG SRC="img/netdev.gif" ALT="">
+			<IMG SRC="img/netnode.png" ALT="">
 		</TD>
 		<TD WIDTH="99%" class="nobr bold">{$nodeinfo.name} ({$nodeinfo.id|string_format:"%04d"})</TD>
 	</TR>
@@ -107,6 +107,19 @@
 			{$_NETELEMENTOWNERSHIPS[$nodeinfo.ownership]} {if ($nodeinfo.ownership >= 1)} ({$nodeinfo.coowner}) {/if}
 		</TD>
 	</TR>
+	{if $nodeinfo.ownerid != null}
+	<tr>
+		<td>
+			<img src="img/customer.gif" alt="">
+		</td>
+		<td class="bold">
+			{trans("Owner:")}
+		</td>
+		<td>
+			<a href="?m=customerinfo&id={$nodeinfo.ownerid}">{$nodeinfo.owner}</a>
+		</td>
+	</tr>
+	{/if}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/producer.gif" ALT="">
@@ -133,12 +146,14 @@
         <TR>
                 <TD WIDTH="1%"><IMG SRC="img/users.gif" ALT=""></TD>
                 <TD width="1%" class="bold">{trans('Created:')}</TD>
-                <TD width="98%">{$nodeinfo.createtime|date_format:"%x (%A)"}</TD>
+                <TD width="98%">{$nodeinfo.createtime|date_format:"%Y/%m/%d (%A)"}</TD>
         </TR>
         <TR>
                 <TD WIDTH="1%"><IMG SRC="img/calendar.gif" ALT=""></TD>
                 <TD width="1%" class="bold">{trans('Last inspection:')}</TD>
-                <TD width="98%">{$nodeinfo.lastinspectiontime|date_format:"%x (%A)"}</TD>
+                <TD width="98%">
+					{if $nodeinfo.lastinspectiontime}{$nodeinfo.lastinspectiontime|date_format:"%Y/%m/%d (%A)"}{else}-{/if}
+				</TD>
         </TR>
         <TR>
                 <TD WIDTH="1%"><IMG SRC="img/phone.gif" ALT=""></TD>

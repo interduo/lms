@@ -151,25 +151,24 @@ if (isset($_GET['ajax'])) {
     header('Content-type: text/plain');
     $search = urldecode(trim($_GET['what']));
 
-    $result = $DB->GetAll('SELECT id, name as item
+    $candidates = $DB->GetAll('SELECT id, name as item
                            FROM voip_prefix_groups
                            WHERE name ?LIKE? ?
                            LIMIT 20', array('%'.$search.'%'));
 
-    $eglible = $descriptions = array();
-    if ($result)
-        foreach ($result as $idx => $row) {
-            $eglible[$row['item']] = escape_js($row['item']);
-            $descriptions[$row['item']] = $row['id'] . ' :id';
+    $result = array();
+    if ($candidates)
+        foreach ($candidates as $idx => $row) {
+            $name = $row['item'];
+            $name_class = '';
+            $description = $row['id'] . ' :id';
+            $description_class = '';
+            $action = '';
+
+            $result[$row['item']] = compact('name', 'name_class', 'description', 'description_class', 'action');
         }
-
-    if ($eglible) {
-        print "this.eligible = [\"" . implode('","', $eglible) . "\"];\n";
-        print "this.descriptions = [\"" . implode('","', $descriptions) . "\"];\n";
-    }
-    else
-        print "false;\n";
-
+    header('Content-Type: application/json');
+    echo json_encode(array_values($result));
     exit;
 }
 

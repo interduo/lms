@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,6 +27,11 @@
 if(! $LMS->QueueExists($_GET['id']))
 {
 	$SESSION->redirect('?m=rtqueuelist');
+}
+
+if (isset($_GET['unread'])) {
+	$LMS->MarkQueueAsRead($_GET['id']);
+	$SESSION->redirect('?' . $SESSION->get('backto'));
 }
 
 if(isset($_POST['queue']))
@@ -60,7 +65,7 @@ if(isset($_POST['queue']))
 	elseif (!$queue['resolveticketsubject'] && $queue['resolveticketbody'])
 		$error['resolveticketsubject'] = trans('Resolve ticket subject should not be empty if you set resolve ticket body!');
 
-	$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+	$categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 	if (isset($queue['categories'])) {
 		foreach ($categories as &$category)
 			if (isset($queue['categories'][$category['id']]))
@@ -72,12 +77,13 @@ if(isset($_POST['queue']))
 		$DB->Execute('UPDATE rtqueues SET name=?, email=?, description=?,
 				newticketsubject=?, newticketbody=?,
 				newmessagesubject=?, newmessagebody=?,
-				resolveticketsubject=?, resolveticketbody=? WHERE id=?',
+				resolveticketsubject=?, resolveticketbody=?, verifierticketsubject=?, verifierticketbody=?, verifierid=? WHERE id=?',
 				array(trim($queue['name']),
 					$queue['email'], $queue['description'],
 					$queue['newticketsubject'], $queue['newticketbody'],
 					$queue['newmessagesubject'], $queue['newmessagebody'],
-					$queue['resolveticketsubject'], $queue['resolveticketbody'],
+					$queue['resolveticketsubject'], $queue['resolveticketbody'], $queue['verifierticketsubject'], $queue['verifierticketbody'],
+					!empty($queue['verifierid']) ? $queue['verifierid'] : NULL,
 					$queue['id']));
 
 		$DB->Execute('DELETE FROM rtrights WHERE queueid=?', array($queue['id']));
@@ -103,7 +109,7 @@ if(isset($_POST['queue']))
 	}
 } else {
 	$queue = $LMS->GetQueue($_GET['id']);
-	$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+	$categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 	$queuecategories = $LMS->GetQueueCategories($_GET['id']);
 	if (empty($categories))
 		$categories = array();
@@ -113,11 +119,15 @@ if(isset($_POST['queue']))
 	unset($category);
 }
 
+$userlist = $LMS->getUserList();
+unset($userlist['total']);
+
 $layout['pagetitle'] = trans('Queue Edit: $a', $queue['name']);
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $SMARTY->assign('queue', $queue);
+$SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('categories', $categories);
 $SMARTY->assign('error', $error);
 $SMARTY->display('rt/rtqueueedit.html');

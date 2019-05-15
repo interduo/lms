@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -102,20 +102,20 @@ if (isset($_GET['ajax']) && isset($_GET['what'])) {
 		WHERE c.name ?LIKE? ' . $DB->Escape("%$search%") . '
 		ORDER BY c.name, b.type LIMIT 10');
 
-	$eligible = $actions = array();
+	$result = array();
 	if ($list)
 		foreach ($list as $idx => $row) {
-			$name = sprintf('%s (%s%s, %s)', $row['name'], $row['btype'] < 4 ? trans('<!borough_abbr>') : '', $row['borough'], trans('<!district_abbr>') . $row['district']);
+			$name = sprintf('%s (%s%s, %s)', $row['name'], $row['btype'] < 4 ?
+				trans('<!borough_abbr>') : '', $row['borough'], trans('<!district_abbr>') . $row['district']);
+			$name_class = '';
+			$description = $description_class = '';
+			$action = sprintf("javascript: search_update(%d,%d,%d)", $row['id'], $row['districtid'], $row['stateid']);
 
-			$eligible[$idx] = escape_js($name);
-			$actions[$idx] = sprintf("javascript: search_update(%d,%d,%d)", $row['id'], $row['districtid'], $row['stateid']);
+			$result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
 		}
 
-	if ($eligible) {
-		print "this.eligible = [\"" . implode('","', $eligible) . "\"];\n";
-		print "this.actions = [\"" . implode('","', $actions) . "\"];\n";
-	} else
-		print "false;\n";
+	header('Content-Type: application/json');
+	echo json_encode(array_values($result));
 	die;
 }
 

@@ -29,7 +29,7 @@ if (defined('USERPANEL_SETUPMODE')) {
 		global $SMARTY, $LMS, $AUTH;
 
 		$default_categories = explode(',', ConfigHelper::getConfig('userpanel.default_categories'));
-		$categories = $LMS->GetCategoryListByUser(Auth::GetCurrentUser());
+		$categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 		foreach ($categories as $category) {
 			if (in_array($category['id'], $default_categories))
 				$category['checked'] = true;
@@ -88,8 +88,10 @@ function module_main() {
 
 	$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
+	$files = array();
+	$attachments = array();
+
 	if (isset($_FILES['files'])) {
-		$files = array();
 		foreach ($_FILES['files']['name'] as $fileidx => $filename)
 			if (!empty($filename)) {
 				if (is_uploaded_file($_FILES['files']['tmp_name'][$fileidx]) && $_FILES['files']['size'][$fileidx]) {
@@ -104,7 +106,12 @@ function module_main() {
 						'name' => $filename,
 						'tmp_name' => $_FILES['files']['tmp_name'][$fileidx],
 						'type' => $_FILES['files']['type'][$fileidx],
-						'contents' => $filecontents,
+						'contents' => &$filecontents,
+					);
+					$attachments[] = array(
+						'content_type' => $_FILES['files']['type'][$fileidx],
+						'filename' => $filename,
+						'data' => &$filecontents,
 					);
 				} else { // upload errors
 					if (isset($error['files']))
@@ -130,7 +137,7 @@ function module_main() {
 		$ticket['subject'] = strip_tags($ticket['subject']);
 		$ticket['body'] = strip_tags($ticket['body']);
 
-		if (!$ticket['queue'] || !$ticket['categories']) {
+		if (!$ticket['queue']) {
 			header('Location: ?m=helpdesk');
 			die;
 		}
@@ -177,12 +184,7 @@ function module_main() {
 					$mailfname = '"'.$mailfname.'"';
 				}
 
-				if ($user['email'])
-					$mailfrom = $user['email'];
-				elseif ($qemail = $LMS->GetQueueEmail($ticket['queue']))
-					$mailfrom = $qemail;
-				else
-					$mailfrom =  $ticket['mailfrom'];
+				$mailfrom = $LMS->DetermineSenderEmail($user['email'], $LMS->GetQueueEmail($ticket['queue']), $ticket['mailfrom']);
 
 				$ticketdata = $LMS->GetTicketContents($id);
 
@@ -215,11 +217,12 @@ function module_main() {
 				$queuedata = $LMS->GetQueue($ticket['queue']);
 				if (!empty($queuedata['newticketsubject']) && !empty($queuedata['newticketbody'])
 					&& !empty($emails)) {
+					$ticketid = sprintf("%06d", $id);
 					$custmail_subject = $queuedata['newticketsubject'];
-					$custmail_subject = str_replace('%tid', $id, $custmail_subject);
+					$custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
 					$custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
 					$custmail_body = $queuedata['newticketbody'];
-					$custmail_body = str_replace('%tid', $id, $custmail_body);
+					$custmail_body = str_replace('%tid', $ticketid, $custmail_body);
 					$custmail_body = str_replace('%cid', $SESSION->id, $custmail_body);
 					$custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
 					$custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
@@ -230,7 +233,7 @@ function module_main() {
 						'Reply-To' => $headers['From'],
 						'Subject' => $custmail_subject,
 					);
-					$LMS->SendMail(implode(',', $emails), $custmail_headers, $custmail_body);
+					$LMS->SendMail(implode(',', $emails), $custmail_headers, $custmail_body, null, null, $LMS->GetRTSmtpOptions());
 				}
 
 				$params = array(
@@ -259,6 +262,7 @@ function module_main() {
 					'mail_headers' => $headers,
 					'mail_body' => $body,
 					'sms_body' => $sms_body,
+					'attachments' => $attachments,
 				));
 			}
 
@@ -341,12 +345,7 @@ function module_main() {
 			$ticket['email'] = $LMS->GetCustomerEmail($SESSION->id);
 			$ticket['mailfrom'] = $ticket['email'] ? $ticket['email'] : '';
 
-			if ($user['email'])
-				$mailfrom = $user['email'];
-			elseif (!empty($ticket['queue']['email']))
-				$mailfrom = $ticket['queue']['email'];
-			else
-				$mailfrom = $ticket['mailfrom'];
+			$mailfrom = $LMS->DetermineSenderEmail($user['email'], $ticket['queue']['email'], $ticket['mailfrom']);
 
 			$ticketdata = $LMS->GetTicketContents($ticket['id']);
 
@@ -389,6 +388,7 @@ function module_main() {
 				'priority' => $RT_PRIORITIES[$ticketdata['priority']],
 				'subject' => $ticket['subject'],
 				'body' => $ticket['body'],
+				'attachments' => &$attachments,
 			);
 
 			// try to use LMS url from userpanel configuration
@@ -407,6 +407,7 @@ function module_main() {
 				'mail_headers' => $headers,
 				'mail_body' => $body,
 				'sms_body' => $sms_body,
+				'attachments' => &$attachments,
 			));
 
 			header('Location: ?m=helpdesk&op=view&id='.$ticket['id']);
@@ -419,6 +420,28 @@ function module_main() {
 		}
 	} else
 		$SMARTY->assign('helpdesk', array());
+
+	$unit_multipliers = array(
+		'K' => 1024,
+		'M' => 1024 * 1024,
+		'G' => 1024 * 1024 * 1024,
+		'T' => 1024 * 1024 * 1024 * 1024,
+	);
+	foreach (array('post_max_size', 'upload_max_filesize') as $var) {
+		preg_match('/^(?<number>[0-9]+)(?<unit>[kKmMgGtT]?)$/', ini_get($var), $m);
+		$unit_multiplier = isset($m['unit']) ? $unit_multipliers[strtoupper($m['unit'])] : 1;
+		if ($var == 'post_max_size')
+			$unit_multiplier *= 1/1.33;
+		if (empty($m['number'])) {
+			$val['bytes'] = 0;
+			$val['text'] = trans('(unlimited)');
+		} else {
+			$val['bytes'] = round($m['number'] * $unit_multiplier);
+			$res = setunits($val['bytes']);
+			$val['text'] = round($res[0]) . ' ' . $res[1];
+		}
+		$SMARTY->assign($var, $val);
+	}
 
 	if (isset($_GET['op']) && $_GET['op'] == 'view') {
 		if ($LMS->TicketExists($_GET['id'])) {
@@ -469,8 +492,14 @@ function module_main() {
 			}
 			$SMARTY->assign('helpdesk', $helpdesk);
 
-			$SMARTY->assign('title', trans('Request No. $a / Queue: $b',
-				sprintf('%06d', $ticket['ticketid']), $ticket['queuename']));
+			if (count($queues)==1) {
+                        	$SMARTY->assign('title', trans('Request No. $a',
+                                	sprintf('%06d', $ticket['ticketid'])));
+                                } else {
+                                        $SMARTY->assign('title', trans('Request No. $a / Queue: $b',
+                                        sprintf('%06d', $ticket['ticketid']), $ticket['queuename']));
+                                }
+
 			if ($ticket['customerid'] == $SESSION->id) {
 				$SMARTY->assign('ticket', $ticket);
 				$SMARTY->display('module:helpdeskreply.html');

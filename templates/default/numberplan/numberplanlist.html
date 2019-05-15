@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -17,7 +17,7 @@
 	</TR>
 	{if $listdata.total != 0}
 	<TR>
-		<TD class="pagination" COLSPAN="8">
+		<TD class="lms-ui-pagination" COLSPAN="8">
 			{include file="scroller.html" loop=$numberplanlist}
 		</TD>
 	</TR>
@@ -66,7 +66,7 @@
     <TFOOT>
 	{if $listdata.total != 0}
 	<TR>
-		<TD class="pagination" COLSPAN="8">
+		<TD class="lms-ui-pagination" COLSPAN="8">
 			{include file="scroller.html" loop=$numberplanlist}
 		</TD>
 	</TR>

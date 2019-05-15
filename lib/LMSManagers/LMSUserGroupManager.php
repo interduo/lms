@@ -60,7 +60,7 @@ class LMSUserGroupManager extends LMSManager implements LMSUserGroupManagerInter
                 $totalcount += $row['userscount'];
             }
 
-            $usergrouplist['total'] = sizeof($usergrouplist);
+            $usergrouplist['total'] = count($usergrouplist);
             $usergrouplist['totalcount'] = $totalcount;
         }
 

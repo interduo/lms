@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -57,7 +57,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-sms2rt.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 EOF;
 	exit(0);
@@ -66,7 +66,7 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-sms2rt.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -m, --message-file=<message-file>       name of message file;
@@ -84,7 +84,7 @@ $quiet = array_key_exists('quiet', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-sms2rt.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 EOF;
 }
@@ -250,6 +250,8 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 		$headers['From'] = $mailfname.' <'.$mailfrom.'>';
 		$headers['Reply-To'] = $headers['From'];
 
+		$queuedata = $LMS->GetQueue($queueid);
+
 		if (!empty($customer['cid'])) {
 			$info = $LMS->GetCustomer($customer['cid'], true);
 
@@ -273,13 +275,13 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 				$sms_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body'), $params);
 			}
 
-			$queuedata = $LMS->GetQueue($queueid);
 			if (!empty($queuedata['newticketsubject']) && !empty($queuedata['newticketbody']) && !empty($emails)) {
+				$ticketid = sprintf("%06d", $ticket_id);
 				$custmail_subject = $queuedata['newticketsubject'];
-				$custmail_subject = str_replace('%tid', $ticket_id, $custmail_subject);
+				$custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
 				$custmail_subject = str_replace('%title', $mh_subject, $custmail_subject);
 				$custmail_body = $queuedata['newticketbody'];
-				$custmail_body = str_replace('%tid', $ticket_id, $custmail_body);
+				$custmail_body = str_replace('%tid', $ticketid, $custmail_body);
 				$custmail_body = str_replace('%cid', $ticket['customerid'], $custmail_body);
 				$custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
 				$custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
@@ -291,7 +293,7 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 				);
 				foreach ($emails as $email) {
 					$custmail_headers['To'] = '<' . $email . '>';
-					$LMS->SendMail($email, $custmail_headers, $custmail_body);
+					$LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $LMS->GetRTSmtpOptions());
 				}
 			}
 		} elseif ($helpdesk_customerinfo) {
@@ -301,6 +303,7 @@ if (($fh = fopen($message_file, "r")) != NULL) {
 
 		$params = array(
 			'id' => $tid,
+			'queue' => $queuedata['name'],
 			'messageid' => isset($msgid) ? $msgid : null,
 			'customerid' => $customer['cid'],
 			'status' => $RT_STATES[RT_NEW],

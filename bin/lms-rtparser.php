@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -51,7 +51,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-rtparser.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 EOF;
 	exit(0);
@@ -60,7 +60,7 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-rtparser.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
@@ -79,7 +79,7 @@ $quiet = array_key_exists('silent', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-rtparser.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2018 LMS Developers
 
 EOF;
 }
@@ -145,26 +145,7 @@ $hostname = gethostname();
 if (empty($hostname))
 	$hostname = 'example.com';
 
-$smtpserver = ConfigHelper::getConfig('rt.smtp_server', 'localhost'); //for backward compatibility
-$smtp_host = ConfigHelper::getConfig('rt.smtp_host', $smtpserver);
-$smtp_port = ConfigHelper::getConfig('rt.smtp_port', null, true);
-$smtp_user = ConfigHelper::getConfig('rt.smtp_user', null, true);
-$smtp_pass = ConfigHelper::getConfig('rt.smtp_pass', null, true);
-$smtp_auth = ConfigHelper::getConfig('rt.smtp_auth', null, true); // 'LOGIN', 'PLAIN', 'CRAM-MD5', 'NTLM'
-$smtp_ssl_verify_peer = ConfigHelper::checkValue(ConfigHelper::getConfig('rt.smtp_ssl_verify_peer', true));
-$smtp_ssl_verify_peer_name = ConfigHelper::checkValue(ConfigHelper::getConfig('rt.smtp_ssl_verify_peer_name', true));
-$smtp_ssl_allow_self_signed = ConfigHelper::checkConfig('rt.smtp_ssl_allow_self_signed');
-
-$smtp_options = array(
-	'host' => $smtp_host,
-	'port' => $smtp_port,
-	'user' => $smtp_user,
-	'pass' => $smtp_pass,
-	'auth' => $smtp_auth,
-	'ssl_verify_peer' => $smtp_ssl_verify_peer,
-	'ssl_verify_peer_name' => $smtp_ssl_verify_peer_name,
-	'ssl_allow_self_signed' => $smtp_ssl_allow_self_signed,
-);
+$smtp_options = $LMS->GetRTSmtpOptions();
 
 $queue = 0;
 if (isset($options['queue']))
@@ -182,10 +163,11 @@ $autoreply_name = ConfigHelper::getConfig('rt.mail_from_name', '', true);
 $autoreply_subject = ConfigHelper::getConfig('rt.autoreply_subject', "[RT#%tid] Receipt of request '%subject'");
 $autoreply_body = ConfigHelper::getConfig('rt.autoreply_body', '', true);
 $autoreply = ConfigHelper::checkValue(ConfigHelper::getConfig('rt.autoreply', '1'));
+$subject_ticket_regexp_match = ConfigHelper::getConfig('rt.subject_ticket_regexp_match', 'RT#(?<ticketid>[0-9]{6,})');
 
 $stderr = fopen('php://stderr', 'w');
 
-if ($smtp_auth && !preg_match('/^(LOGIN|PLAIN|CRAM-MD5|NTLM)$/i', $smtp_auth)) {
+if ($smtp_options['auth'] && !preg_match('/^(LOGIN|PLAIN|CRAM-MD5|NTLM)$/i', $smtp_options['auth'])) {
 	fprintf($stderr, "Fatal error: smtp_auth setting not supported! Can't continue, exiting." . PHP_EOL);
 	exit(1);
 }
@@ -230,6 +212,7 @@ $mh_subject = isset($headers['subject']) ? iconv_mime_decode($headers['subject']
 if (!strlen($mh_subject))
 	$mh_subject = trans('(no subject)');
 $mh_references = iconv_mime_decode($headers['references']);
+$files = array();
 $attachments = array();
 
 $mail_headers = substr($buffer, $partdata['starting-pos'], $partdata['starting-pos-body'] - $partdata['starting-pos'] - 1);
@@ -264,6 +247,10 @@ if (preg_match('#multipart/#', $partdata['content-type']) && !empty($parts)) {
 					break;
 			}
 			$mail_body = iconv($charset, 'UTF-8', $mail_body);
+			if ($partdata['content-type'] == 'text/html') {
+				$html2text = new \Html2Text\Html2Text($mail_body, array());
+				$mail_body = $html2text->getText();
+			}
 		} elseif (preg_match('#multipart/alternative#', $partdata['content-type']) && $mail_body == '') {
 			while (!empty($parts) && strpos($parts[0], $partid . '.') === 0) {
 				$subpartid = array_shift($parts);
@@ -299,13 +286,18 @@ if (preg_match('#multipart/#', $partdata['content-type']) && !empty($parts)) {
 			$file_name = isset($partdata['content-name']) ? $partdata['content-name'] :
 				(isset($partdata['disposition-filename']) ? $partdata['disposition-filename'] : '');
 			if (!$file_name) {
-				unset($file_conntent);
+				unset($file_content);
 				continue;
 			}
-			$attachments[] = array(
+			$files[] = array(
 				'name' => $file_name,
 				'type' => $partdata['content-type'],
-				'content' => $file_content,
+				'content' => &$file_content,
+			);
+			$attachments[] = array(
+				'content_type' => $partdata['content-type'],
+				'filename' => $file_name,
+				'data' => &$file_content,
 			);
 			unset($file_content);
 		}
@@ -325,6 +317,10 @@ if (preg_match('#multipart/#', $partdata['content-type']) && !empty($parts)) {
 	}
 
 	$mail_body = iconv($charset, 'UTF-8', $mail_body);
+	if ($partdata['content-type'] == 'text/html') {
+		$html2text = new \Html2Text\Html2Text($mail_body, array());
+		$mail_body = $html2text->getText();
+	}
 }
 
 mailparse_msg_free($mail);
@@ -353,7 +349,7 @@ if ($lastref) {
 }
 
 // check email subject
-if (!$prev_tid && preg_match('/RT#(?<ticketid>[0-9]{6,})/', $mh_subject, $matches)) {
+if (!$prev_tid && preg_match('/' . $subject_ticket_regexp_match . '/', $mh_subject, $matches)) {
 	$prev_tid = sprintf('%d', $matches['ticketid']);
 	if (!$DB->GetOne("SELECT id FROM rttickets WHERE id = ?", array($prev_tid)))
 		$prev_tid = 0;
@@ -432,7 +428,7 @@ if (!$prev_tid) { // generate new ticket if previous not found
 		'messageid' => $mh_msgid,
 		'headers' => $mail_headers,
 		'body' => $mail_body,
-		'categories' => $cats), $attachments);
+		'categories' => $cats), $files);
 
 	if ($autoreply) {
 		$ticketid = sprintf("%06d", $ticket_id);
@@ -479,7 +475,7 @@ if (!$prev_tid) { // generate new ticket if previous not found
 			'headers' => $mail_headers,
 			'body' => $mail_body,
 			'inreplyto' => $inreplytoid,
-		), $attachments);
+		), $files);
 
 	if ($auto_open)
 		$DB->Execute("UPDATE rttickets SET state = ? WHERE id = ? AND state > ?",
@@ -508,6 +504,8 @@ if ($notify) {
 	$headers['From'] = $mailfname . ' <' . $mailfrom . '>';
 	$headers['Reply-To'] = $headers['From'];
 
+	$queuedata = $LMS->GetQueue($queue);
+
 	if ($ticket['customerid'] && $reqcustid) {
 		$info = $LMS->GetCustomer($ticket['customerid'], true);
 
@@ -530,7 +528,6 @@ if ($notify) {
 			$sms_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body'), $params);
 		}
 
-		$queuedata = $LMS->GetQueue($queue);
 		if ($new_ticket) {
 			$ticketsubject_variable = 'newticketsubject';
 			$ticketbody_variable = 'newticketbody';
@@ -539,11 +536,12 @@ if ($notify) {
 			$ticketbody_variable = 'newmessagebody';
 		}
 		if (!empty($queuedata[$ticketsubject_variable]) && !empty($queuedata[$ticketbody_variable]) && !empty($emails)) {
+			$ticketid = sprintf("%06d", $ticket_id);
 			$custmail_subject = $queuedata[$ticketsubject_variable];
-			$custmail_subject = str_replace('%tid', $ticket_id, $custmail_subject);
+			$custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
 			$custmail_subject = str_replace('%title', $mh_subject, $custmail_subject);
 			$custmail_body = $queuedata[$ticketbody_variable];
-			$custmail_body = str_replace('%tid', $ticket_id, $custmail_body);
+			$custmail_body = str_replace('%tid', $ticketid, $custmail_body);
 			$custmail_body = str_replace('%cid', $ticket['customerid'], $custmail_body);
 			$custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
 			$custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
@@ -555,7 +553,7 @@ if ($notify) {
 			);
 			foreach ($emails as $email) {
 				$custmail_headers['To'] = '<' . $email . '>';
-				$LMS->SendMail($email, $custmail_headers, $custmail_body);
+				$LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $smtp_options);
 			}
 		}
 	} elseif ($customerinfo && !empty($fromname)) {
@@ -565,12 +563,14 @@ if ($notify) {
 
 	$params = array(
 		'id' => $ticket_id,
+		'queue' => $queuedata['name'],
 		'messageid' => isset($msgid) ? $msgid : null,
 		'customerid' => $ticket['customerid'] && $reqcustid ? $ticket['customerid'] : null,
 		'status' => $ticket['status'],
 		'categories' => $ticket['categorynames'],
 		'subject' => $mh_subject,
 		'body' => $mail_body,
+		'attachments' => &$attachments,
 		'url' => $lms_url,
 	);
 	$headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
@@ -584,6 +584,7 @@ if ($notify) {
 		'mail_headers' => $headers,
 		'mail_body' => $body,
 		'sms_body' => $sms_body,
+		'attachments' => &$attachments,
 	));
 }
 

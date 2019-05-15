@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,23 +24,34 @@
  *  $Id$
  */
 
+check_file_uploads();
+
 $userid = Auth::GetCurrentUser();
 
-if (isset($_GET['action']) && $_GET['action'] == 'confirm') {
+if (isset($_GET['action'])) {
 	if (!empty($_POST['marks']))
 		$ids = $_POST['marks'];
 	else
 		$ids = array($_GET['id']);
 
-	$LMS->CommitDocuments($ids);
+	switch ($_GET['action']) {
+		case 'confirm':
+			$LMS->CommitDocuments($ids);
+			break;
+		case 'archive':
+			$LMS->ArchiveDocuments($ids);
+			break;
+	}
 
 	$SESSION->redirect('?'.$SESSION->get('backto'));
 }
 
 include(MODULES_DIR . DIRECTORY_SEPARATOR . 'document.inc.php');
 
-$document = $DB->GetRow('SELECT documents.id AS id, closed, type, number, numberplans.template,
-	cdate, sdate, cuserid, numberplanid, title, fromdate, todate, description, divisionid, documents.customerid
+$document = $DB->GetRow('SELECT documents.id AS id, closed,
+		archived, adate, auserid,
+		type, number, numberplans.template,
+		cdate, sdate, cuserid, numberplanid, title, fromdate, todate, description, divisionid, documents.customerid
 	FROM documents
 	JOIN docrights r ON (r.doctype = documents.type)
 	LEFT JOIN documentcontents ON (documents.id = docid)
@@ -123,6 +134,9 @@ if(isset($_POST['document']))
 		$error['todate'] = trans('Start date can\'t be greater than end date!');
 
 	$documentedit['closed'] = isset($documentedit['closed']) ? 1 : 0;
+	$documentedit['archived'] = isset($documentedit['archived']) ? 1 : 0;
+	if ($documentedit['archived'] && !$documentedit['closed'])
+		$error['closed'] = trans('Cannot undo document confirmation while it is archived!');
 
 	$result = handle_file_uploads('attachments', $error);
 	extract($result);
@@ -162,7 +176,8 @@ if(isset($_POST['document']))
 					break;
 				}
 			}
-			rrmdir($tmppath);
+			if (!empty($tmppath))
+				rrmdir($tmppath);
 		}
 	}
 
@@ -176,12 +191,16 @@ if(isset($_POST['document']))
 			'customerid' => $document['customerid'],
 		));
 
-		$DB->Execute('UPDATE documents SET type=?, closed=?, sdate=?, cuserid=?, number=?, numberplanid=?, fullnumber=?
+		$DB->Execute('UPDATE documents SET type=?, closed=?, sdate=?, cuserid=?,
+			archived = ?, adate = ?, auserid = ?, number=?, numberplanid=?, fullnumber=?
 				WHERE id=?',
 				array(	$documentedit['type'],
 					$documentedit['closed'],
 					$documentedit['closed'] ? ($document['closed'] ? $document['sdate'] : time()) : 0,
 					$documentedit['closed'] ? ($document['closed'] ? $document['cuserid'] : $userid) : null,
+					$documentedit['archived'],
+					$documentedit['archived'] ? ($document['archived'] ? $document['adate'] : time()) : 0,
+					$documentedit['archived'] ? ($document['archived'] ? $document['auserid'] : $userid) : null,
 					$documentedit['number'],
 					empty($documentedit['numberplanid']) ? null : $documentedit['numberplanid'],
 					$fullnumber,

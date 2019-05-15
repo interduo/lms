@@ -60,6 +60,12 @@ class LMSProjectManager extends LMSManager implements LMSProjectManagerInterface
 			array(INV_PROJECT_SYSTEM, $id));
 	}
 
+	public function GetProjectName($id) {
+		return $this->db->GetOne('SELECT name FROM invprojects
+			WHERE type <> ? AND id = ?',
+			array(INV_PROJECT_SYSTEM, $id));
+	}
+
 	public function GetProjectByName($name) {
 		return $this->db->GetRow('SELECT * FROM invprojects
 			WHERE type <> ? AND name = ?',
@@ -75,7 +81,7 @@ class LMSProjectManager extends LMSManager implements LMSProjectManagerInterface
 	public function AddProject($project) {
 		$this->db->Execute("INSERT INTO invprojects (name, divisionid, type) VALUES (?, ?, ?)",
 			array(
-				$project['projectname'],
+				$project['project'],
 				isset($project['divisionid']) && !empty($project['divisionid']) ? $project['divisionid'] : null,
 				INV_PROJECT_REGULAR
 			)
@@ -92,6 +98,10 @@ class LMSProjectManager extends LMSManager implements LMSProjectManagerInterface
 		$project['id'] = $id;
 		return $this->db->Execute('UPDATE invprojects SET name=?, divisionid=?, type=?
             WHERE id = ?', array_values($project));
+	}
 
+	public function GetProjectType($id) {
+		return $this->db->GetOne('SELECT type FROM invprojects WHERE id = ?',
+			array($id));
 	}
 }

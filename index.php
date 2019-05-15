@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -224,8 +224,30 @@ $documents_dirs = $plugin_manager->executeHook('documents_dir_initialized', $doc
 
 // Check privileges and execute modules
 if ($AUTH->islogged) {
-	if (!$api)
+	if (!$api) {
 		$SMARTY->assign('main_menu_sortable_order', $SESSION->get_persistent_setting('main-menu-order'));
+
+		$qs_properties = $SESSION->get_persistent_setting('qs-properties');
+		if (empty($qs_properties))
+			$qs_properties = array();
+		else
+			foreach ($qs_properties as $mode => $properties)
+				$qs_properties[$mode] = array_flip(explode(',', $properties));
+		$SMARTY->assign('qs_properties', $qs_properties);
+
+		$qs_fields = $SESSION->get_persistent_setting('qs-fields');
+		if (empty($qs_fields))
+			$qs_fields = array();
+		else {
+			$qs_fields = array_flip(explode(',', $qs_fields));
+		}
+		$SMARTY->assign('qs_fields', $qs_fields);
+
+		if (isset($_GET['backid']))
+			$SESSION->save('backid', $_GET['backid']);
+		if ($backid = $SESSION->get('backid'))
+			$SMARTY->assign('backid', $backid);
+	}
 
 	// Load plugin files and register hook callbacks
 	$plugins = $plugin_manager->getAllPluginInfo(LMSPluginManager::OLD_STYLE);
@@ -279,6 +301,46 @@ if ($AUTH->islogged) {
 
 		if ($global_allow || $allow) {
 			$layout['module'] = $module;
+
+			$SESSION->save('module', $module);
+
+			if (!$api) {
+				// get all persistent filters
+				$SMARTY->assign('persistent_filters', $SESSION->getAllPersistentFilters());
+
+				// persister filter apply
+				if (isset($_GET['persistent-filter'])) {
+					$filter = $SESSION->getPersistentFilter($_GET['persistent-filter']);
+					$filter['persistent_filter'] = $_GET['persistent-filter'];
+					$SESSION->saveFilter($filter);
+				} else
+					$filter = $SESSION->getFilter();
+				$SMARTY->assignByRef('filter', $filter);
+
+				// restore selected persistent filter info
+				if (isset($filter['persistent_filter']))
+					$SMARTY->assign('persistent_filter', $filter['persistent_filter']);
+			} else {
+				// persistent filter ajax management
+				if (isset($_GET['persistent-filter']) && isset($_GET['action']))
+					switch ($_GET['action']) {
+						case 'update':
+							$SESSION->savePersistentFilter($_GET['persistent-filter'], $SESSION->getFilter());
+							$persistent_filters = $SESSION->getAllPersistentFilters();
+							$SESSION->close();
+							header('Content-type: application/json');
+							die(json_encode($persistent_filters));
+							break;
+						case 'delete':
+							$SESSION->removePersistentFilter($_GET['persistent-filter']);
+							$persistent_filters = $SESSION->getAllPersistentFilters();
+							$SESSION->close();
+							header('Content-type: application/json');
+							die(json_encode($persistent_filters));
+							break;
+					}
+			}
+
 			$LMS->InitUI();
 			$LMS->executeHook($module.'_on_load');
 

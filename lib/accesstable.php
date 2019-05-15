@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -25,7 +25,7 @@
  */
 
 // modules with access for everyone
-$global_access_regexp = '^(welcome|copyrights|logout|chpasswd|quicksearch|calendar|persistentsetting|zipcode)$';
+$global_access_regexp = '^(welcome|copyrights|logout|chpasswd|quicksearch|calendar|persistentsetting|zipcode|indicators)$';
 
 $access_table = array(
 	'full_access' => array(
@@ -42,7 +42,21 @@ $access_table = array(
 	),
 	'finances_management' => array(
 		'label' => trans('finances management'),
-		'allow_regexp' => '^((tariff|customerassignment)(add|info|list|move|edit|del)|(payment)(add|del|edit|info|list)|(balance|customerbalance)(new|add|ok|del|list|)|(cashreg(list|info))|(invoice|invoice(list|new|edit|del|note|report|paid|info|send))|(note|note(list|add|edit|del|paid))|number|export|print|cashimport|cashimportparser|cashpackagedel)$',
+		'allow_regexp' => '^((tariff|customerassignment)(add|info|list|move|edit|del)|(payment)(add|del|edit|info|list)|(balance|customerbalance)(new|add|ok|del|list|)|(cashreg(list|info))|(invoice|invoice(list|new|edit|del|note|report|paid|info|send))|(note|note(list|add|edit|del|paid))|number|export|print|cashimport|cashimportparser|cashpackagedel|customertransferform)$',
+	),
+	'trade_document_archiving' => array(
+		'label' => trans('trade document archiving'),
+		'allow_regexp' => '^(invoice|note)archive$',
+	),
+	'trade_document_unarchiving' => array(
+		'label' => trans('trade document unarchiving'),
+		'allow_regexp' => '^(invoice|note)unarchive$',
+	),
+	'invoice_consent_date' => array(
+		'label' => trans('invoice consent date manipulation'),
+	),
+	'invoice_sale_date' => array(
+		'label' => trans('invoice sale date manipulation'),
 	),
 	'published_document_modification' => array(
 		'label' => trans('published document modification'),
@@ -53,7 +67,15 @@ $access_table = array(
 	),
 	'customer_management' => array(
 		'label' => trans('customers management'),
-		'allow_regexp' => '^((customer|document)(add|edit|info|infoshort|list|del|print|search|warn|cutoffstop|group)|customeraddresses|customerassignmenthelper|documentsend|documentgen|documentview|nodewarn|choosenode|gusapi)$',
+		'allow_regexp' => '^((customer|document)(add|edit|info|infoshort|list|print|search|warn|cutoffstop|group)|documentdel|customertransferform|customeraddresses|customerassignmenthelper|documentsend|documentgen|documentview|nodewarn|choosenode|gusapi)$',
+	),
+	'customer_removal' => array(
+		'label' => trans('customer removal'),
+		'allow_regexp' => '^customerdel$',
+	),
+	'permanent_customer_removal' => array(
+		'label' => trans('permanent customer removal'),
+		'allow_regexp' => '^customerdel$',
 	),
 	'node_management' => array(
 		'label' => trans('nodes management'),
@@ -65,7 +87,7 @@ $access_table = array(
 	),
 	'messaging' => array(
 		'label' => trans('messaging (email, sms)'),
-		'allow_regexp' => '^message(add|del|list|info)$',
+		'allow_regexp' => '^message(add|del|list|info|template(del|list))$',
 	),
 	'helpdesk_administration' => array(
 		'label' => trans('Helpdesk (RT) administration'),
@@ -89,7 +111,8 @@ $access_table = array(
 	),
 	'network_management' => array(
 		'label' => trans('networks and devices management'),
-		'allow_regexp' => '^((net|netdev|ewxch)(info|list|edit|add|del|print|cmp|map(refresh|)|remap|search)|choose(mac|ip|gpscoords|netdevfrommap|netdevfornetnode|netdevmodel)|ewxnodelist|ewxdevlist|chooselocation|ping|netnode(add|adddev|del|deldev|edit|info|list)|netdevmodels|netlinkproperties|netusage)$',
+		'allow_regexp' => '^((net|netdev|ewxch)(info|list|edit|add|del|print|cmp|map(refresh|)|remap|search)|choose(mac|ip|gpscoords|netdevfrommap|netdevfornetnode|netdevmodel)|ewxnodelist|ewxdevlist|chooselocation|ping'
+			. '|netnode(add|adddev|del|deldev|edit|info|list)|netdevmodels|netlinkproperties|netusage|attachments)$',
 	),
 	'timetable_management' => array(
 		'label' => trans('timetable management'),

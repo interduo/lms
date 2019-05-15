@@ -31,6 +31,12 @@ if (isset($_GET['id']) && $action == 'edit') {
 	if ($LMS->isDocumentPublished($_GET['id']) && !ConfigHelper::checkPrivilege('published_document_modification'))
 		return;
 
+	if ($LMS->isDocumentReferenced($_GET['id']))
+		return;
+
+	if ($LMS->isArchiveDocument($_GET['id']))
+		return;
+
 	$cnote = $LMS->GetInvoiceContent($_GET['id']);
 
 	if (!empty($cnote['cancelled']))
@@ -87,6 +93,14 @@ if (isset($_GET['id']) && $action == 'edit') {
 	$cnote['oldnumberplanid'] = $cnote['numberplanid'];
 	$cnote['oldcustomerid'] = $cnote['customerid'];
 
+	$hook_data = array(
+		'contents' => $cnotecontents,
+		'cnote' => $cnote,
+	);
+	$hook_data = $LMS->ExecuteHook('invoicenoteedit_init', $hook_data);
+	$cnotecontents = $hook_data['contents'];
+	$cnote = $hook_data['cnote'];
+
 	$SESSION->save('cnote', $cnote);
 	$SESSION->save('cnoteid', $cnote['id']);
 }
@@ -120,6 +134,7 @@ switch ($action) {
 	case 'setheader':
 
 		$oldcdate = $cnote['oldcdate'];
+		$oldsdate = $cnote['oldsdate'];
 		$oldnumber = $cnote['oldnumber'];
 		$oldnumberplanid = $cnote['oldnumberplanid'];
 		$oldcustomerid = $cnote['oldcustomerid'];
@@ -133,6 +148,7 @@ switch ($action) {
 				$cnote[$key] = $val;
 
 		$cnote['oldcdate'] = $oldcdate;
+		$cnote['oldsdate'] = $oldsdate;
 		$cnote['oldnumber'] = $oldnumber;
 		$cnote['oldnumberplanid'] = $oldnumberplanid;
 		$cnote['oldcustomerid'] = $oldcustomerid;
@@ -143,32 +159,38 @@ switch ($action) {
 
 		$currtime = time();
 
-		if ($cnote['sdate']) {
-			list ($syear, $smonth, $sday) = explode('/', $cnote['sdate']);
-			if (checkdate($smonth, $sday, $syear)) {
-				$sdate = mktime(23, 59, 59, $smonth, $sday, $syear);
-				$cnote['sdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $smonth, $sday, $syear);
-				if ($sdate < $invoice['sdate'])
-					$error['sdate'] = trans('Credit note sale date cannot be earlier than invoice sale date!');
-			} else {
-				$error['sdate'] = trans('Incorrect date format! Using current date.');
-				$cnote['sdate'] = $currtime;
-			}
-		} else
-			$cnote['sdate'] = $currtime;
-
-		if ($cnote['cdate']) {
-			list ($year, $month, $day) = explode('/', $cnote['cdate']);
-			if (checkdate($month, $day, $year)) {
-				$cnote['cdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $month, $day, $year);
-				if($cnote['cdate'] < $invoice['cdate'])
-					$error['cdate'] = trans('Credit note date cannot be earlier than invoice date!');
-			} else {
-				$error['cdate'] = trans('Incorrect date format! Using current date.');
+		if (ConfigHelper::checkPrivilege('invoice_consent_date'))
+			if ($cnote['cdate']) {
+				list ($year, $month, $day) = explode('/', $cnote['cdate']);
+				if (checkdate($month, $day, $year)) {
+					$cnote['cdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $month, $day, $year);
+					if($cnote['cdate'] < $invoice['cdate'])
+						$error['cdate'] = trans('Credit note date cannot be earlier than invoice date!');
+				} else {
+					$error['cdate'] = trans('Incorrect date format! Using current date.');
+					$cnote['cdate'] = $currtime;
+				}
+			} else
 				$cnote['cdate'] = $currtime;
-			}
-		} else
-			$cnote['cdate'] = $currtime;
+		else
+			$cnote['cdate'] = $cnote['oldcdate'];
+
+		if (ConfigHelper::checkPrivilege('invoice_sale_date'))
+			if ($cnote['sdate']) {
+				list ($syear, $smonth, $sday) = explode('/', $cnote['sdate']);
+				if (checkdate($smonth, $sday, $syear)) {
+					$sdate = mktime(23, 59, 59, $smonth, $sday, $syear);
+					$cnote['sdate'] = mktime(date('G', $currtime), date('i', $currtime), date('s', $currtime), $smonth, $sday, $syear);
+					if ($sdate < $invoice['sdate'])
+						$error['sdate'] = trans('Credit note sale date cannot be earlier than invoice sale date!');
+				} else {
+					$error['sdate'] = trans('Incorrect date format! Using current date.');
+					$cnote['sdate'] = $currtime;
+				}
+			} else
+				$cnote['sdate'] = $currtime;
+		else
+			$cnote['sdate'] = $cnote['oldsdate'];
 
 		if ($cnote['deadline']) {
 			list ($dyear, $dmonth, $dday) = explode('/', $cnote['deadline']);
@@ -207,12 +229,23 @@ switch ($action) {
 		if (empty($contents))
 			break;
 
+		$error = array();
+
 		$SESSION->restore('cnoteid', $cnote['id']);
 		$cnote['type'] = DOC_CNOTE;
 
 		$currtime = time();
-		$cdate = $cnote['cdate'] ? $cnote['cdate'] : $currtime;
-		$sdate = $cnote['sdate'] ? $cnote['sdate'] : $currtime;
+
+		if (ConfigHelper::checkPrivilege('invoice_consent_date'))
+			$cdate = $cnote['cdate'] ? $cnote['cdate'] : $currtime;
+		else
+			$cdate = $cnote['oldcdate'];
+
+		if (ConfigHelper::checkPrivilege('invoice_sale_date'))
+			$sdate = $cnote['sdate'] ? $cnote['sdate'] : $currtime;
+		else
+			$sdate = $cnote['oldsdate'];
+
 		$deadline = $cnote['deadline'] ? $cnote['deadline'] : $currtime;
 		$paytime = $cnote['paytime'] = round(($cnote['deadline'] - $cnote['cdate']) / 86400);
 		$iid   = $cnote['id'];
@@ -243,7 +276,7 @@ switch ($action) {
 			$contents[$idx]['valuenetto'] = $newcontents['valuenetto'][$idx] != '' ? $newcontents['valuenetto'][$idx] : $item['valuenetto'];
 			$contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto']);
 			$contents[$idx]['valuenetto'] = f_round($contents[$idx]['valuenetto']);
-			$contents[$idx]['count'] = f_round($contents[$idx]['count']);
+			$contents[$idx]['count'] = f_round($contents[$idx]['count'], 3);
 			$contents[$idx]['pdiscount'] = f_round($contents[$idx]['pdiscount']);
 			$contents[$idx]['vdiscount'] = f_round($contents[$idx]['vdiscount']);
 			$taxvalue = $taxeslist[$contents[$idx]['taxid']]['value'];
@@ -276,6 +309,17 @@ switch ($action) {
 			$contents[$idx]['valuebrutto'] = str_replace(',', '.', $contents[$idx]['valuebrutto']);
 			$contents[$idx]['count'] = str_replace(',', '.', $contents[$idx]['count']);
 		}
+
+		$hook_data = array(
+			'contents' => $contents,
+			'cnote' => $cnote,
+		);
+		$hook_data = $LMS->ExecuteHook('invoicenoteedit_save_validation', $hook_data);
+		if (isset($hook_data['error']) && is_array($hook_data['error']))
+			$error = array_merge($error, $hook_data['error']);
+
+		if (!empty($error))
+			break;
 
 		$DB->BeginTrans();
 
@@ -499,9 +543,18 @@ if ($action != '')
 	// redirect needed because we don't want to destroy contents of invoice in order of page refresh
 	$SESSION->redirect('?m=invoicenoteedit');
 
+$hook_data = array(
+	'contents' => $contents,
+	'cnote' => $cnote,
+);
+$hook_data = $LMS->ExecuteHook('invoicenoteedit_before_display', $hook_data);
+$contents = $hook_data['contents'];
+$cnote = $hook_data['cnote'];
+
 $SMARTY->assign('error', $error);
 $SMARTY->assign('contents', $contents);
 $SMARTY->assign('cnote', $cnote);
+$SMARTY->assign('refdoc', $cnote);
 $SMARTY->assign('taxeslist', $taxeslist);
 
 $args = array(
@@ -512,6 +565,6 @@ $args = array(
 );
 $SMARTY->assign('numberplanlist', $LMS->GetNumberPlans($args));
 
-$SMARTY->display('invoice/invoicenoteedit.html');
+$SMARTY->display('invoice/invoicenotemodify.html');
 
 ?>

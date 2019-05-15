@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2018 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -52,7 +52,7 @@ if ($api) {
 if (isset($netnodedata)) {
 	$netnodedata['id'] = $id;
 	if ($netnodedata['name'] == '')
-		$error['name'] = trans('Net node name is required!');
+		$error['name'] = trans('Network node name is required!');
 
 	if ($api) {
 		if (isset($netnodedata['division'])) {
@@ -65,20 +65,12 @@ if (isset($netnodedata)) {
 			$error['divisionid'] = trans('Division is required!');
 	}
 
-	if ($api && isset($netnodedata['project'])) {
+	if (!strlen($netnodedata['projectid']) && !empty($netnodedata['project'])) {
 		$project = $LMS->GetProjectByName($netnodedata['project']);
 		if (empty($project)) {
-			$netnodedata['projectname'] = $netnodedata['project'];
-			$netnodedata['invprojectid'] = -1;
+			$netnodedata['projectid'] = -1;
 		} else
-			$netnodedata['invprojectid'] = $project['id'];
-	}
-
-	if ($netnodedata['invprojectid'] == '-1') { // new project
-		if (!strlen(trim($netnodedata['projectname'])))
-			$error['projectname'] = trans('Project name is required');
-		if ($LMS->ProjectByNameExists($netnodedata['projectname']))
-			$error['projectname'] = trans('Project with that name already exists');
+			$netnodedata['projectid'] = $project['id'];
 	}
 
 	if (in_array($netnodedata['ownership'], array('1', '2'))) { // węzeł współdzielony lub obcy
@@ -102,18 +94,17 @@ if (isset($netnodedata)) {
 		$netnodedata['location_street_name'] = $teryt['location_street_name'];
 	}
 
-	if (isset($netnodedata['lastinspectiontime']))
-		if ($netnodedata['lastinspectiontime'] == '')
-			$netnodedata['lastinspectiontime'] = 0;
-		else {
-			$lit = date_to_timestamp($netnodedata['lastinspectiontime']);
-			if (!empty($lit) && $lit > time())
-				$error['lastinspectiontime'] = trans('Date from the future not allowed!');
-		}
+	if (intval($netnodedata['lastinspectiontime']) > time())
+		$error['lastinspectiontime'] = trans('Date from the future not allowed!');
+
+	if (!empty($netnodedata['ownerid']) && !$LMS->CustomerExists($netnodedata['ownerid']))
+		$error['ownerid'] = trans('Customer doesn\'t exist!');
 
 	if (!$error) {
-		if (intval($netnodedata['invprojectid']) == -1)
-			$netnodedata['invprojectid'] = $LMS->AddProject($netnodedata);
+		if ($netnodedata['projectid'] == -1)
+			$netnodedata['projectid'] = $LMS->AddProject($netnodedata);
+		elseif (empty($netnodedata['projectid']))
+			$netnodedata['projectid'] = null;
 
 		$result = $LMS->NetNodeUpdate($netnodedata);
 		$LMS->CleanupProjects();
@@ -134,9 +125,8 @@ if (isset($netnodedata)) {
 } else {
 	$netnodedata = $LMS->GetNetNode($id);
 
-	if ($netnodedata['location_city'] || $netnodedata['location_street']) {
+	if (($netnodedata['location_city'] || $netnodedata['location_street']) && !$netnodedata['ownerid'] )
 		$netnodedata['teryt'] = true;
-	}
 }
 
 $layout['pagetitle'] = trans('Net Device Node Edit: $a', $netnodedata['name']);
@@ -144,12 +134,15 @@ $layout['pagetitle'] = trans('Net Device Node Edit: $a', $netnodedata['name']);
 if ($subtitle)
 	$layout['pagetitle'] .= ' - ' . $subtitle;
 
+if (!ConfigHelper::checkConfig('phpui.big_networks'))
+	$SMARTY->assign('customers', $LMS->GetCustomerNames());
+
 $SMARTY->assign('error'    , $error);
 $SMARTY->assign('netnode'  , $netnodedata);
 $SMARTY->assign('objectid' , $netnodedata['id']);
 $SMARTY->assign('divisions', $LMS->GetDivisions());
 $SMARTY->assign('NNprojects', $LMS->GetProjects());
 
-$SMARTY->display('netnode/netnodeedit.html');
+$SMARTY->display('netnode/netnodemodify.html');
 
 ?>

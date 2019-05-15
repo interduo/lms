@@ -1,10 +1,13 @@
 <!--// $Id$ //-->
-{if $pin_min_size == $pin_max_size}
-{$pin_tip=trans("Enter \$a characters PIN code", $pin_min_size)}
-{else}
-{$pin_tip=trans("Enter \$a to \$b characters PIN code", $pin_min_size, $pin_max_size)}
+{$pin_tip = ConfigHelper::getConfig('phpui.pin_restriction_description')}
+{if !$pin_tip}
+	{if $pin_min_size == $pin_max_size}
+		{$pin_tip=trans("Enter \$a characters PIN code", $pin_min_size)}
+	{else}
+		{$pin_tip=trans("Enter \$a to \$b characters PIN code", $pin_min_size, $pin_max_size)}
+	{/if}
 {/if}
-<script type="text/javascript" src="img/location_box_expandable.js"></script>
+<script type="text/javascript" src="js/location_box_expandable.js"></script>
 <SCRIPT type="text/javascript">
 <!--
 	function randomize() {
@@ -109,7 +112,7 @@
 	{$addr_counter = 0}
 
 	<tr>
-		<td style="width: 1%;" class="valign-top"><img src="img/home.gif" alt="" title="{trans('billing address')}"></td>
+		<td style="width: 1%;" class="valign-top"><i class="lms-ui-icon-home fa-fw" title="{trans('billing address')}"></i></td>
 		<td style="width: 99%;">
 			{foreach $customerinfo.addresses as $v}
 				{if $v.location_address_type == $smarty.const.BILLING_ADDRESS}
@@ -224,6 +227,9 @@
 				<TR>
 					<TD style="width: 1%;" class="nobr">{trans("ICN")}:</TD>
 					<TD style="width: 99%;">
+						{if $customerinfo.icnwarning}
+						<INPUT type="hidden" name="customerdata[icnwarning]" value="1">
+						{/if}
 						<INPUT type="text" value="{$customerinfo.icn}" name="customerdata[icn]" size="30" {tip text="Enter Identity Card Number (optional)" trigger="icn"}>
 					</TD>
 				</TR>
@@ -321,7 +327,7 @@
 							<input type="checkbox" name="customerdata[cutoffstopindefinitely]" value="1" onchange="$('#cutoffstop').css('display', this.checked ? 'none' : '');"{if $customerinfo.cutoffstopindefinitely} checked{/if}>
 							{trans("indefinitely")}
 						</label>&nbsp;
-						<INPUT type="text" name="customerdata[cutoffstop]" id="cutoffstop" {if $customerinfo.cutoffstopindefinitely}style="display: none;"{elseif $customerinfo.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="calendar" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
+						<INPUT type="text" name="customerdata[cutoffstop]" id="cutoffstop" {if $customerinfo.cutoffstopindefinitely}style="display: none;"{elseif $customerinfo.cutoffstop}value="{$customerinfo.cutoffstop}"{/if} size="10" {tip class="lms-ui-date" text="Select date of cutoff suspending (optional)" trigger="cutoffstop"}>
 					</TD>
 				</TR>
 			</TABLE>
@@ -406,7 +412,7 @@
 		</TD>
 		<TD style="width: 99%;">
 			<span class="bold">{trans("Balance:")}</span>
-			{if $customerinfo.balance < 0}<span class="alert">{$customerinfo.balance|money_format}</span>{else}{$customerinfo.balance|money_format}{/if}
+			{if $customerinfo.balance < 0}<span class="lms-ui-error">{$customerinfo.balance|money_format}</span>{else}{$customerinfo.balance|money_format}{/if}
 		</TD>
 	</TR>
 	<TR>

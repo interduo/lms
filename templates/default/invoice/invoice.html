@@ -1,3 +1,5 @@
+{$use_alert_color = ConfigHelper::checkConfig('invoices.use_alert_color')}
+
 <!--// $Id$ //-->
 <DIV{if !$invoice.last} STYLE="page-break-after: always"{/if}>
 <TABLE WIDTH="100%" CELLSPACING="3">
@@ -7,7 +9,9 @@
 			{if $invoice.invoice}
 			    {number number=$invoice.invoice.number template=$invoice.invoice.template time=$invoice.invoice.cdate customerid=$invoice.invoice.customerid assign=number_ref}
 			    <B>{t a=$number}Credit Note No. $a{/t}</B><BR>
-			    <B class="mdf">{t a=$number_ref}for Invoice No. $a{/t}</B><BR>
+			    <B class="mdf">
+					{t a=$number_ref}for Invoice No. $a{/t}
+				</B><BR>
 			{elseif $invoice.doctype == $smarty.const.DOC_INVOICE_PRO}
 			    <B>{t a=$number}Pro Forma Invoice No. $a{/t}</B><BR>
 			{else}
@@ -21,20 +25,33 @@
 			{/if}
 			<!--<B>{*$type*}</B>//-->
 			{if $duplicate}
-			<BR><font class="sdr">{trans("DUPLICATE, draw-up date:")} {$smarty.now|date_format:"%Y/%m/%d"}</font>
+			<BR>
+			<span class="sdr">
+				{trans("DUPLICATE, draw-up date:")}
+				{if $invoice['duplicate-date']}
+					{$invoice['duplicate-date']|date_format:"%Y/%m/%d"}
+				{else}
+					{$smarty.now|date_format:"%Y/%m/%d"}
+				{/if}
+			</span>
 			{/if}
 		</TD>
 		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT" VALIGN="TOP" CLASS="sdr">
 			{trans("Draw-up date:")}<BR>
-			{trans("Sale date:")}<BR>
-			{trans("Deadline:")}<BR>
-			{trans("Payment type:")}
+			{if !ConfigHelper::checkConfig('invoices.hide_sale_date')}{trans("Sale date:")}<BR>{/if}
+			{if $use_alert_color}<span style="color: red; font-weight: bold;">{/if}
+			{trans("Deadline:")}
+			{if $use_alert_color}</span>{/if}
+			<BR>
+			{if !ConfigHelper::checkConfig('invoices.hide_payment_type')}{trans("Payment type:")}{/if}
 		</TD>
 		<TD WIDTH="1%" NOWRAP ALIGN="LEFT" VALIGN="TOP" CLASS="sdr">
 			{$invoice.cdate|date_format:"%Y/%m/%d"}{if $invoice.division_cplace != ""}, {$invoice.division_cplace}{/if}<BR>
-			{$invoice.sdate|date_format:"%Y/%m/%d"}<BR>
+			{if !ConfigHelper::checkConfig('invoices.hide_sale_date')}{$invoice.sdate|date_format:"%Y/%m/%d"}<BR>{/if}
+			{if $use_alert_color}<span style="color: red; font-weight: bold;">{/if}
 			{$invoice.pdate|date_format:"%Y/%m/%d"}<BR>
-			{$invoice.paytypename}
+			{if $use_alert_color}</span>{/if}
+			{if !ConfigHelper::checkConfig('invoices.hide_payment_type')}{$invoice.paytypename}{/if}
 		</TD>
 	</TR>
 	<TR>
@@ -48,13 +65,18 @@
 		<TD WIDTH="66%" VALIGN="TOP">
 			<div class="address-header">{trans("Seller:")}</div>
 			{$invoice.division_header|replace:"\n":"<BR>"}<BR>
-			{if ConfigHelper::checkConfig('invoices.show_all_accounts') && !empty($invoice.bankaccounts)}
-			{trans("Bank accounts:")}<br>{format_bankaccount(bankaccount($invoice.customerid, $invoice.account))}<br>
-			{foreach $invoice.bankaccounts as $account}
-			{format_bankaccount($account)}{if !$account@last}<br>{/if}
-			{/foreach}
-			{else}
-			{trans("Bank account:")} {format_bankaccount(bankaccount($invoice.customerid, $invoice.account))}
+			{if ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_bankaccount', true))}
+				{if ConfigHelper::checkConfig('invoices.show_all_accounts') && !empty($invoice.bankaccounts)}
+					{trans("Bank accounts:")}<br>{format_bankaccount(bankaccount($invoice.customerid, $invoice.account))}<br>
+					{if $use_alert_color}<span style="color: red;">{/if}
+					{foreach $invoice.bankaccounts as $account}
+						{format_bankaccount($account)}{if !$account@last}<br>{/if}
+					{/foreach}
+					{if $use_alert_color}</span>{/if}
+				{else}
+					{trans("Bank account:")}
+					{if $use_alert_color}<span style="color: red;">{/if}{format_bankaccount(bankaccount($invoice.customerid, $invoice.account))}{if $use_alert_color}</span>{/if}
+				{/if}
 			{/if}
 
 			<BR><BR>
@@ -153,7 +175,7 @@
 		{$item.content}
 	</TD>
 	<TD WIDTH="1%" CLASS="flr" ALIGN="CENTER">
-		{$item.count|string_format:"%.2f"}
+		{$item.count|string_format:"%.3f"}
 	</TD>
 	{if $invoice.pdiscount != 0 || $invoice.vdiscount != 0}
 	<TD WIDTH="1%" CLASS="flr" ALIGN="RIGHT" NOWRAP>
@@ -242,7 +264,7 @@
 		{$item.content}
 	</TD>
 	<TD WIDTH="1%" CLASS="flr" ALIGN="CENTER">
-		{$item.count|string_format:"%.2f"}
+		{$item.count|string_format:"%.3f"}
 	</TD>
 	{if $invoice.pdiscount != 0 || $invoice.vdiscount != 0}
 	<TD WIDTH="1%" CLASS="flr" ALIGN="RIGHT" NOWRAP>
@@ -345,26 +367,28 @@
 </TABLE>
 <TABLE WIDTH="100%" CELLPADDING="3">
 	<TR>
-		<TD WIDTH="100%" COLSPAN="2">
-			&nbsp;
-		</TD>
-	</TR>
-	<TR>
-		<TD WIDTH="50%" ALIGN="CENTER" ROWSPAN="2">
-	        {if $invoice.user || $invoice.division_author}
-			{trans("Expositor:")} {if $invoice.user}{$invoice.user}{else}{$invoice.division_author}{/if}
-        	{/if}
-		</TD>
-		<TD WIDTH="50%" ALIGN="RIGHT" CLASS="hdf">
+		<TD WIDTH="50%" ALIGN="LEFT" class="hdf">
 			{if $invoice.rebate}
-			{trans("To repay:")} {$invoice.value|money_format}
+				{if $use_alert_color}<span style="color: red; font-weight: bold;">{/if}
+				{trans("To repay:")}
+				{$invoice.value|money_format}
+				{if $use_alert_color}</span>{/if}
 			{else}
-			{trans("To pay:")} {$invoice.value|money_format}
+				{if $use_alert_color}<span style="color: red; font-weight: bold;">{/if}
+				{trans("To pay:")}
+				{$invoice.value|money_format}
+				{if $use_alert_color}</span>{/if}
+			{/if}
+		</TD>
+		<TD WIDTH="50%" ALIGN="RIGHT" ROWSPAN="2">
+			{if !ConfigHelper::checkConfig('invoices.hide_expositor')}
+				{trans("Expositor:")} {if $invoice.user}{$invoice.user}{elseif $invoice.division_author}{$invoice.division_author}{else}{trans("system")}{/if}
 			{/if}
 		</TD>
 	</TR>
+	{if !ConfigHelper::checkConfig('invoices.hide_in_words')}
 	<TR>
-		<TD WIDTH="50%" ALIGN="RIGHT" CLASS="SDR">
+		<TD WIDTH="50%" ALIGN="LEFT" CLASS="SDR">
 			{trans("In words:")}
 			{if ConfigHelper::checkConfig('phpui.to_words_short_version')}
 				{$invoice.value|string_format:"%d"|to_words:0:"":1} {$invoice.valuep|string_format:"%02d"}/100
@@ -373,9 +397,24 @@
 			{/if}
 		</TD>
 	</TR>
+	{/if}
 	<TR>
 		<TD WIDTH="100%" COLSPAN="2">
-			&nbsp;
+			{if $invoice.customerbalance > 0}
+				{$comment = trans('(excess payment)')}
+			{elseif $invoice.customerbalance < 0}
+				{$comment = trans('(underpayment)')}
+			{else}
+				{$comment = ''}
+			{/if}
+
+			<span style="font-weight: bold">
+				{if $use_alert_color}<span style="color: red;">{/if}
+				{trans('Your balance on date of invoice issue: $a $b', moneyf($invoice.customerbalance), $comment)}
+				{if $use_alert_color}</span>{/if}
+				<br>
+				{trans('Balance includes current invoice')}
+			</span>
 		</TD>
 	</TR>
 	<TR>
@@ -388,6 +427,16 @@
 			<BR>
 		</TD>
 	</TR>
+{if $invoice.comment}
+        <TR>
+                <TD WIDTH="100%" COLSPAN="2">
+                        <B>{trans("Comment:")}</B><BR>
+			<BLOCKQUOTE>
+			{$invoice.comment}
+			</BLOCKQUOTE>
+		</TD>
+        </TR>
+{/if}
 </TABLE>
 </TD>
 </TR>
@@ -409,11 +458,13 @@
 <!-- The Other Page of Invoice customerbalancelist + customerpin -->
 <!-- insert page break here and buy auto-duplex printer :p -->
 
-{if $invoice.customerpin}
-	<BR><BR>
-	<B>{trans("Customer ID:")} {$invoice.customerid|string_format:"%04d"}</B><BR>
-	PIN: <CODE>{if strlen($invoice.customerpin) < 4}{$invoice.customerpin|string_format:"%04d"}{else}{$invoice.customerpin}{/if}</CODE>
-	<BR><BR>
+{if ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.customer_credentials', true))}
+	{if $invoice.customerpin}
+		<BR><BR>
+		<B>{trans("Customer ID:")} {$invoice.customerid|string_format:"%04d"}</B><BR>
+		PIN: <CODE>{if strlen($invoice.customerpin) < 4}{$invoice.customerpin|string_format:"%04d"}{else}{$invoice.customerpin}{/if}</CODE>
+		<BR><BR>
+	{/if}
 {/if}
 
 {* 

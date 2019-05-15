@@ -4,7 +4,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -37,7 +37,9 @@ $parameters = array(
 	'g:' => 'fakehour:',
 	'e:' => 'extra-file:',
 	'b' => 'backup',
+	'a' => 'archive',
 	'o:' => 'output-directory:',
+	'n' => 'no-attachment',
 );
 
 foreach ($parameters as $key => $val) {
@@ -55,7 +57,7 @@ foreach ($short_to_longs as $short => $long)
 if (array_key_exists('version', $options)) {
 	print <<<EOF
 lms-sendinvoices.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 EOF;
 	exit(0);
@@ -64,7 +66,7 @@ EOF;
 if (array_key_exists('help', $options)) {
 	print <<<EOF
 lms-sendinvoices.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 -C, --config-file=/etc/lms/lms.ini      alternate config file (default: /etc/lms/lms.ini);
 -h, --help                      print this help and exit;
@@ -73,9 +75,12 @@ lms-sendinvoices.php
 -q, --quiet                     suppress any output, except errors;
 -f, --fakedate=YYYY/MM/DD       override system date;
 -g, --fakehour=HH               override system hour; if no fakehour is present - current hour will be used;
+-i, --interval=ms               force delay interval between subsequent posts
 -e, --extra-file=/tmp/file.pdf  send additional file as attachment
 -b, --backup                    make financial document file backup
+-a, --archive                   archive financial documents in documents directory
 -o, --output-directory=/path    output directory for document backup
+-n, --no-attachments            dont attach documents
 
 EOF;
 	exit(0);
@@ -85,7 +90,7 @@ $quiet = array_key_exists('quiet', $options);
 if (!$quiet) {
 	print <<<EOF
 lms-sendinvoices.php
-(C) 2001-2017 LMS Developers
+(C) 2001-2019 LMS Developers
 
 EOF;
 }
@@ -99,6 +104,10 @@ if ($backup) {
 	} else
 		$output_dir = getcwd();
 }
+
+$archive = isset($options['archive']);
+if ($archive && $backup)
+	die("Archive and backup modes cannot be used simultaneously!" . PHP_EOL);
 
 if (array_key_exists('config-file', $options))
 	$CONFIG_FILE = $options['config-file'];
@@ -118,6 +127,7 @@ $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 // Check for configuration vars and set default values
 $CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir']);
+$CONFIG['directories']['doc_dir'] = (!isset($CONFIG['directories']['doc_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'documents' : $CONFIG['directories']['doc_dir']);
 $CONFIG['directories']['smarty_compile_dir'] = (!isset($CONFIG['directories']['smarty_compile_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates_c' : $CONFIG['directories']['smarty_compile_dir']);
 $CONFIG['directories']['smarty_templates_dir'] = (!isset($CONFIG['directories']['smarty_templates_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates' : $CONFIG['directories']['smarty_templates_dir']);
 $CONFIG['directories']['plugin_dir'] = (!isset($CONFIG['directories']['plugin_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'plugins' : $CONFIG['directories']['plugin_dir']);
@@ -125,6 +135,7 @@ $CONFIG['directories']['plugins_dir'] = $CONFIG['directories']['plugin_dir'];
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
+define('DOC_DIR', $CONFIG['directories']['doc_dir']);
 define('SMARTY_COMPILE_DIR', $CONFIG['directories']['smarty_compile_dir']);
 define('SMARTY_TEMPLATES_DIR', $CONFIG['directories']['smarty_templates_dir']);
 define('PLUGIN_DIR', $CONFIG['directories']['plugin_dir']);
@@ -151,10 +162,9 @@ try {
 	die("Fatal error: cannot connect to database!" . PHP_EOL);
 }
 
-$invoice_filetype = ConfigHelper::getConfig('invoices.type', '');
-$dnote_filetype = ConfigHelper::getConfig('notes.type', '');
+$no_attachments = isset($options['no-attachments']);
 
-if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
+if (!$no_attachments) {
 	// Initialize templates engine (must be before locale settings)
 	$SMARTY = new LMSSmarty;
 
@@ -181,7 +191,7 @@ include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
 
 $SYSLOG = SYSLOG::getInstance();
 
-if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
+if (!$no_attachments) {
 	// Set some template and layout variables
 
 	$SMARTY->setTemplateDir(null);
@@ -204,7 +214,7 @@ if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
 $invoice_filename = ConfigHelper::getConfig('sendinvoices.invoice_filename', 'invoice_%docid');
 $dnote_filename = ConfigHelper::getConfig('sendinvoices.debitnote_filename', 'dnote_%docid');
 
-if ($backup)
+if ($backup || $archive)
 	$count_limit = 0;
 else {
 	// now it's time for script settings
@@ -230,7 +240,17 @@ else {
 	$add_message = ConfigHelper::checkConfig('sendinvoices.add_message');
 	$dsn_email = ConfigHelper::getConfig('sendinvoices.dsn_email', '', true);
 	$mdn_email = ConfigHelper::getConfig('sendinvoices.mdn_email', '', true);
-	$count_limit = intval(ConfigHelper::getConfig('sendinvoices.limit', '0'));
+	$count_limit = ConfigHelper::getConfig('sendinvoices.limit', '0');
+
+	if (isset($options['interval']))
+		$interval = $options['interval'];
+	else
+		$interval = ConfigHelper::getConfig('sendinvoices.interval', 0);
+	if ($interval == 'random')
+		$interval = -1;
+	else
+		$interval = intval($interval);
+
 
 	if (empty($sender_email))
 		die("Fatal error: sender_email unset! Can't continue, exiting." . PHP_EOL);
@@ -265,7 +285,7 @@ $currtime = localtime2($fakedate) + $timeoffset;
 $daystart = (intval($currtime / 86400) * 86400) - $timeoffset;
 $dayend = $daystart + 86399;
 
-if ($backup)
+if ($backup || $archive)
 	$groupnames = '';
 else {
 	// prepare customergroups in sql query
@@ -288,7 +308,7 @@ else {
 	if ($test)
 		echo "WARNING! You are using test mode." . PHP_EOL;
 
-	if (!empty($count_limit))
+	if (!empty($count_limit) && preg_match('/^[0-9]+$/', $count_limit))
 		$count_offset = $curr_h * $count_limit;
 }
 
@@ -303,25 +323,54 @@ $LMS->lang = $_language;
 $plugin_manager = new LMSPluginManager();
 $LMS->setPluginManager($plugin_manager);
 
-if ($invoice_filetype != 'pdf' || $dnote_filetype != 'pdf') {
+if (!$no_attachments) {
 	$plugin_manager->executeHook('smarty_initialized', $SMARTY);
 
 	$SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
 	$SMARTY->assignByRef('_language', $LMS->lang);
 }
 
-if ($backup)
+if ($backup || $archive)
 	$args = array(DOC_INVOICE, DOC_INVOICE_PRO, DOC_CNOTE, DOC_DNOTE);
-else
+else {
 	$args = array(CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_DISABLED,
 		CONTACT_EMAIL | CONTACT_INVOICES, DOC_INVOICE, DOC_INVOICE_PRO, DOC_CNOTE, DOC_DNOTE);
-$query = "SELECT d.id, d.number, d.cdate, d.name, d.customerid, d.type AS doctype, n.template" . ($backup ? '' : ', m.email') . "
+
+	if (!empty($count_limit) && preg_match('/^(?<percent>[0-9]+)%$/', $count_limit, $m)) {
+		$percent = intval($m['percent']);
+		if ($percent < 1 || $percent > 99)
+			$count_limit = 0;
+		else {
+			$count = intval($DB->GetOne("SELECT COUNT(*)
+				FROM documents d
+				LEFT JOIN customers c ON c.id = d.customerid
+				JOIN (SELECT customerid, " . $DB->GroupConcat('contact') . " AS email
+					FROM customercontacts
+					WHERE (type & ?) = ?
+					GROUP BY customerid
+				) m ON m.customerid = c.id
+				WHERE c.deleted = 0 AND d.cancelled = 0 AND d.type IN (?, ?, ?, ?) AND c.invoicenotice = 1
+					AND d.cdate >= $daystart AND d.cdate <= $dayend"
+				. (!empty($groupnames) ? $customergroups : ""), $args));
+			if (empty($count))
+				die;
+
+			$count_limit = floor(($percent * $count) / 100);
+			$count_offset = $curr_h * $count_limit;
+			if ($count_offset >= $count)
+				die;
+		}
+	}
+}
+
+$query = "SELECT d.id, d.number, d.cdate, d.name, d.customerid, d.type AS doctype, d.archived, n.template" . ($backup || $archive ? '' : ', m.email') . "
 		FROM documents d
 		LEFT JOIN customers c ON c.id = d.customerid"
-		. ($backup ? '' : " JOIN (SELECT customerid, " . $DB->GroupConcat('contact') . " AS email
+		. ($backup || $archive ? '' : " JOIN (SELECT customerid, " . $DB->GroupConcat('contact') . " AS email
 				FROM customercontacts WHERE (type & ?) = ? GROUP BY customerid) m ON m.customerid = c.id")
 		. " LEFT JOIN numberplans n ON n.id = d.numberplanid 
-		WHERE c.deleted = 0 AND d.cancelled = 0 AND d.type IN (?, ?, ?, ?)" . ($backup ? '' : " AND c.invoicenotice = 1") . "
+		WHERE c.deleted = 0 AND d.cancelled = 0 AND d.type IN (?, ?, ?, ?)" . ($backup || $archive ? '' : " AND c.invoicenotice = 1")
+			. ($archive ? " AND d.archived = 0" : '') . "
 			AND d.cdate >= $daystart AND d.cdate <= $dayend"
 			. (!empty($groupnames) ? $customergroups : "")
 		. " ORDER BY d.number" . (!empty($count_limit) ? " LIMIT $count_limit OFFSET $count_offset" : '');
@@ -332,7 +381,7 @@ if (!empty($docs)) {
 		foreach ($docs as $doc) {
 			$doc['invoice_filename'] = $invoice_filename;
 			$doc['dnote_filename'] = $dnote_filename;
-			$document = $LMS->GetFinancialDocument($doc, $SMARTY);
+			$document = $LMS->GetTradeDocument($doc);
 			if (!$quiet)
 				echo "Document " . $document['filename'] . " backed up." . PHP_EOL;
 			if (!$test) {
@@ -341,10 +390,20 @@ if (!empty($docs)) {
 				fclose($fh);
 			}
 		}
-	} else
-		$LMS->SendInvoices($docs, 'backend', compact('SMARTY', 'invoice_filetype', 'dnote_filetype' , 'invoice_filename', 'dnote_filename', 'debug_email',
+	} elseif ($archive)
+		foreach ($docs as $doc) {
+			$result = $LMS->ArchiveTradeDocument($doc['id']);
+			if (!$quiet && isset($result['ok']))
+				if ($result['ok'])
+					echo "Document ID: " . $doc['id'] . " archived with name " . $result['filename'] . "." . PHP_EOL;
+				else
+					echo $result['error'] . PHP_EOL;
+		}
+	else
+		$LMS->SendInvoices($docs, 'backend', compact('SMARTY','invoice_filename', 'dnote_filename', 'debug_email',
 			'mail_body', 'mail_subject', 'mail_format', 'currtime', 'sender_email', 'sender_name', 'extrafile',
-			'dsn_email', 'reply_email', 'mdn_email', 'notify_email', 'quiet', 'test', 'add_message',
+			'dsn_email', 'reply_email', 'mdn_email', 'notify_email', 'quiet', 'test', 'add_message', 'interval',
+			'no_attachments',
 			'smtp_options'));
 }
 

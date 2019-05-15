@@ -24,7 +24,7 @@
  *  $Id$
  */
 
-define('DBVERSION', '2018022607'); // here should be always the newest version of database!
+define('DBVERSION', '2019042400'); // here should be always the newest version of database!
 				 // it placed here to avoid read disk every time when we call this file.
 
 /**
@@ -511,6 +511,17 @@ abstract class LMSDB_common implements LMSDBInterface
 	*/
 	public function Day($date) {
 		return $this->_driver_day($date);
+	}
+
+	/**
+	 * Regular expression match for selected field.
+	 *
+	 * @param string $field
+	 * @param string $regexp
+	 * @return regexp match string
+	 */
+	public function RegExp($field, $regexp) {
+		return $this->_driver_regexp($field, $regexp);
 	}
 
 	/**

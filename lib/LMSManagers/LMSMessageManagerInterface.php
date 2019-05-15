@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C) 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,15 +27,20 @@
 /**
  * LMSMessageManagerInterface
  * 
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
  */
 interface LMSMessageManagerInterface
 {
     public function GetMessages($customerid, $limit = NULL);
     
-    public function AddMessageTemplate($type, $name, $subject, $message);
+    public function AddMessageTemplate($type, $name, $subject, $helpdesk_queues, $helpdesk_message_types, $message);
     
-    public function UpdateMessageTemplate($id, $type, $name, $subject, $message);
-    
-    public function GetMessageTemplates($type);
+    public function UpdateMessageTemplate($id, $type, $name, $subject, $helpdesk_queues, $helpdesk_message_types, $message);
+
+	public function DeleteMessageTemplates(array $ids);
+
+    public function GetMessageTemplates($type = 0);
+
+	public function GetMessageTemplatesByQueueAndType($queueid, $type);
+
+	public function GetMessageList(array $params);
 }

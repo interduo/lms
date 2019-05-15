@@ -8,9 +8,9 @@
             "type": "package",
             "package": {
                 "name": "xdan/datetimepicker",
-                "version": "2.5.12",
+                "version": "2.5.20",
                 "dist": {
-                    "url": "https://github.com/xdan/datetimepicker/archive/2.5.12.zip",
+                    "url": "https://github.com/xdan/datetimepicker/archive/2.5.20.zip",
                     "type": "zip"
                 }
             }
@@ -25,6 +25,40 @@
                     "type": "zip"
                 }
             }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "ccampbell/mousetrap",
+                "version": "1.6.2",
+                "dist": {
+                    "url": "https://github.com/ccampbell/mousetrap/archive/1.6.2.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "ivkremer/jquery-simple-combobox",
+                "version": "1.1.29",
+                "dist": {
+                    "url": "https://github.com/ivkremer/jquery-simple-combobox/archive/1.1.29.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "fortawesome/font-awesome",
+                "version": "5.3.1",
+                "source": {
+                    "url": "https://github.com/FortAwesome/Font-Awesome.git",
+                    "type": "git",
+                    "reference": "5.3.1"
+                }
+            }
         }
     ],
     "require": {
@@ -35,19 +69,29 @@
         "tecnickcom/tcpdf": "6.2.21",
         "spipu/html2pdf": "^4.5",
         "components/normalize.css": "^3.0",
-        "smarty/smarty": "3.1.31",
+        "smarty/smarty": "3.1.33",
         "rospdf/pdf-php": "^0.12",
         "components/jqueryui": "^1",
         "xdan/datetimepicker": "^2",
         "alexei/sprintf.js": "^1",
         "datatables/datatables": "^1.10",
-        "setasign/fpdi-tcpdf": "^1.6",
+        "setasign/fpdi-tcpdf": "^1",
         "pear/mail": "^1.3",
         "gusapi/gusapi": "^3",
-        "erusev/parsedown": "^1"
+        "erusev/parsedown": "^1",
+        "tecnickcom/tc-lib-barcode": "^1",
+        "zenorocha/clipboardjs": "^2.0",
+        "harvesthq/chosen": "^1.8",
+        "tinymce/tinymce": "^4",
+        "ccampbell/mousetrap": "^1",
+        "ivkremer/jquery-simple-combobox": "^1",
+		"fortawesome/font-awesome": "^5",
+        "html2text/html2text": "^4",
+        "drmonty/datatables-responsive": "^2.2"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4"
+        "phpunit/phpunit": "^4",
+        "squizlabs/php_codesniffer": "*"
     },
     "autoload": {
         "classmap": ["lib/", "plugins/"]

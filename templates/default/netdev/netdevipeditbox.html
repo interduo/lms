@@ -1,6 +1,6 @@
 <!-- $Id$ -->
 
-<FORM NAME="editipaddr" METHOD="POST" ACTION="?m=netdevedit&action=formeditip&id={$netdevinfo.id}&ip={$nodeipdata.id}">
+<FORM NAME="editipaddr" METHOD="POST" ACTION="?m=netdevedit&action=formeditip&id={$netdev.id}&ip={$nodeipdata.id}">
 
 <INPUT type="submit" class="hiddenbtn">
 <INPUT TYPE="hidden" NAME="ipadd[id]" VALUE="{$nodeipdata.id}">
@@ -54,10 +54,10 @@
 										{trans("Network:")}
 									</td>
 									<td>
-										<select name="ipadd[netid]" {tip text="Choose network" trigger="netid"}>
+										<select name="ipadd[netid]" {tip text="Choose network" trigger="netid" class="lms-ui-advanced-select"}>
 											<option value="0">{trans("- automatic selection -")}</option>
 											{foreach $networks as $net}
-											<option value="{$net.id}" {if $net.id == $nodeipdata.netid} selected{/if}{if $net.disabled == 1} class="alert"{/if}>{$net.name|truncate:20:"":true}: {$net.address}/{$net.prefix}</OPTION>
+											<option value="{$net.id}" {if $net.id == $nodeipdata.netid} selected{/if}{if $net.disabled == 1} class="lms-ui-error"{/if}>{$net.name|truncate:20:"":true}: {$net.address}/{$net.prefix}</OPTION>
 											{/foreach}
 										</select>
 									</td>
@@ -73,10 +73,10 @@
 										<input type="text" name="ipadd[ipaddr]" value="{$nodeipdata.ipaddr}" {tip text="Enter IP address" trigger="ipaddr"}>
 										<a href="javascript: void(0);" onClick="return ipchoosewin({
 												ipelem: document.editipaddr['ipadd[ipaddr]'],
-												netelem: document.editipaddr['ipadd[netid]'],
 												ip: document.editipaddr['ipadd[ipaddr]'].value,
+												netelem: document.editipaddr['ipadd[netid]'],
 												netid: document.editipaddr['ipadd[netid]'].value,
-												device: {$netdevinfo.id}
+												device: {$netdev.id}
 											});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 										<br>
 										<a href="#" id="selectfirstfreeaddress">{trans("Select first free address")}</a>
@@ -104,12 +104,15 @@
 										{trans("Pub. IP address:")}
 									</td>
 									<td>
-										<input type="text" name="ipadd[ipaddr_pub]" value="{if $nodeipdata.ip_pub!="0.0.0.0"}{$nodeipdata.ip_pub}{/if}" {tip text="Enter IP address" trigger="ipaddr_pub"}>
+										<input type="hidden" name="ipadd[pubnetid]" value="{$nodeipdata.pubnetid}">
+										<input type="text" name="ipadd[ipaddr_pub]" value="{if $nodeipdata.ipaddr_pub!="0.0.0.0"}{$nodeipdata.ipaddr_pub}{/if}" {tip text="Enter IP address" trigger="ipaddr_pub"}>
 										<a href="javascript: void(0);" onClick="return ipchoosewin({
 												ipelem: document.editipaddr['ipadd[ipaddr_pub]'],
-												netelem: null,
-												netid: {$nodeipdata.netid},
-												device: {$netdevinfo.id}
+												ip: document.editipaddr['ipadd[ipaddr_pub]'].value,
+												netelem: document.editipaddr['ipadd[pubnetid]'],
+												netid: document.editipaddr['ipadd[pubnetid]'].value,
+												privnetid: document.editipaddr['ipadd[netid]'].value,
+												device: {$netdev.id}
 											});" {tip text="Click to select IP from the list"}>&raquo;&raquo;&raquo;</A>
 									</td>
 								</tr>
@@ -122,16 +125,8 @@
 									<td>
 										{trans("MAC:")}
 									</td>
-									<td>
-										<table width="100%" cellpadding="1" cellspacing="0">
-											{foreach from=$nodeipdata.macs item=item key=key}
-											<tr id="mac{$key}">
-												<td width="100%"><input type="text" name="ipadd[macs][{$key}]" value="{$item}" {tip text="Enter MAC address" trigger="mac`$key`"}> <a href="javascript: void(0);" onClick="return macchoosewin(document.editipaddr.elements['ipadd[macs][{$key}]']);" {tip text="Click to select MAC from the list"}>&raquo;&raquo;&raquo;</a>
-											</tr>
-											{/foreach}
-										</table>
-										<input type="hidden" id="macscount" value="{$item@total}">
-										<A href="javascript: newmac()">{trans("Add MAC address")} &raquo;&raquo;&raquo;</A>
+									<td class="lms-ui-mac-address-selection nobr">
+										{mac_address_selection form="ipadd" macs=$nodeipdata.macs}
 									</td>
 								</tr>
 								<tr>
@@ -247,15 +242,15 @@
 		<tr>
 			<td colspan="3" class="text-right">
 				<a href="javascript:document.editipaddr.submit();" ACCESSKEY="S">{trans("Submit")} <img src="img/save.gif" alt=""></a>
-				<a href="?m=netdevinfo&id={$netdevinfo.id}{if isset($nodeipdata.id)}&ip={$nodeipdata.id}{/if}">{trans("Cancel")} <img src="img/cancel.gif" alt=""></a>
+				<a href="?m=netdevinfo&id={$netdev.id}{if isset($nodeipdata.id)}&ip={$nodeipdata.id}{/if}">{trans("Cancel")} <img src="img/cancel.gif" alt=""></a>
 			</td>
 		</tr>
     </tbody>
 </table>
 </form>
 
-<script type="text/javascript">
-<!--
+<script>
+
 	$( '#passGen' ).click( function() {
 		var length = {ConfigHelper::getConfig('phpui.nodepassword_length', '16')};
 
@@ -266,23 +261,4 @@
 		event.preventDefault();
 	});
 
-	function newmac()
-	{
-		var macscountelem = document.getElementById('macscount');
-		var nr = macscountelem.value;
-		var lastmacelem = document.getElementById('mac' + (nr - 1));
-		var newrow = lastmacelem.parentNode.insertRow(lastmacelem.rowIndex + 1);
-		newrow.id = 'mac' + nr;
-		var newcell = newrow.insertCell(0);
-		newcell.style.width = '100%';
-		newcell.innerHTML = '<INPUT TYPE="TEXT" NAME="ipadd[macs][' + nr + ']" VALUE=""'
-			+ ' title="{trans("Enter MAC address")}\')">'
-			+ '<a href="javascript: void(0);" onClick="return macchoosewin(document.editipaddr.elements[\'ipadd[macs][' + nr + ']\']);"'
-			+ ' title="{trans("Click to select MAC from the list")}">&nbsp;&raquo;&raquo;&raquo;</A>';
-		$(newcell).children("[title]").tooltip({
-			position: { my: "left top" }
-		});
-		macscountelem.value = parseInt(nr) + 1;
-	}
-//-->
 </script>

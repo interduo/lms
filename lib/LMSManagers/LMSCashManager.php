@@ -54,7 +54,7 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 		global $LMS;
 
 		$file = preg_split('/\r?\n/', $contents);
-		$patterns_cnt = isset($patterns) ? sizeof($patterns) : 0;
+		$patterns_cnt = isset($patterns) ? count($patterns) : 0;
 		$ln = 0;
 		$sum = array();
 		$data = array();
@@ -186,6 +186,8 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 				compact("id", "pattern", "comment", "theline", "ln", "patterns_cnt", "error", "line", "time"));
 			extract($hook_data);
 
+			if (!strlen($comment))
+				$comment = trans('(payment without title)');
 			if (!empty($pattern['comment_replace']))
 				$comment = preg_replace($pattern['comment_replace']['from'], $pattern['comment_replace']['to'], $comment);
 			$cid = $id;

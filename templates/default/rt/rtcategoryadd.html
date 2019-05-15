@@ -1,5 +1,5 @@
 {extends file="layout.html"}
-{block name=title}::: LMS :{$layout.pagetitle|striphtml} :::{/block}
+{block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
@@ -30,6 +30,16 @@
 	    <TD class="bold">{trans("Description")}:</TD>
 	    <TD>
 		<TEXTAREA NAME="category[description]" COLS="50" ROWS="2" {tip text="Enter additional information (optional)"}>{$category.description}</TEXTAREA>
+	    </TD>
+	</TR>
+	<TR>
+	    <TD>
+		<IMG src="img/queue.gif" ALT="">
+	    </TD>
+	    <TD class="bold">{trans("Category style:")}
+	    </TD>
+	    <TD class="bold">
+	        <TEXTAREA NAME="category[style]" COLS="50" ROWS="2" {tip text="Enter category CSS style (optional):"}>{$category.description}</TEXTAREA>
 	    </TD>
 	</TR>
 	<TR>
