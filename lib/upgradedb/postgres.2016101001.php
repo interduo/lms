@@ -28,4 +28,3 @@ $this->Execute("ALTER TABLE voip_numbers ADD PRIMARY KEY (id)");
 $this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2016101001', 'dbversion'));
 
 $this->CommitTrans();
-?>
