@@ -201,7 +201,6 @@
 						{/if}
 					{/if}
 				{/if}
-				{/if}
 			{/if}
 			{if !$invoice.cancelled}
 				{if $invoice.type != $smarty.const.DOC_INVOICE_PRO && !$invoice.archived && !$invoice.referenced && (!$invoice.published || ConfigHelper::checkPrivilege('published_document_modification'))}
