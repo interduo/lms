@@ -175,7 +175,6 @@ switch (intval($_GET['customertype'])) {
 $attachment_name = ConfigHelper::getConfig('invoices.attachment_name');
 $invoice_type = strtolower(ConfigHelper::getConfig('invoices.type'));
 $dontpublish = isset($_GET['dontpublish']);
-
 $jpk = isset($_GET['jpk']);
 if ($jpk) {
     $jpk_type = $_GET['jpk'];
