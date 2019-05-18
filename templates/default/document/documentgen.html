@@ -25,17 +25,6 @@
 		document.documentgen.target = "_blank";
 		document.documentgen.submit();
 	}
-
-	function setnumberplans() {
-		reset_login_timeout();
-		xajax_GetNumberPlans(document.forms['documentgen'].elements['document[type]'].value,
-			document.forms['documentgen'].elements['document[numberplanid]'].value,
-			null);
-	}
-
-	function numberplans_received() {
-		gettemplates();
-	}
 //-->
 </SCRIPT>
 <FORM name="documentgen" method="POST" id="documentgen-form" action="?m=documentgen" enctype="multipart/form-data">
