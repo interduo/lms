@@ -30,6 +30,6 @@ $this->Execute("ALTER TABLE ewx_stm_channels DROP FOREIGN KEY ewx_stm_channels_c
 $this->Execute("ALTER TABLE ewx_stm_channels ADD CONSTRAINT ewx_stm_channels_cid_fkey
 	FOREIGN KEY (cid) REFERENCES customers(id) ON UPDATE CASCADE ON DELETE SET NULL");
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019071500', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019042401', 'dbversion'));
 
 $this->CommitTrans();

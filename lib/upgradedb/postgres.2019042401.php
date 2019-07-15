@@ -32,6 +32,6 @@ $this->Execute("
 		FOREIGN KEY (cid) REFERENCES customers(id) ON UPDATE CASCADE ON DELETE SET NULL
 ");
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019071500', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019042401', 'dbversion'));
 
 $this->CommitTrans();
