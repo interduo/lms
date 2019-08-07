@@ -26,7 +26,8 @@
 INPUT.alert,
 INPUT.alert:focus,
 TEXTAREA.alert,
-TEXTAREA.alert:focus {
+TEXTAREA.alert:focus,
+.form-control:invalid {
 	background-color: #FF9B9B;
 }
 
