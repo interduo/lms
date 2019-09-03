@@ -4350,5 +4350,5 @@ $_LANG['<!dialog>Alert'] = 'Ostrzeżenie';
 
 $_LANG['Bandwidth distribution:'] = 'Rozkład przepływności:';
 $_LANG['Bandwidth interval'] = 'Przedział przepływności';
-$_LANG['<!customer>Private'] = 'Prywatni';
-$_LANG['<!customer>Bussiness'] = 'Biznesowi';
+$_LANG['<!link>Private links'] = 'Łącza prywatne';
+$_LANG['<!link>Bussiness links'] = 'Łącza biznesowe';
