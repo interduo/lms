@@ -25,6 +25,12 @@
  */
 
 $_LANG['Are you sure, you want to unlink this ticket $a?'] = 'Czy jesteś pewien, że chcesz odwiązać zgłoszenie $a?';
+
+$_LANG['split payment'] = 'podzielona płatność';
+$_LANG['(split payment)'] = '(podzielona płatność)';
+
+$_LANG['There is no assigned parent ticket.'] = 'Nie ma przypisanego zgłoszenia nadrzędnego.';
+$_LANG['Are you sure, you want to unlink ticket \'$a\'?'] = 'Czy jesteś pewien, że chcesz odwiązać zgłoszenie \'$a\'?';
 $_LANG['Cannot link ticket because of related ticket loop!'] = 'Nie można powiązać zgłoszenia z powodu pętli powiązań!';
 $_LANG['Ticket parent ID has been set to $a.'] = 'ID zgłoszenia nadrzędnego zostało ustawione na $a.';
 $_LANG['Ticket does not exist'] = 'Zgłoszenie nie istnieje';
