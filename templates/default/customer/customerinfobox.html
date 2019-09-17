@@ -1,5 +1,5 @@
 <!--// $Id$ //-->
-<TABLE class="lmsbox{if $customerpanel} sortable{/if}" id="customerinfobox">
+<TABLE class="lmsbox{if $customerpanel} lms-ui-sortable{/if}" id="customerinfobox">
 	<COLGROUP>
 		<COL style="width: 99%;">
 		<COL style="width: 1%;">
@@ -7,7 +7,7 @@
     <THEAD>
 	<TR{if $customerpanel} class="hand lmsbox-titlebar" data-lmsbox-content="customerpanel"{/if}>
 		<TD class="bold{if !$customerpanel} fleftu{/if}">
-			<IMG SRC="img/customer.gif" ALT="">
+			<IMG SRC="img/customer.gif" ALT=""{if $customerpanel} class="lms-ui-sortable-handle"{/if}>
 			{if $customerpanel}{trans("Owner:")}{/if}
 			{$customerinfo.customername|escape} ({$customerinfo.id|string_format:"%04d"}{if $customerinfo.extid} / {$customerinfo.extid}{/if}){if $customerinfo.deleted} <span class="red">({trans("deleted customer")})</span>{/if}
 		</TD>
