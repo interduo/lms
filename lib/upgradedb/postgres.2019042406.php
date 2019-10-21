@@ -29,6 +29,6 @@ $this->Execute("
     UPDATE rttickets t SET modtime = (SELECT MAX(createtime) FROM rtmessages m WHERE m.ticketid = t.id)
 ");
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019102100', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019042406', 'dbversion'));
 
 $this->CommitTrans();
