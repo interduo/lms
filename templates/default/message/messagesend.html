@@ -2,6 +2,23 @@
 {block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
+
+<style>
+
+	#message-body {
+		line-height: 0.7em;
+	}
+
+</style>
+
+<script>
+
+	$(function() {
+		show_pagecontent();
+	});
+
+</script>
+
 <H1>{$layout.pagetitle}</H1>
 <P class="txt">
 {if $message.from}<B>{trans("Sender:")}</B> {$message.from} &lt;{$message.sender}&gt;<BR>{/if}
