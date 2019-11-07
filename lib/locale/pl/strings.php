@@ -27,6 +27,7 @@
 $_LANG['Are you sure, you want to unlink this ticket $a?'] = 'Czy jesteś pewien, że chcesz odwiązać zgłoszenie $a?';
 
 $_LANG['split payment'] = 'podzielona płatność';
+$_LANG['Split payment:'] = 'Podzielona płatność:';
 $_LANG['(split payment)'] = '(podzielona płatność)';
 
 $_LANG['There is no assigned parent ticket.'] = 'Nie ma przypisanego zgłoszenia nadrzędnego.';
