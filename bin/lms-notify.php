@@ -832,7 +832,7 @@ if (empty($types) || in_array('debtors', $types)) {
             WHERE (type & ?) = ?
             GROUP BY customerid
         ) x ON (x.customerid = c.id)
-        WHERE c.id = 3076 AND c.status <> ? AND c.cutoffstop < $currtime AND b2.balance " . ($limit > 0 ? '>' : '<') . " ?",
+        WHERE c.status <> ? AND c.cutoffstop < $currtime AND b2.balance " . ($limit > 0 ? '>' : '<') . " ?",
         array(
             DOC_CNOTE,
             $days,
