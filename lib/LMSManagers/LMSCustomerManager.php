@@ -769,7 +769,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                         case 'balance_relation':
                             if ($key == 'balance' && isset($search['balance_relation'])) {
                                 $balance_relation = intval($search['balance_relation']);
-                                $searchargs[] = 'b.value' . ($balance_relation == -1 ? '<=' : '>=') . ' ' . floatval($value);
+                                $searchargs[] = 'b.value' . ($balance_relation == -1 ? '<=' : '>=') . ' ' . str_replace(',', '.', floatval($value));
                             }
                             break;
                         default:
