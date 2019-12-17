@@ -150,9 +150,6 @@ $_LANG['Cost limit:'] = 'Limit kosztów:';
 $_LANG['Callee:'] = 'Dokąd:';
 $_LANG['Unit size<!voip>'] = 'Rozmiar jednostki';
 $_LANG['Start call:'] = 'Dokąd:';
-
-$_LANG['billing'] = 'billing';
-
 $_LANG['purchase invoice'] = 'faktura zakupu';
 $_LANG['pro-forma invoice'] = 'faktura pro-forma';
 $_LANG['$a ($b addresses)'] = '$a ($b adresów)';
@@ -2236,7 +2233,7 @@ $_LANG['Position:'] = 'Stanowisko:';
 $_LANG['Configuration error. Patterns array not found!'] = 'Błąd w konfiguracji. Nie znaleziono tablicy wzorców!';
 $_LANG['Line:'] = 'Linia:';
 $_LANG['Errors and Duplicated Entries'] = 'Błędy i duplikaty';
-$_LANG['24 months'] = '24 m-ce';
+$_LANG['24 months'] = '24 mies.';
 $_LANG['Enter description or select tariff from the list'] = 'Wprowadź opis lub wybierz taryfę z listy';
 $_LANG['Created by:'] = 'Utworzył:';
 $_LANG['Body:'] = 'Treść:';
@@ -2878,9 +2875,9 @@ $_LANG['Enter promotion name'] = 'Wprowadź nazwę promocji';
 $_LANG['Enter schema name'] = 'Wprowadź nazwę schematu';
 $_LANG['Enter subscription value for specified period'] = 'Wprowadź kwotę abonamentu w wybranym okresie';
 $_LANG['List of promotions'] = 'Lista promocji';
-$_LANG['Months $a-$b'] = 'M-ce $a-$b';
-$_LANG['Month $a'] = 'M-c $a';
-$_LANG['Months $a-'] = 'M-ce $a-';
+$_LANG['Months $a-$b'] = 'mies. $a-$b';
+$_LANG['Month $a'] = 'mies. $a';
+$_LANG['Months $a-'] = 'mies. $a-';
 $_LANG['New Promotion'] = 'Nowa promocja';
 $_LANG['New Schema'] = 'Nowy schemat';
 $_LANG['Periods:'] = 'Okresy:';
@@ -4351,3 +4348,4 @@ $_LANG['Check if representative should be disabled'] = 'Zaznacz jeśli reprezent
 $_LANG['<!dialog>Confirmation'] = 'Potwierdzenie';
 $_LANG['<!dialog>Alert'] = 'Ostrzeżenie';
 
+$_LANG['indefinitely'] = 'bezterminowo';
