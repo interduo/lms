@@ -428,6 +428,24 @@ if (!empty($docs)) {
             }
         }
     } else {
+        $which = array();
+        $tmp = explode(',', ConfigHelper::getConfig('invoices.default_printpage'));
+        foreach ($tmp as $t) {
+            if (trim($t) == 'original') {
+                $which[] = trans('ORIGINAL');
+            } elseif (trim($t) == 'copy') {
+                $which[] = trans('COPY');
+            } elseif (trim($t) == 'duplicate') {
+                $which[] = trans('DUPLICATE');
+            }
+        }
+
+        if (!count($which)) {
+            $which[] = trans('ORIGINAL');
+        }
+
+        $duplicate_date = 0;
+
         $LMS->SendInvoices($docs, 'backend', compact(
             'SMARTY',
             'invoice_filename',
@@ -449,6 +467,8 @@ if (!empty($docs)) {
             'add_message',
             'interval',
             'no_attachments',
+            'which',
+            'duplicate_date',
             'smtp_options'
         ));
     }
