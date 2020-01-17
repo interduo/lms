@@ -62,7 +62,11 @@ if ($c == 'cdate' && $s) {
 }
 
 if (!empty($_POST['from'])) {
-    $from = datetime_to_timestamp($_POST['from']);
+    if (strlen($_POST['from']) > 10) {
+        $from = datetime_to_timestamp($_POST['from']);
+    } else {
+        $from = date_to_timestamp($_POST['from']);
+    }
 } elseif ($SESSION->is_set('blf')) {
     $SESSION->restore('blf', $from);
 } else {
@@ -70,7 +74,11 @@ if (!empty($_POST['from'])) {
 }
 
 if (!empty($_POST['to'])) {
-    $to = datetime_to_timestamp($_POST['to']);
+    if (strlen($_POST['to']) > 10) {
+        $to = datetime_to_timestamp($_POST['to']);
+    } else {
+        $to = date_to_timestamp($_POST['to']);
+    }
 } elseif ($SESSION->is_set('blt')) {
     $SESSION->restore('blt', $to);
 } else {
