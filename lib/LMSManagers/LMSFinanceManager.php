@@ -1255,12 +1255,23 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
             foreach ($values as $label => $tariffs) {
                 foreach ($tariffs as $tariffid => $periods) {
-                    $a_data = $this->db->GetOne(
-                        'SELECT data
-                        FROM promotionassignments
-                        WHERE promotionschemaid = ? AND tariffid = ? AND label = ?',
-                        array($schemaid, $tariffid, strval($label))
-                    );
+                    $label = strval($label);
+                    $unlabeled_regexp = trans('^unlabeled_(?<assignmentid>[0-9]+)$');
+                    if (preg_match('/' . $unlabeled_regexp . '/', $label, $m)) {
+                        $a_data = $this->db->GetOne(
+                            'SELECT data
+                            FROM promotionassignments
+                            WHERE promotionschemaid = ? AND id = ?',
+                            array($schemaid, $m['assignmentid'])
+                        );
+                    } else {
+                        $a_data = $this->db->GetOne(
+                            'SELECT data
+                            FROM promotionassignments
+                            WHERE promotionschemaid = ? AND tariffid = ? AND label = ?',
+                            array($schemaid, $tariffid, $label)
+                        );
+                    }
                     $a_periods = explode(';', $a_data);
                     $allowed_period_indexes = array();
                     foreach ($a_periods as $a_period_idx => $a_period) {
@@ -3743,7 +3754,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
         $promotion_schema_assignments = $this->db->GetAll('SELECT
 				p.id AS promotion_id, ps.id AS schema_id, pa.id AS assignment_id,
 				t.name as tariff_name, pa.optional, pa.data AS adata,
-				(CASE WHEN label IS NULL THEN ' . $this->db->Concat("'unlabeled_'", 't.id') . ' ELSE label END) AS label,
+				(CASE WHEN label IS NULL THEN ' . $this->db->Concat("'unlabeled_'", 'pa.id') . ' ELSE label END) AS label,
 				t.id as tariffid, t.type AS tarifftype, t.value, t.authtype
 			FROM promotions p
 				LEFT JOIN promotionschemas ps ON p.id = ps.promotionid
@@ -3764,8 +3775,8 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
             if (empty($single_labels)) {
                 $single_labels = array();
             }
-            $selection_labels = $this->db->GetAll('SELECT promotionschemaid AS schemaid,
-					(CASE WHEN label IS NULL THEN ' . $this->db->Concat("'unlabeled_'", 'tariffid') . ' ELSE label END) AS label,
+            $selection_labels = $this->db->GetAll('SELECT id, promotionschemaid AS schemaid,
+					(CASE WHEN label IS NULL THEN ' . $this->db->Concat("'unlabeled_'", 'id') . ' ELSE label END) AS label,
 					1 AS cnt
 				FROM promotionassignments
 				WHERE label IS NULL');
@@ -3777,8 +3788,8 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
             $promotion_schema_selections = array();
             if (!empty($labels)) {
                 foreach ($labels as &$label) {
-                    if (preg_match('/^unlabeled_(?<tariffid>[0-9]+)$/', $label['label'], $m)) {
-                        $label['label'] = trans('<!tariffselection>unlabeled_$a', $m['tariffid']);
+                    if (preg_match('/^unlabeled_(?<assignmentid>[0-9]+)$/', $label['label'], $m)) {
+                        $label['label'] = trans('<!tariffselection>unlabeled_$a', $m['assignmentid']);
                     }
                     $promotion_schema_selections[$label['schemaid']][$label['label']] = $label['cnt'];
                 }
@@ -3829,8 +3840,8 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     'periods' => $periods,
                 );
 
-                if (preg_match('/^unlabeled_(?<tariffid>[0-9]+)$/', $assign['label'], $m)) {
-                    $label = trans('<!tariffselection>unlabeled_$a', $m['tariffid']);
+                if (preg_match('/^unlabeled_(?<assignmentid>[0-9]+)$/', $assign['label'], $m)) {
+                    $label = trans('<!tariffselection>unlabeled_$a', $m['assignmentid']);
                 } else {
                     $label = $assign['label'];
                 }
