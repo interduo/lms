@@ -57,7 +57,7 @@
 							{/if}
 							<SELECT size="5" id="assignment-tags" name="assignment[tags][]" class="lms-ui-multiselect" {tip text="Select tariff tags"} multiple onchange="javascript:updateTariffs();"{if empty($tags)} style="display: none;"{/if}>
 								{foreach $tags as $tag}
-								<OPTION value="{$tag.id}">{$tag.name}</OPTION>
+								<OPTION value="{$tag.id}"{if isset($assignment.tags) && in_array($tag.id, $assignment.tags)} selected{/if}>{$tag.name}</OPTION>
 								{/foreach}
 							</SELECT>
 						</td>
@@ -88,6 +88,7 @@
 {include file="customer/customerassignments.html"}
 
 <SCRIPT>
+
 	var tariffTypes = [];
 	{foreach $tariffs as $tariff}
 	tariffTypes[{$tariff.id}] = {$tariff.tarifftype};
@@ -166,6 +167,8 @@
 		});
 
 		updateCheckAllNodes();
+
+		updateTariffs();
 	});
 
 	function updateTariffs() {
@@ -216,5 +219,6 @@
 			tariff_select.val($('option:nth(0)').val());
 		}
 	}
+
 </SCRIPT>
 {/block}
