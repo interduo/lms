@@ -360,7 +360,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                                 'prodid' => $tariff['prodid']
                             );
                             $this->db->Execute('INSERT INTO liabilities (name, value, splitpayment, taxid, prodid)
-                                VALUES (?, ?, ?, ?, ?, ?)', array_values($args));
+                                VALUES (?, ?, ?, ?, ?)', array_values($args));
 
                             $lid = $this->db->GetLastInsertID('liabilities');
 
