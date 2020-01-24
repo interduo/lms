@@ -945,7 +945,7 @@ if (empty($types) || in_array('reminder', $types)) {
                 OR (cash.docid IS NOT NULL AND ((d.type = ? AND cash.time < $currtime)
                     OR (d.type = ? AND cash.time < $currtime AND tv.totalvalue >= 0)
                     OR (((d.type = ? AND tv.totalvalue < 0)
-                        OR d.type IN (?, ?, ?)) AND (" . ($days > 0 ? 'cash.docid = d.id OR ' : '') . "d.cdate + d.paytime * 86400 < $currtime))))
+                        OR d.type IN (?, ?, ?)) AND (" . ($days > 0 ? 'cash.docid = d.id OR ' : '') . "d.cdate + (d.paytime - ?) * 86400 < $currtime))))
             GROUP BY cash.customerid
         ) b2 ON b2.customerid = c.id
         LEFT JOIN (SELECT " . $DB->GroupConcat('contact') . " AS email, customerid
@@ -965,8 +965,8 @@ if (empty($types) || in_array('reminder', $types)) {
         ) v ON (v.docid = d.id)
         LEFT JOIN numberplans n ON (d.numberplanid = n.id)
         WHERE d.type IN (?, ?, ?) AND d.closed = 0 AND b2.balance < ?
-            AND ((d.cdate / 86400) + d.paytime - ?) * 86400 >= $daystart
-            AND ((d.cdate / 86400) + d.paytime - ?) * 86400 < $dayend",
+            AND ((d.cdate / 86400) + d.paytime - ? + 1) * 86400 >= $daystart
+            AND ((d.cdate / 86400) + d.paytime - ? + 1) * 86400 < $dayend",
         array(
             DOC_CNOTE,
             DOC_RECEIPT,
@@ -975,6 +975,7 @@ if (empty($types) || in_array('reminder', $types)) {
             DOC_INVOICE,
             DOC_INVOICE_PRO,
             DOC_DNOTE,
+            $days,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS,
             CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
