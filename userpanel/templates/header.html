@@ -2,7 +2,8 @@
 <!--// $Id$ //-->
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{$_ui_language}"> 
   <meta content="text/html; charset={$LANGDEFS.$_ui_language.charset}" http-equiv="content-type" />
-  <meta http-equiv="refresh" content="{ConfigHelper::getConfig('phpui.timeout')+5}">
+  {$timeout = ConfigHelper::getConfig('phpui.timeout', 600)}
+  <meta http-equiv="refresh" content="{$timeout+5}">
   <title>{if $page_header}{$page_header}{else}{trans("Virtual Customer Service")}{/if}</title>
 <link href="{ConfigHelper::getConfig('userpanel.shortcut_icon', 'img/lms-net.gif')}" rel="shortcut icon">
 <link type="text/css" rel="stylesheet" href="css/fontawesome/css/fontawesome-all.min.css" />
