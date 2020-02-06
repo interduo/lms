@@ -484,6 +484,11 @@ $(function() {
 	});
 
 	$('select.lms-ui-advanced-select').each(function() {
+		$(this).on('chosen:ready', function() {
+			if (typeof($(this).attr('required')) !== 'undefined') {
+				$(this).next().toggleClass('lms-ui-error', !parseInt($(this).val()));
+			}
+		});
 		$(this).chosen($.extend({
 			no_results_text: $t('No results match'),
 			placeholder_text_single: $t('Select an Option'),
@@ -491,6 +496,11 @@ $(function() {
 			disable_search_threshold: 5,
 			inherit_select_classes: true
 		}, $(this).attr('data-options') ? JSON.parse($(this).attr('data-options')) : {}));
+		$(this).chosen().change(function(e, data) {
+			if (typeof($(this).attr('required')) !== 'undefined') {
+				$(this).next().toggleClass('lms-ui-error', !parseInt(data.selected));
+			}
+		});
 	});
 
 	$('.lms-ui-combobox').each(function() {
