@@ -20,7 +20,7 @@
 	{if ($assignment.tariffid || $assignment.liabilityid) && !($assignment.suspended || ($assignment.dateto < $smarty.now && $assignment.dateto) || ($assignment.datefrom > $smarty.now && $assignment.datefrom))}
 	<tr class="dark">
 		<td><strong>{if ConfigHelper::checkConfig('userpanel.show_tariffname')}{$assignment.name}{/if}</strong></td>
-		<td class="nobr" align="right">{$assignment.real_disc_value|money_format}</td>
+		<td class="nobr" align="right">{$assignment.discounted_value|money_format}</td>
 		<td class="nobr" align="right">{if $assignment.pdiscount > 0}{$assignment.pdiscount}%{else}{if $assignment.vdiscount > 0}{$assignment.vdiscount|money_format}{else}-{/if}{/if}</td>
 		<td class="nobr">{$assignment.payday}</td>
 		{if $show_speeds}
