@@ -51,8 +51,8 @@
 	{/foreach}
 	<tr class="darkest">
 		<td align="right"><strong>{trans("Total:")}</strong></td>
-		<td class="nobr" align="right">{sum array=$assignments column="real_value" string_format=$LANGDEFS.$_language.money_format}</td>
-		<td class="nobr" align="right">({sum array=$assignments column="real_disc_value" string_format=$LANGDEFS.$_language.money_format})</td>
+		<td class="nobr" align="right">{sum array=$assignments column="real_disc_value" string_format=$LANGDEFS.$_language.money_format}</td>
+		<td class="nobr" align="right">(-)</td>
 		<td>&nbsp;</td>
 		{if $show_speeds}
 			<td class="nobr" align="right">
