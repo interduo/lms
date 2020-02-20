@@ -1150,14 +1150,14 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     $a['vdiscount'] = 0;
                     $a['value']     = 0;
 
-                    unset($a['schemaid'], $a['stariffid'], $a['invoice'], $a['settlement'], $error['at']);
+                    unset($a['schemaid'], $a['sassignmentid'], $a['invoice'], $a['settlement'], $error['at']);
                     $at = 0;
                     break;
 
                 // promotion schema
                 case -2:
                     $schemaid = isset($a['schemaid']) ? intval($a['schemaid']) : 0;
-                    $a['promotionassignmentid'] = $a['stariffid'][$schemaid];
+                    $a['promotionassignmentid'] = $a['sassignmentid'][$schemaid];
 
                     $values = $a['values'][$schemaid];
                     foreach ($a['promotionassignmentid'] as $label => $tariffid) {
@@ -1203,7 +1203,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                         $error['discount'] = trans('Value less than discount are not allowed!');
                     }
 
-                    unset($a['schemaid'], $a['stariffid']);
+                    unset($a['schemaid'], $a['sassignmentid']);
             }
         } else {
             if ($a['discount_type'] == 2 && $a['discount']
@@ -1212,7 +1212,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                 $error['discount'] = trans('Value less than discount are not allowed!');
             }
 
-            unset($a['schemaid'], $a['stariffid']);
+            unset($a['schemaid'], $a['sassignmentid']);
         }
 
         if (isset($error['dateto'])) {
