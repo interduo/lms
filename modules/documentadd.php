@@ -364,7 +364,7 @@ if (isset($_POST['document'])) {
                             continue;
                         }
 
-                        $copy_a['promotiontariffid'] = $v;
+                        $copy_a['promotionassignmentid'] = $v;
                         $copy_a['modifiedvalues'] = isset($modifiedvalues[$label][$v]) ? $modifiedvalues[$label][$v] : array();
                         $copy_a['nodes'] = $snodes[$label];
                         $copy_a['phones'] = $sphones[$label];
