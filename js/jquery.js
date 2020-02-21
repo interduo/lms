@@ -486,7 +486,7 @@ $(function() {
 	$('select.lms-ui-advanced-select').each(function() {
 		$(this).on('chosen:ready', function() {
 			if (typeof($(this).attr('required')) !== 'undefined') {
-				$(this).next().toggleClass('lms-ui-error', RegExp("^(0|-1)?$").test($(this).val()));
+				$(this).next().toggleClass('lms-ui-error', RegExp("^0?$").test($(this).val()));
 			}
 		});
 		$(this).chosen($.extend({
@@ -497,12 +497,8 @@ $(function() {
 			inherit_select_classes: true
 		}, $(this).attr('data-options') ? JSON.parse($(this).attr('data-options')) : {}));
 		$(this).chosen().change(function(e, data) {
-			if (typeof ($(this).attr('required')) !== 'undefined') {
-				if (typeof (data) !== 'undefined') {
-					$(this).next().toggleClass('lms-ui-error', RegExp("^0?$").test(data.selected));
-				} else {
-					$(this).next().toggleClass('lms-ui-error', RegExp("^(0|-1)?$").test($(this).val()));
-				}
+			if (typeof($(this).attr('required')) !== 'undefined') {
+				$(this).next().toggleClass('lms-ui-error', RegExp("^0?$").test(data.selected));
 			}
 		});
 	});
