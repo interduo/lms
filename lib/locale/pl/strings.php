@@ -26,6 +26,10 @@
 
 $_LANG['Are you sure, you want to unlink this ticket $a?'] = 'Czy jesteś pewien, że chcesz odwiązać zgłoszenie $a?';
 
+$_LANG['Generate XML report'] = 'Generuj raport XML';
+$_LANG['Phone contacts:'] = 'Telefony kontaktowe:';
+$_LANG['(undefined)'] = '(nieokreślone)';
+
 $_LANG['split payment'] = 'podzielona płatność';
 $_LANG['Split payment:'] = 'Podzielona płatność:';
 $_LANG['(split payment)'] = '(podzielona płatność)';
