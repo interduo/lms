@@ -19,7 +19,7 @@
 						<img src="img/logo.png" alt="">
 					</td>
 					<td align="center" class="loginform light" style="width: 300px;">
-						<span class="bold">{trans("LMS version")} {$layout.lmsv}{if $layout.lmsvr} ({$layout.lmsvr}){/if}<br><br>
+						<span class="bold">{t a=LMS::SOFTWARE_NAME}$a version{/t} {$layout.lmsv}{if $layout.lmsvr} ({$layout.lmsvr}){/if}<br><br>
 						&copy; 2001-{$smarty.now|date_format:'%Y'} LMS Developers</span><br><br><br>
 						{if $error}<span class="lms-ui-error bold">{$error}</span>{else}&nbsp;{/if}<br>
 						<br>
