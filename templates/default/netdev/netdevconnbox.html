@@ -90,11 +90,11 @@
 							</div>
 						</div>
 						<div class="lms-ui-tab-table-wrapper link col-2">
-							<div class="lms-ui-tab-table-column link-tech" id="dev-link-tech-{$netdevice.id}">
+							<div class="lms-ui-tab-table-column link-tech" id="dev-link-tech-{$netdevice.id}" data-target-url="?m=netdevinfo&id={$netdevice.id}">
 								{if $netdevice.linktechnology}{$_LINKTECHNOLOGIES[$netdevice.linktype][$netdevice.linktechnology]}{else}-{/if}
 								{if $netdevice.linktype == $smarty.const.LINKTYPE_WIRELESS && ($netdevice.srcradiosector || $netdevice.dstradiosector)} ({if $netdevice.srcradiosector}{$netdevice.srcradiosector}{else}-{/if}/{if $netdevice.dstradiosector}{$netdevice.dstradiosector}{/if}){/if}
 							</div>
-							<div class="lms-ui-tab-table-column link-speed" id="dev-link-speed-{$netdevice.id}">
+							<div class="lms-ui-tab-table-column link-speed" id="dev-link-speed-{$netdevice.id}" data-target-url="?m=netdevinfo&id={$netdevice.id}">
 								{if $netdevice.linkspeed}{$_LINKSPEEDS[$netdevice.linkspeed]}{else}-{/if}
 							</div>
 						</div>
@@ -118,7 +118,7 @@
 								</span>
 								[{if $netdevice.dstport}{$netdevice.dstport}{else}-{/if}]
 							</div>
-							<div class="lms-ui-tab-table-column used-ports">
+							<div class="lms-ui-tab-table-column used-ports" data-target-url="?m=netdevinfo&id={$netdevice.id}">
 								<i class="lms-ui-icon-plug"></i> {$netdevice.ports} ({$netdevice.takenports})
 							</div>
 						</div>
