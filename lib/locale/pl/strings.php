@@ -4369,3 +4369,6 @@ $_LANG['<!link>Bussiness links'] = 'Łącza biznesowe';
 $_LANG['<!link>$a ($b)'] = '$a ($b)';
 
 $_LANG['indefinitely'] = 'bezterminowo';
+
+$_LANG['Tax category:'] = 'Kategoria podatkowa:';
+$_LANG['Select tax category'] = 'Wybierz kategorię podatkową';
