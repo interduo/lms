@@ -248,6 +248,11 @@ if (isset($_POST['tariff'])) {
         }
     }
 
+    if (ConfigHelper::checkConfig('phpui.tax_category_required')
+        && empty($tariff['taxcategory'])) {
+        $error['taxcategory'] = trans('Tax category selection is required!');
+    }
+
     if (!$error) {
         $SESSION->redirect('?m=tariffinfo&id='.$LMS->TariffAdd($tariff));
     }
