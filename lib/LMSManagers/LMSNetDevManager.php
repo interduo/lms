@@ -414,7 +414,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
             'netnodeid'        => $data['netnodeid'],
             'status'           => empty($data['status']) ? 0 : $data['status'],
             'netdevicemodelid' => null,
-            'address_id'       => ($data['customer_address_id'] >= 0 ? $data['customer_address_id'] : null),
+            'address_id'       => !empty($data['ownerid']) && $data['customer_address_id'] > 0 ? $data['customer_address_id'] : null,
             'ownerid'          => !empty($data['ownerid'])  ? $data['ownerid']    : null
         );
 
@@ -449,11 +449,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
                 $address_id = $LMS->InsertAddress($data);
 
-                if ($address_id >= 0) {
+                if (!empty($address_id)) {
                     $this->db->Execute('UPDATE netdevices SET address_id = ? WHERE id = ?', array($address_id, $id));
                 }
-            } else if ($data['address_id'] && $data['address_id'] >= 0) {
-                $this->db->Execute('UPDATE netdevices SET address_id = ? WHERE id = ?', array($data['address_id'], $id));
             }
 
             // EtherWerX support (devices have some limits)
