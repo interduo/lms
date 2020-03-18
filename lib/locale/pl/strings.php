@@ -24,6 +24,10 @@
  *  $Id$
  */
 
+$_LANG['link technologies'] = 'technologie łącza';
+$_LANG['service types'] = 'typy usług';
+$_LANG['<!uke-income>Service type'] = 'Typ usługi';
+
 $_LANG['Are you sure, you want to unlink this ticket $a?'] = 'Czy jesteś pewien, że chcesz odwiązać zgłoszenie $a?';
 
 $_LANG['Generate XML report'] = 'Generuj raport XML';
