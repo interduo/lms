@@ -241,7 +241,7 @@ function BodyVars(&$body, $data)
     global $LMS, $LANGDEFS;
 
     $body = str_replace('%customer', $data['customername'], $body);
-    $body = str_replace('%balance', $data['balance'], $body);
+    $body = str_replace('%balance', moneyf($data['balance']), $body);
     $body = str_replace('%cid', $data['id'], $body);
     $body = str_replace('%pin', $data['pin'], $body);
     if (strpos($body, '%bankaccount') !== false) {
