@@ -606,6 +606,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 								HAVING COUNT(netlinks.id) >= 0
 							)';
                             break;
+                        case 102:
+                            $where[] = 'd.id NOT IN (SELECT DISTINCT src FROM netlinks) AND d.id NOT IN (SELECT DISTINCT dst FROM netlinks)';
+                            break;
                         default:
                             $where[] = 'd.status = ' . intval($value);
                     }

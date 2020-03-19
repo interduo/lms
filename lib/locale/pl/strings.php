@@ -4376,3 +4376,5 @@ $_LANG['indefinitely'] = 'bezterminowo';
 $_LANG['Tax category:'] = 'Kategoria podatkowa:';
 $_LANG['Select tax category'] = 'Wybierz kategorię podatkową';
 $_LANG['Tax category selection is required!'] = 'Wymagany wybór kategorii podatkowej!';
+
+$_LANG['no connections'] = 'bez połączeń';
