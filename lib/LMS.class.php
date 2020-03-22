@@ -2493,13 +2493,24 @@ class LMS
 
             switch ($service) {
                 case 'smscenter':
-                    if ($msg_len < 160) {
-                        $type_sms = 'sms';
-                    } else if ($msg_len <= 459) {
-                        $type_sms = 'concat';
+                    if (ConfigHelper::checkValue($transliterate_message)) {
+                        if ($msg_len < 160) {
+                            $type_sms = 'sms';
+                        } else if ($msg_len <= 459) {
+                            $type_sms = 'concat';
+                        } else {
+                            $errors[] = trans('SMS Message too long!');
+                            continue 2;
+                        }
                     } else {
-                        $errors[] = trans('SMS Message too long!');
-                        continue 2;
+                        if ($msg_len <= 70) {
+                            $type_sms = 'unicode';
+                        } else if ($msg_len <= 201) {
+                            $type_sms = 'unicode_concat';
+                        } else {
+                            $errors[] = trans('SMS Message too long!');
+                            continue 2;
+                        }
                     }
 
                     $type = ConfigHelper::getConfig('sms.smscenter_type', 'dynamic');
