@@ -1685,7 +1685,12 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
         $invoicelist = $this->db->GetAll('SELECT d.id AS id, d.number, d.cdate, d.type,
 			d.customerid, d.name, d.address, d.zip, d.city, countries.name AS country, numberplans.template, d.closed,
 			d.cancelled, d.published, d.archived,
-			SUM(a.value * a.count) AS value,
+			(CASE WHEN d.type = ' . DOC_INVOICE_PRO . '
+			    THEN
+			        SUM(a.value * a.count)
+			    ELSE
+			        -SUM(cash.value)
+			END) AS value,
 			COUNT(a.docid) AS count,
 			i.sendinvoices,
 			(CASE WHEN d2.id IS NULL THEN 0 ELSE 1 END) AS referenced
