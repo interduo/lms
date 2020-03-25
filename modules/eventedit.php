@@ -193,7 +193,7 @@ $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $usergroups = $DB->GetAll('SELECT id, name FROM usergroups');
 
-if (isset($event['customerid']) || intval($event['customerid'])) {
+if (isset($event['customerid']) && intval($event['customerid'])) {
     $SMARTY->assign('nodes', $LMS->GetNodeLocations(
         $event['customerid'],
         isset($event['address_id']) && intval($event['address_id']) > 0 ? $event['address_id'] : null
