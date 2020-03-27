@@ -243,9 +243,7 @@ if (isset($_POST['assignment'])) {
         }
     }
 
-    if ($a['tarifftype'] == SERVICE_PHONE) {
-        unset($a['nodes']);
-    } else {
+    if ($a['tarifftype'] != SERVICE_PHONE) {
         unset($a['phones']);
     }
 
