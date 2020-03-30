@@ -1459,10 +1459,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 $props['address_id'] = $ticket['address_id'];
             }
         } else {
-            $props['address_id'] = null;
-            if (!empty($ticket['location'])) {
-                $notes[] = trans('Ticket\'s location $a has been removed.', $ticket['location']);
-            }
+            $props['address_id'] = $ticket['address_id'];
         }
 
         if (isset($props['nodeid'])) {
