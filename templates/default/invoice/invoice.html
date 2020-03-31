@@ -398,6 +398,7 @@
 		</TD>
 	</TR>
 	{/if}
+	{if ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.show_balance', true))}
 	<TR>
 		<TD WIDTH="100%" COLSPAN="2">
 			{if $invoice.customerbalance > 0}
@@ -417,6 +418,7 @@
 			</span>
 		</TD>
 	</TR>
+	{/if}
 	<TR>
 		<TD WIDTH="100%" COLSPAN="2">
 			<B>{trans("Cautions:")}</B><BR>
