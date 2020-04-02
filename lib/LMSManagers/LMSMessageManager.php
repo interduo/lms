@@ -313,7 +313,7 @@ class LMSMessageManager extends LMSManager implements LMSMessageManagerInterface
 					WHERE e.customerid IS NULL
 					GROUP BY i.messageid
 				) x ON (x.messageid = m.id) '
-                .(!empty($userjoin) ? 'JOIN users u ON (u.id = m.userid) ' : '')
+                .(!empty($userjoin) ? 'JOIN vusers u ON (u.id = m.userid) ' : '')
                 .(!empty($where) ? $where : ''));
         }
 
@@ -335,7 +335,7 @@ class LMSMessageManager extends LMSManager implements LMSMessageManagerInterface
 				WHERE e.customerid IS NULL
 				GROUP BY i.messageid
 			) x ON (x.messageid = m.id) '
-            .(!empty($userjoin) ? 'JOIN users u ON (u.id = m.userid) ' : '')
+            .(!empty($userjoin) ? 'JOIN vusers u ON (u.id = m.userid) ' : '')
             .(!empty($where) ? $where : '')
             .$sqlord.' '.$direction
             . (isset($limit) ? ' LIMIT ' . $limit : '')
