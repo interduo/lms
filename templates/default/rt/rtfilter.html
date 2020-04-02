@@ -65,22 +65,30 @@
             </SELECT>
             </label>
             <label class="nobr">
-            <input type="hidden" name="owner" value="-1">
-            {trans("Owner:")}
-            <SELECT size="1" name="owner[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("- all -")}">
-                <OPTION value="0" data-exclusive{if !is_array($filter.owner) && $filter.owner == 0} selected{/if}>- {trans("no owner")} -</OPTION>
-                {foreach $users as $user}
-                <OPTION value="{$user.id}"{if is_array($filter.owner) && in_array($user.id, $filter.owner)}} SELECTED{/if}>{$user.rname|truncate:40:"...":true}</OPTION>
-                {/foreach}
-            </SELECT>
+                <input type="hidden" name="owner" value="-1">
+                {trans("Owner:")}
+                <SELECT size="1" name="owner[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("- all -")}">
+                    <OPTION value="0" data-exclusive{if !is_array($filter.owner) && $filter.owner == 0} selected{/if}>- {trans("no owner")} -</OPTION>
+                    {foreach $users as $user}
+                        {if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
+                            || (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
+                            || (is_array($filter.owner) && in_array($user.id, $filter.owner))}
+                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.owner) && in_array($user.id, $filter.owner)}} selected{/if}>{$user.rname|truncate:40:"...":true}</OPTION>
+                        {/if}
+                    {/foreach}
+                </SELECT>
             </label>
             <label class="nobr">
                 {trans("Verifier:")}
                 <input type="hidden" name="vids" value="all">
                 <SELECT size="1" name="vids[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("No filter")}" >
-                {foreach $users as $user}
-                    <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.verifierids) && in_array($user.id, $filter.verifierids)} SELECTED{/if}>{$user.name|truncate:40:"...":true}</OPTION>
-                {/foreach}
+                    {foreach $users as $user}
+                        {if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
+                            || (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
+                            || (is_array($filter.verifierids) && in_array($user.id, $filter.verifierids))}
+                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.verifierids) && in_array($user.id, $filter.verifierids)} SELECTED{/if}>{$user.name|truncate:40:"...":true}</OPTION>
+                        {/if}
+                    {/foreach}
                 </SELECT>
             </label>
             {if ConfigHelper::checkPrivilege('helpdesk_advanced_operations')}
