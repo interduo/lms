@@ -2421,7 +2421,8 @@ class LMS
 
         $message = preg_replace("/\r/", "", $message);
 
-        if (ConfigHelper::checkConfig('sms.transliterate_message')) {
+        $transliterate_message = ConfigHelper::checkConfig(ConfigHelper::getConfig('sms.transliterate_message', 'false'));
+        if ($transliterate_message) {
             $message = iconv('UTF-8', 'ASCII//TRANSLIT', $message);
         }
 
@@ -2496,7 +2497,7 @@ class LMS
 
             switch ($service) {
                 case 'smscenter':
-                    if (ConfigHelper::checkValue($transliterate_message)) {
+                    if ($transliterate_message) {
                         if ($msg_len < 160) {
                             $type_sms = 'sms';
                         } else if ($msg_len <= 459) {
