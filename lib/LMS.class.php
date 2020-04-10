@@ -2421,7 +2421,7 @@ class LMS
 
         $message = preg_replace("/\r/", "", $message);
 
-        $transliterate_message = ConfigHelper::checkConfig(ConfigHelper::getConfig('sms.transliterate_message', 'false'));
+        $transliterate_message = ConfigHelper::checkValue(ConfigHelper::getConfig('sms.transliterate_message', 'false'));
         if ($transliterate_message) {
             $message = iconv('UTF-8', 'ASCII//TRANSLIT', $message);
         }
