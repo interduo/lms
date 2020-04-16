@@ -2653,8 +2653,8 @@ class LMS
                     if ($messageid) {
                         $args['usmsid'] = $messageid;
                     }
-                    $fast = ConfigHelper::getConfig('sms.fast');
-                    if (!empty($fast)) {
+                    $fast = ConfigHelper::getConfig('sms.fast', 'false');
+                    if (ConfigHelper::checkValue($fast)) {
                         $args['speed'] = 1;
                     }
 
