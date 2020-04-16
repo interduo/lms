@@ -118,7 +118,7 @@
 		<TD class="text-right nobr" colspan="2">
 			<A HREF="javascript:Delete();">{trans("Delete")} <IMG src="img/delete.gif" ALT=""></A>
 			<A HREF="javascript:Save();">{trans("Save")} <IMG src="img/save.gif" ALT=""></A>
-			<A HREF="javascript:document.cashimport.submit();">{trans("<!do>Import")} <IMG src="img/save.gif" ALT=""></A>
+			<A href="#" id="import-button">{trans("<!do>Import")} <IMG src="img/save.gif" ALT=""></A>
 		</TD>
 	</TR>
     </TFOOT>
@@ -271,5 +271,14 @@
 	</TR>
     </TBODY>
 </TABLE>
+<script>
+
+	$(function() {
+		$('#import-button').one('click', function() {
+			document.cashimport.submit();
+		});
+	});
+
+</script>
 {/block}
 
