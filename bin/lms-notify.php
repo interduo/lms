@@ -636,7 +636,7 @@ if (empty($types) || in_array('documents', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -750,7 +750,7 @@ if (empty($types) || in_array('contracts', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -881,7 +881,7 @@ if (empty($types) || in_array('debtors', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -1028,7 +1028,7 @@ if (empty($types) || in_array('reminder', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -1159,7 +1159,7 @@ if (empty($types) || in_array('income', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -1277,7 +1277,7 @@ if (empty($types) || in_array('invoices', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -1392,7 +1392,7 @@ if (empty($types) || in_array('notes', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
@@ -1490,7 +1490,7 @@ if (empty($types) || in_array('warnings', $types)) {
             } else {
                 $recipient_mails = explode(',', $debug_email ?: trim($row['email']));
             }
-            if (!empty($row['phone'])) {
+            if (empty($row['phone'])) {
                 $recipient_phones = null;
             } else {
                 $recipient_phones = explode(',', $debug_phone ?: trim($row['phone']));
