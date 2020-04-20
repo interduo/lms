@@ -98,8 +98,8 @@ $tariffs = $DB->GetAll('SELECT t.name, t.value, t.id, t.upceil, t.downceil
     FROM tariffs t
     ' . (ConfigHelper::checkConfig('phpui.promotion_tariff_duplicates') ? '' : ' WHERE t.id NOT IN (
         SELECT tariffid FROM promotionassignments
-        WHERE promotionschemaid = ?)') . '
-    ORDER BY t.name, t.value DESC', array($schema['id']));
+        WHERE promotionschemaid = ' . $schema['id'] . ')') . '
+    ORDER BY t.name, t.value DESC');
 
 $layout['pagetitle'] = trans('Schema Info: $a', $schema['name']);
 
