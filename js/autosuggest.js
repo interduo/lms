@@ -82,6 +82,7 @@ function AutoSuggest(form,elem,uri,autosubmit, onsubmit) {
 		switch(key) {
 			case ENT:
 			case RET:
+				clearTimeout(me.timer);
 				me.useSuggestion();
 			break;
 
