@@ -23,8 +23,8 @@
 
 $this->BeginTrans();
 
-$this->Execute("ALTER TABLE pna MODIFY COLUMN zip varchar(10) NOT NULL");
+$this->Execute("ALTER TABLE pna ALTER COLUMN zip TYPE varchar(10)");
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2020042701', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2019042414', 'dbversion'));
 
 $this->CommitTrans();
