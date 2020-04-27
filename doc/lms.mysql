@@ -2381,7 +2381,12 @@ CREATE TABLE messageitems (
 	status 		smallint	DEFAULT '0' NOT NULL,
 	error 		text		DEFAULT NULL,
 	lastreaddate 	int(11)		DEFAULT '0' NOT NULL,
+<<<<<<< HEAD
 	externalmsgid	int(6)		DEFAULT '0' NOT NULL,
+=======
+	externalmsgid	int(11)		DEFAULT '0' NOT NULL,
+    body 		text		DEFAULT NULL,
+>>>>>>> 3d6b726b3... bugfix: fixed db schema structures; thanks go to mrd83 (original PR#1233)
         PRIMARY KEY (id),
 	INDEX messageid (messageid),
 	INDEX customerid (customerid),
@@ -3520,4 +3525,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2019042412');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2019042413');
