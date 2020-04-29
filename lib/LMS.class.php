@@ -4159,7 +4159,7 @@ class LMS
             $body = preg_replace('/%pin/', $document['document']['customerpin'], $body);
             $body = preg_replace('/%cid/', $doc['customerid'], $body);
             // invoices, debit notes
-            $body = preg_replace('/%value/', $document['document']['total'], $body);
+            $body = preg_replace('/%value/', moneyf($document['document']['total']), $body);
             $body = preg_replace('/%cdate-y/', strftime("%Y", $document['document']['cdate']), $body);
             $body = preg_replace('/%cdate-m/', strftime("%m", $document['document']['cdate']), $body);
             $body = preg_replace('/%cdate-d/', strftime("%d", $document['document']['cdate']), $body);
