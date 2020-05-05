@@ -21,7 +21,7 @@
 		{foreach $assignments as $assignment}
 			{if ($assignment.tariffid || $assignment.liabilityid) && !($assignment.suspended || ($assignment.dateto < $smarty.now && $assignment.dateto) || ($assignment.datefrom > $smarty.now && $assignment.datefrom))}
 				<tr>
-					<td>{$assignment.name}</td>
+					<td>{if ConfigHelper::checkConfig('userpanel.show_tariffname')}{$assignment.name}{/if}</td>
 					<td class="text-right text-nowrap">{$assignment.value|money_format}</td>
 					<td class="text-right text-nowrap">{if $assignment.pdiscount > 0}{$assignment.pdiscount}%{else}{if $assignment.vdiscount > 0}{$assignment.vdiscount|money_format}{else}-{/if}{/if}</td>
 					<td class="text-right">{$assignment.payday}</td>
