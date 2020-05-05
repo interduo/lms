@@ -38,14 +38,14 @@ if (count($config)) {
     if (!($config['var'] || $config['value'] || $config['description'])) {
         $SESSION->redirect('?m=configlist');
     }
-    
+
     if ($config['var']=='') {
         $error['var'] = trans('Option name is required!');
     } elseif (strlen($config['var'])>64) {
         $error['var'] = trans('Option name is too long (max.64 characters)!');
     } elseif (!preg_match('/^[a-z0-9_-]+$/', $config['var'])) {
         $error['var'] = trans('Option name contains forbidden characters!');
-    } elseif ($LMS->GetConfigOptionId($config['var'], $config['section'])) {
+    } elseif ($LMS->ConfigOptionExists(array('section' => $config['section'], 'variable' => $config['var']))) {
         $error['var'] = trans('Option exists!');
     }
 
@@ -64,7 +64,7 @@ if (count($config)) {
     if ($msg = $LMS->CheckOption($option, $config['value'], $config['type'])) {
         $error['value'] = $msg;
     }
-    
+
     if (!isset($config['disabled'])) {
         $config['disabled'] = 0;
     }
@@ -97,6 +97,19 @@ if (count($config)) {
         unset($config['description']);
         unset($config['disabled']);
     }
+
+    $config['documentation'] = Utils::MarkdownToHtml(Utils::LoadMarkdownDocumentation($option));
+} elseif (isset($_GET['id'])) {
+    $config = $LMS->GetConfigVariable($_GET['id']);
+    unset($config['id']);
+    $config['section'] = trans('$a-clone', $config['section']);
+} elseif (isset($_GET['section']) && isset($_GET['new-section'])) {
+    if (!preg_match('/^[a-z0-9_-]+$/', $_GET['section'])
+        || !preg_match('/^[a-z0-9_-]+$/', $_GET['new-section'])) {
+        die;
+    }
+    $LMS->CloneConfigSection($_GET['section'], $_GET['new-section'], isset($_GET['userid']) ? intval($_GET['userid']) : null);
+    $SESSION->redirect('?m=configlist');
 }
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);

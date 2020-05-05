@@ -78,6 +78,13 @@ class SYSLOG
     const RES_USERASSIGN = 50;
     const RES_TARIFFTAG = 51;
     const RES_TARIFFASSIGN = 52;
+    const RES_EVENT = 53;
+    const RES_EVENTASSIGN = 54;
+    const RES_ADDRESS = 55;
+    const RES_TICKET = 56;
+    const RES_DOCATTACH = 57;
+    const RES_DOCCONTENT = 58;
+    const RES_CUSTCONSENT = 59;
 
     const OPER_ADD = 1;
     const OPER_DELETE = 2;
@@ -88,6 +95,7 @@ class SYSLOG
     const OPER_USERLOGFAIL = 253;
     const OPER_USERLOGIN = 254;
     const OPER_USERLOGOUT = 255;
+    const OPER_USERAUTCHANGE = 256;
 
     private static $resources = array(
         self::RES_USER => 'user<!syslog>',
@@ -142,6 +150,13 @@ class SYSLOG
         self::RES_USERASSIGN => 'user assignment<!syslog>',
         self::RES_TARIFFTAG => 'tariff tag<!syslog>',
         self::RES_TARIFFASSIGN => 'tariff assignment<!syslog>',
+        self::RES_EVENT => 'event<!syslog>',
+        self::RES_EVENTASSIGN => 'event assignment<!syslog>',
+        self::RES_ADDRESS => 'address<!syslog>',
+        self::RES_TICKET => 'ticket<!syslog>',
+        self::RES_DOCATTACH => 'document attachment<!syslog>',
+        self::RES_DOCCONTENT => 'document content<!syslog>',
+        self::RES_CUSTCONSENT => 'customer consent<!syslog>',
     );
     private static $resource_keys = array(
         self::RES_USER => 'userid',
@@ -196,6 +211,13 @@ class SYSLOG
         self::RES_USERASSIGN => 'userassignmentid',
         self::RES_TARIFFTAG => 'tarifftagid',
         self::RES_TARIFFASSIGN => 'tariffassignmentid',
+        self::RES_EVENT => 'eventid',
+        self::RES_EVENTASSIGN => 'eventassignmentid',
+        self::RES_ADDRESS => 'address_id',
+        self::RES_TICKET => 'ticketid',
+        self::RES_DOCATTACH => 'documentattachmentid',
+        self::RES_DOCCONTENT => 'documentcontentid',
+        self::RES_CUSTCONSENT => 'customerconsentid',
     );
     private static $operations = array(
         self::OPER_ADD => 'addition<!syslog>',
@@ -304,7 +326,10 @@ class SYSLOG
             foreach ($data as $resourcetype => $val) {
                 if (((is_int($resourcetype) && isset(self::$resource_keys[$resourcetype]))
                 || (!is_int($resourcetype) && is_array($keys) && in_array($resourcetype, $keys)))
-                && (is_int($val) || preg_match('/^[0-9]+$/', $val))) {
+                && (is_int($val) || preg_match('/^[0-9]+$/', $val) || !isset($val))) {
+                    if (!isset($val)) {
+                        $val = 0;
+                    }
                     $this->DB->Execute(
                         'INSERT INTO logmessagekeys (logmessageid, name, value)
 						VALUES(?, ?, ?)',
@@ -379,7 +404,7 @@ class SYSLOG
 
     public function DecodeMessageData(&$data)
     {
-        global $PERIODS, $PAYTYPES, $LINKTYPES, $LINKSPEEDS;
+        global $PERIODS, $PAYTYPES, $LINKTYPES, $LINKSPEEDS, $CSTATUSES;
 
         switch ($data['name']) {
             case 'datefrom':
@@ -435,8 +460,19 @@ class SYSLOG
             case 'port':
                 $data['value'] = $data['value'] == 0 ? trans('none') : $data['value'];
                 break;
+            case 'status':
+                if ($data['resource'] == self::RES_CUST) {
+                    $data['value'] = $CSTATUSES[$data['value']]['singularlabel'];
+                } else {
+                    $data['value'] = $data['value'];
+                }
+                break;
             default:
-                $data['value'] = $data['value'];
+                if (strpos($data['name'], 'chkconsent') === 0) {
+                    $data['value'] = !empty($data['value']) ? $data['value'] = date('Y.m.d', $data['value']) : $data['value'];
+                } else {
+                    $data['value'] = $data['value'];
+                }
         }
         if ($data['resource'] != self::RES_USER && strlen($data['value']) > 50) {
             $data['value'] = substr($data['value'], 0, 50) . '...';
@@ -556,5 +592,19 @@ class SYSLOG
         }
         //xdebug_var_dump($result);
         return $result;
+    }
+
+    public function AddResources($namesArray, $keysArray = null)
+    {
+        if (is_array($namesArray)) {
+            foreach ($namesArray as $key => $value) {
+                self::$resources[$key] = $value;
+            }
+        }
+        if ($keysArray != null && is_array($keysArray)) {
+            foreach ($keysArray as $key => $value) {
+                self::$resource_keys[$key] = $value;
+            }
+        }
     }
 }

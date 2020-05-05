@@ -35,6 +35,7 @@ $ticket['customerid'] = isset($_GET['customerid']) && intval($_GET['customerid']
 $ticket['netdevid'] = isset($_GET['netdevid']) ? intval($_GET['netdevid']) : 0;
 $ticket['netnodeid'] = isset($_GET['netnodeid']) ? intval($_GET['netnodeid']) : 0;
 $ticket['invprojectid'] = isset($_GET['invprojectid']) ? intval($_GET['invprojectid']) : 0;
+$ticket['parentid'] = isset($_GET['parentid']) ? intval($_GET['parentid']) : null;
 
 $categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 if (!$categories) {
@@ -63,10 +64,6 @@ if (isset($_POST['ticket'])) {
         $error['deadline'] = trans('Ticket deadline could not be set in past!');
     }
 
-    if ($ticket['subject']=='' && $ticket['body']=='' && !$ticket['custid']) {
-        $SESSION->redirect('?m=rtticketadd&id='.$queue);
-    }
-
     if (empty($ticket['categories']) && (!$allow_empty_categories || (empty($ticket['categorywarn']) && $empty_category_warning))) {
         if ($allow_empty_categories) {
             $ticket['categorywarn'] = 1;
@@ -82,6 +79,8 @@ if (isset($_POST['ticket'])) {
 
     if ($ticket['subject'] == '') {
         $error['subject'] = trans('Ticket must have its title!');
+    } elseif (mb_strlen($ticket['subject']) > ConfigHelper::getConfig('rt.subject_max_length', 50)) {
+        $error['subject'] = trans('Ticket subject can contain maximum $a characters!', ConfigHelper::getConfig('rt.subject_max_length', 50));
     }
 
     if ($ticket['body'] == '') {
@@ -128,6 +127,10 @@ if (isset($_POST['ticket'])) {
     );
     $ticket = $hook_data['ticket'];
     $error = $hook_data['error'];
+
+    if (!empty($ticket['categories'])) {
+        $ticket['categories'] = array_flip($ticket['categories']);
+    }
 
     if (!$error) {
         if (!$ticket['customerid']) {
@@ -280,9 +283,10 @@ if (isset($_POST['ticket'])) {
                         'Reply-To' => $headers['From'],
                         'Subject' => $custmail_subject,
                     );
+                    $smtp_options = $LMS->GetRTSmtpOptions();
                     foreach ($emails as $email) {
                         $custmail_headers['To'] = '<' . $info['email'] . '>';
-                        $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $LMS->GetRTSmtpOptions());
+                        $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $smtp_options);
                     }
                 }
             } elseif (!empty($requestor) && ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
@@ -330,11 +334,39 @@ if (isset($_POST['ticket'])) {
         $category['checked'] = isset($ticket['categories'][$category['id']]) || count($categories) == 1;
     }
     unset($category);
+
+    if (!empty($ticket['relatedtickets'])) {
+        $ticket['relatedtickets'] = $LMS->getTickets($ticket['relatedtickets']);
+    }
+    if (!empty($ticket['parentid'])) {
+        $ticket['parent'] = $LMS->getTickets($ticket['parentid']);
+    }
 } else {
     $queuelist = $LMS->GetQueueList(array('stats' => false));
     if (!$queue && !empty($queuelist)) {
-        $firstqueue = reset($queuelist);
-        $queue = $firstqueue['id'];
+        $queue = ConfigHelper::getConfig('rt.default_queue');
+        if (preg_match('/^[0-9]+$/', $queue)) {
+            if (!$LMS->QueueExists($queue)) {
+                $queue = 0;
+            }
+        } else {
+            $queue = $LMS->GetQueueIdByName($queue);
+        }
+        if ($queue) {
+            foreach ($queuelist as $firstqueue) {
+                if ($firstqueue['id'] == $queue) {
+                    break;
+                }
+                $firstqueue = null;
+            }
+            if (!isset($firstqueue)) {
+                $queue = 0;
+            }
+        }
+        if (!$queue) {
+            $firstqueue = reset($queuelist);
+            $queue = $firstqueue['id'];
+        }
         $ticket['verifierid'] = $LMS->GetQueueVerifier($queue);
         if ($firstqueue['newticketsubject'] && $firstqueue['newticketbody']) {
             $ticket['customernotify'] = 1;
@@ -347,21 +379,66 @@ if (isset($_POST['ticket'])) {
         }
     }
 
-    $queuecategories = $LMS->GetQueueCategories($queue);
-    foreach ($categories as &$category) {
-        if (isset($queuecategories[$category['id']]) || count($categories) == 1
-            // handle category id got from welcome module so this category will be selected
-            || (isset($_GET['catid']) && $category['id'] == intval($_GET['catid']))) {
-            $category['checked'] = 1;
+    if (!isset($_GET['ticketid'])) {
+        $queuecategories = $LMS->GetQueueCategories($queue);
+        foreach ($categories as &$category) {
+            if (isset($queuecategories[$category['id']]) || count($categories) == 1
+                // handle category id got from welcome module so this category will be selected
+                || (isset($_GET['catid']) && $category['id'] == intval($_GET['catid']))) {
+                $category['checked'] = 1;
+            }
         }
+        unset($category);
     }
-    unset($category);
 
     if (ConfigHelper::checkConfig('phpui.helpdesk_notify')) {
         $ticket['notify'] = true;
     }
 
     $ticket['categorywarn'] = 0;
+
+    if (isset($_GET['ticketid'])) {
+        $oldticket = $LMS->GetTicketContents($_GET['ticketid']);
+        $ticket['queue'] = $oldticket['queueid'];
+        $ticket['customerid'] = $oldticket['customerid'];
+        if (!empty($oldticket['requestor_userid'])) {
+            $ticket['requestor_userid'] = $oldticket['requestor_userid'];
+        } elseif (!empty($oldticket['requestor_phone']) || !empty($oldticket['requestor_mail'])) {
+            $ticket['requestor_userid'] = 0;
+            $ticket['requestor_name'] = $oldticket['requestor'];
+            $ticket['requestor_phone'] = $oldticket['requestor_phone'];
+            $ticket['requestor_mail'] = $oldticket['requestor_mail'];
+        }
+        $ticket['subject'] = $oldticket['subject'];
+        $ticket['service'] = $oldticket['service'];
+        $ticket['type'] = $oldticket['type'];
+        $oldmessage = reset($oldticket['messages']);
+        if ($oldmessage['type'] == RTMESSAGE_REGULAR) {
+            $ticket['body'] = $oldmessage['body'];
+        } elseif ($oldmessage['type'] == RTMESSAGE_NOTE) {
+            $ticket['note'] = $oldmessage['note'];
+        }
+        if (!empty($oldticket['categories'])) {
+            foreach ($categories as &$category) {
+                if (isset($oldticket['categories'][$category['id']])) {
+                    $category['checked'] = 1;
+                }
+            }
+        }
+        $ticket['owner'] = $oldticket['owner'];
+        $ticket['verifierid'] = $oldticket['verifierid'];
+        $ticket['deadline'] = $oldticket['deadline'];
+        $ticket['state'] = $oldticket['state'];
+        $ticket['cause'] = $oldticket['cause'];
+        $ticket['source'] = $oldticket['source'];
+        $ticket['priority'] = $oldticket['priority'];
+        $ticket['address_id'] = $oldticket['address_id'];
+        $ticket['nodeid'] = $oldticket['nodeid'];
+        $ticket['netnodeid'] = $oldticket['netnodeid'];
+        $ticket['invprojectid'] = $oldticket['invprojectid'];
+        $ticket['parentid'] = $oldticket['parentid'];
+        $ticket['netdevid'] = $oldticket['netdevid'];
+    }
 }
 
 $layout['pagetitle'] = trans('New Ticket');
@@ -409,6 +486,12 @@ $hook_data = $LMS->executeHook(
     )
 );
 $ticket = $hook_data['ticket'];
+
+if (!empty($ticket['customerid'])) {
+    $addresses = $LMS->getCustomerAddresses($ticket['customerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
+}
 
 $SMARTY->assign('ticket', $ticket);
 $SMARTY->assign('queue', $queue);

@@ -93,7 +93,7 @@ try {
     $DB = LMSDB::getInstance();
 } catch (Exception $ex) {
     trigger_error($ex->getMessage(), E_USER_WARNING);
-    // can't working without database
+    // can't work without database
     die("Fatal error: cannot connect to database!<BR>");
 }
 
@@ -162,6 +162,12 @@ $LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
+LMS::$currency = $_currency;
+LMS::$default_currency = ConfigHelper::getConfig('phpui.default_currency', '', true);
+if (empty(LMS::$default_currency) || !isset($CURRENCIES[LMS::$default_currency])) {
+    LMS::$default_currency = $_currency;
+}
+
 $plugin_manager = new LMSPluginManager();
 $LMS->setPluginManager($plugin_manager);
 
@@ -203,9 +209,12 @@ if (!$api) {
     $SMARTY->assignByRef('LANGDEFS', $LANGDEFS);
     $SMARTY->assignByRef('_ui_language', $LMS->ui_lang);
     $SMARTY->assignByRef('_language', $LMS->lang);
+    $SMARTY->assignByRef('_currency', LMS::$currency);
+    $SMARTY->assignByRef('_default_currency', LMS::$default_currency);
 }
 
 $error = null; // initialize error variable needed for (almost) all modules
+$warning = null; // initialize warning variable needed for (almost) all modules
 
 // Load menu
 
@@ -233,17 +242,18 @@ $documents_dirs = $plugin_manager->executeHook('documents_dir_initialized', $doc
 
 // Check privileges and execute modules
 if ($AUTH->islogged) {
+    $qs_properties = $SESSION->get_persistent_setting('qs-properties');
+    if (empty($qs_properties)) {
+        $qs_properties = array();
+    } else {
+        foreach ($qs_properties as $mode => $properties) {
+            $qs_properties[$mode] = array_flip(explode(',', $properties));
+        }
+    }
+
     if (!$api) {
         $SMARTY->assign('main_menu_sortable_order', $SESSION->get_persistent_setting('main-menu-order'));
 
-        $qs_properties = $SESSION->get_persistent_setting('qs-properties');
-        if (empty($qs_properties)) {
-            $qs_properties = array();
-        } else {
-            foreach ($qs_properties as $mode => $properties) {
-                $qs_properties[$mode] = array_flip(explode(',', $properties));
-            }
-        }
         $SMARTY->assign('qs_properties', $qs_properties);
 
         $qs_fields = $SESSION->get_persistent_setting('qs-fields');
@@ -282,6 +292,17 @@ if ($AUTH->islogged) {
         'user_id' => Auth::GetCurrentUser(),
     ));
 
+    LMSConfig::getConfig(array(
+        'force' => true,
+        'force_user_settings_only' => true,
+        'user_id' => Auth::GetCurrentUser(),
+    ));
+
+    LMS::$default_currency = ConfigHelper::getConfig('phpui.default_currency', '', true);
+    if (empty(LMS::$default_currency) || !isset($CURRENCIES[LMS::$default_currency])) {
+        LMS::$default_currency = LMS::$currency;
+    }
+
     $module = isset($_GET['m']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['m']) : '';
     $deny = $allow = false;
 
@@ -293,8 +314,12 @@ if ($AUTH->islogged) {
     }
     $module = $res['module'];
 
-    if ($AUTH->passwdrequiredchange) {
-        $module = 'chpasswd';
+    if ($module != 'logout') {
+        if ($AUTH->requiredPasswordChange()) {
+            $module = 'chpasswd';
+        } elseif ($AUTH->requiredTwoFactorAuthChange()) {
+            $module = 'twofactorauthedit';
+        }
     }
 
     if ($module == '') {
@@ -326,6 +351,9 @@ if ($AUTH->islogged) {
             $SESSION->save('module', $module);
 
             if (!$api) {
+                $SMARTY->assign('url', 'http' . ($_SERVER['HTTPS'] == 'on' ? 's' : '') . '://' . $_SERVER['HTTP_HOST']
+                    . substr($_SERVER['REQUEST_URI'], 0, strrpos($_SERVER['REQUEST_URI'], '/') + 1));
+
                 // get all persistent filters
                 $SMARTY->assign('persistent_filters', $SESSION->getAllPersistentFilters());
 
@@ -342,6 +370,18 @@ if ($AUTH->islogged) {
                 // restore selected persistent filter info
                 if (isset($filter['persistent_filter'])) {
                     $SMARTY->assign('persistent_filter', $filter['persistent_filter']);
+                }
+
+                // preset error and warning smarty variable
+                // they can be easily filled later in modules
+                $SMARTY->assignByRef('error', $error);
+                $SMARTY->assignByRef('warning', $warning);
+
+                // preload warnings from submitted form to $warning variable
+                if (isset($_GET['warning'])) {
+                    $warnings = $_GET['warning'];
+                } elseif (isset($_POST['warning'])) {
+                    $warnings = $_POST['warning'];
                 }
             } else {
                 // persistent filter ajax management
@@ -410,7 +450,11 @@ if ($AUTH->islogged) {
     if (!$api) {
         $SMARTY->assign('error', $AUTH->error);
         $SMARTY->assign('target', '?'.$_SERVER['QUERY_STRING']);
-        $SMARTY->display('login.html');
+        if ($AUTH->authCodeRequired()) {
+            $SMARTY->display('twofactorauth/twofactorauthcode.html');
+        } else {
+            $SMARTY->display('login.html');
+        }
     }
 }
 

@@ -98,14 +98,14 @@ function hostname()
         default:
             $return = trans('unknown OS ($a)', PHP_OS);
     }
-    
+
     if (!$hostname) {
         $hostname = $_ENV['HOSTNAME'] ? $_ENV['HOSTNAME'] : $_SERVER['SERVER_NAME'];
     }
     if (!$hostname) {
         $hostname='N.A.';
     }
-        
+
     return $hostname;
 }
 
@@ -129,38 +129,12 @@ function ip_long($sip)
 
 function check_ip($ip)
 {
-    return (bool) preg_match('/^((25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)$/', $ip);
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false;
 }
 
 function check_ipv6($ip)
 {
-        // fast exit for localhost
-    if (strlen($ip) < 3) {
-            return $ip == '::';
-    }
-    
-    // Check if part is in IPv4 format
-    if (strpos($ip, '.')) {
-        $lastcolon = strrpos($ip, ':');
-        if (!($lastcolon && check_ip(substr($ip, $lastcolon + 1)))) {
-                return false;
-        }
-
-        // replace IPv4 part with dummy
-        $ip = substr($ip, 0, $lastcolon) . ':0:0';
-    }
-    
-    // check uncompressed
-    if (strpos($ip, '::') === false) {
-        return preg_match('/^(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}$/i', $ip);
-    }
-    
-    // check colon-count for compressed format
-    if (substr_count($ip, ':') < 8) {
-        return preg_match('/^(?::|(?:[a-f0-9]{1,4}:)+):(?:(?:[a-f0-9]{1,4}:)*[a-f0-9]{1,4})?$/i', $ip);
-    }
-    
-    return false;
+    return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
 }
 
 function check_mask($mask)
@@ -253,7 +227,7 @@ function mask2prefix($mask)
 function check_mac(&$macaddr)
 {
     // save passed macaddr for future use
-    
+
     $oldmac = $macaddr;
 
     // strip EVERYTHING that doesnt match 0-9 and a-f,
@@ -265,9 +239,9 @@ function check_mac(&$macaddr)
     if (!preg_match('/^[0-9a-f]{12}$/i', $macaddr)) {
         // mac address isn't valid, restore it (cause we working on
         // reference) and return false
-    
+
         $macaddr = $oldmac;
-    
+
         return false;
     } else {
         // mac address is valid, return nice mac address that LMS
@@ -306,10 +280,10 @@ function textwrap($text, $wrap = 76, $break = "\n")
             if ($char == ' ' || $char == chr(13) || $char == chr(10)) {
                 $lastWhite = $lastChar; // note the position of the last whitespace
             }
-            
+
             $lastChar = $lastChar + 1; // advance the last character position by one
         }
-        
+
         $h .= substr($text, $lastBreak); // build line
     } else {
         $h = $text; // in this case everything can fit on one line
@@ -443,22 +417,7 @@ function striphtml($text)
 
 function check_email($email)
 {
-    $length = strlen($email);
-
-    if (!$email
-            || substr($email, 0, 1) == '@'
-            || substr($email, 0, 1) == '.'
-            || strrpos($email, '@') == ($length - 1)
-            || strrpos($email, '.') == ($length - 1)
-            || substr_count($email, '@') != 1
-            || !substr_count(substr($email, strpos($email, '@')), '.')
-            || substr_count($email, '..')
-            || ($length-strrpos($email, '.'))<3
-    ) {
-        return false;
-    }
-
-    return preg_match('/^[a-z0-9\-._+]+@[a-z0-9\-.]+$/i', $email) > 0;
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
 function get_producer($mac)
@@ -508,7 +467,7 @@ function r_trim($array)
             $array[$key] = trim($value);
         }
     }
-    
+
     return $array;
 }
 
@@ -522,16 +481,25 @@ function isboolean($value)
     }
 }
 
-function moneyf($value)
+function moneyf($value, $currency = null)
 {
-    global $LANGDEFS, $_language;
-    return sprintf($LANGDEFS[$_language]['money_format'], $value);
+    if (empty($currency)) {
+        $currency = LMS::$currency;
+    }
+    return sprintf('%01.2f %s', $value, $currency);
 }
 
-function moneyf_in_words($value)
+function moneyf_in_words($value, $currency = null)
 {
-    global $LANGDEFS, $_language;
-    return sprintf($LANGDEFS[$_language]['money_format_in_words'], to_words(floor($value)), to_words(round(($value - floor($value)) * 100)));
+    if (empty($currency) || $currency == LMS::$currency) {
+        $currency = LMS::$currency;
+    }
+    return sprintf(
+        $GLOBALS['LANGDEFS'][$GLOBALS['_language']]['money_format_in_words'],
+        to_words(floor($value)),
+        $currency,
+        round(($value - floor($value)) * 100)
+    );
 }
 
 if (!function_exists('bcmod')) {
@@ -698,11 +666,11 @@ function lms_ucwords($str)
 {
     $result = array();
     $arr = preg_split('/\s+/', $str);
-    
+
     foreach ($arr as $word) {
         $result[] = mb_strlen($word) > 1 ? mb_convert_case($word, MB_CASE_TITLE) : $word;
     }
-    
+
     return implode(' ', $result);
 }
 
@@ -885,116 +853,9 @@ function register_plugin($handle, $plugin)
 
 function html2pdf($content, $subject = null, $title = null, $type = null, $id = null, $orientation = 'P', $margins = array(5, 10, 5, 10), $dest = 'I', $copy = false, $md5sum = '')
 {
-    global $layout, $DB;
+    global $layout;
 
-    if (isset($margins)) {
-        if (!is_array($margins)) {
-            $margins = array(5, 10, 5, 10); /* default */
-        }
-    }
-    $html2pdf = new LMSHTML2PDF($orientation, 'A4', 'en', true, 'UTF-8', $margins);
-    /* disable font subsetting to improve performance */
-    $html2pdf->pdf->setFontSubsetting(false);
-
-    if ($id) {
-        $info = $DB->GetRow('SELECT di.name, di.description FROM divisions di
-			LEFT JOIN documents d ON (d.divisionid = di.id)
-			WHERE d.id = ?', array($id));
-    }
-
-    $html2pdf->pdf->SetAuthor('LMS Developers');
-    $html2pdf->pdf->SetCreator('LMS '.$layout['lmsv']);
-    if ($info) {
-        $html2pdf->pdf->SetAuthor($info['name']);
-    }
-    if ($subject) {
-        $html2pdf->pdf->SetSubject($subject);
-    }
-    if ($title) {
-        $html2pdf->pdf->SetTitle($title);
-    }
-
-    $html2pdf->pdf->SetDisplayMode('fullpage', 'SinglePage', 'UseNone');
-
-    /* if tidy extension is loaded we repair html content */
-    if (extension_loaded('tidy')) {
-        $config = array(
-            'indent' => true,
-            'output-html' => true,
-            'indent-spaces' => 4,
-            'join-styles' => true,
-            'join-classes' => true,
-            'fix-bad-comments' => true,
-            'fix-backslash' => true,
-            'repeated-attributes' => 'keep-last',
-            'drop-proprietary-attribute' => true,
-            'sort-attributes' => 'alpha',
-            'hide-comments' => true,
-            'new-blocklevel-tags' => 'page, page_header, page_footer, barcode',
-            'wrap' => 200);
-
-        $tidy = new tidy;
-        $content = $tidy->repairString($content, $config, 'utf8');
-    }
-
-    $html2pdf->WriteHTML($content);
-
-    if ($copy) {
-        /* add watermark only for contract & annex */
-        if (($type == DOC_CONTRACT) || ($type == DOC_ANNEX)) {
-            $html2pdf->AddFont('courier', '', 'courier.php');
-            $html2pdf->AddFont('courier', 'B', 'courierb.php');
-            $html2pdf->pdf->SetTextColor(255, 0, 0);
-
-            $PageWidth = $html2pdf->pdf->getPageWidth();
-            $PageHeight = $html2pdf->pdf->getPageHeight();
-            $PageCount = $html2pdf->pdf->getNumPages();
-            $txt = trim(preg_replace("/(.)/i", "\${1} ", trans('COPY')));
-            $w = $html2pdf->pdf->getStringWidth($txt, 'courier', 'B', 120);
-            $x = ($PageWidth / 2) - (($w / 2) * sin(45));
-            $y = ($PageHeight / 2) + 50;
-
-            for ($i = 1; $i <= $PageCount; $i++) {
-                $html2pdf->pdf->setPage($i);
-                $html2pdf->pdf->SetAlpha(0.2);
-                $html2pdf->pdf->SetFont('courier', 'B', 120);
-                $html2pdf->pdf->StartTransform();
-                $html2pdf->pdf->Rotate(45, $x, $y);
-                $html2pdf->pdf->Text($x, $y, $txt);
-                $html2pdf->pdf->StopTransform();
-            }
-            $html2pdf->pdf->SetAlpha(1);
-        }
-    }
-
-    if (($type == DOC_CONTRACT) || ($type == DOC_ANNEX)) {
-        /* set signature additional information */
-        $info = array(
-            'Name' => $info['name'],
-            'Location' => $subject,
-            'Reason' => $title,
-            'ContactInfo' => $info['description'],
-        );
-
-        /* setup your cert & key file */
-        $cert = 'file://' . LIB_DIR . DIRECTORY_SEPARATOR . 'tcpdf' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'lms.cert';
-        $key = 'file://' . LIB_DIR . DIRECTORY_SEPARATOR . 'tcpdf' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'lms.key';
-
-        /* set document digital signature & protection */
-        if (file_exists($cert) && file_exists($key)) {
-            $html2pdf->pdf->setSignature($cert, $key, 'lms-documents', '', 1, $info);
-        }
-    }
-
-    $password = ConfigHelper::getConfig('phpui.document_password', '', true);
-    if (!empty($password)) {
-        $html2pdf->pdf->SetProtection(array('modify', 'annot-forms', 'fill-forms', 'extract', 'assemble'), '', $password, '1');
-    }
-
-    // cache pdf file
-    if ($md5sum) {
-        $html2pdf->Output(DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum, 0, 2) . DIRECTORY_SEPARATOR . $md5sum.'.pdf', 'F');
-    }
+    $DB = LMSDB::getInstance();
 
     if ($dest === true) {
         $dest = 'D';
@@ -1002,21 +863,207 @@ function html2pdf($content, $subject = null, $title = null, $type = null, $id = 
         $dest = 'I';
     }
 
-    switch ($dest) {
-        case 'D':
-            if (function_exists('mb_convert_encoding')) {
-                $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
-            } else {
-                $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
+    $html2pdf_command = ConfigHelper::getConfig('documents.html2pdf_command', '', true);
+    if (empty($html2pdf_command)) {
+        if (isset($margins)) {
+            if (!is_array($margins)) {
+                $margins = array(5, 10, 5, 10); /* default */
             }
-            $html2pdf->Output($filename.'.pdf', 'D');
-            break;
-        case 'S':
-            return $html2pdf->Output('', 'S');
-            break;
-        default:
-            $html2pdf->Output();
-            break;
+        }
+        $html2pdf = new LMSHTML2PDF($orientation, 'A4', 'en', true, 'UTF-8', $margins);
+        /* disable font subsetting to improve performance */
+        $html2pdf->pdf->setFontSubsetting(false);
+
+        if ($id) {
+            $info = $DB->GetRow('SELECT di.name, di.description FROM divisions di
+				LEFT JOIN documents d ON (d.divisionid = di.id)
+				WHERE d.id = ?', array($id));
+        }
+
+        $html2pdf->pdf->SetAuthor('LMS Developers');
+        $html2pdf->pdf->SetCreator('LMS ' . $layout['lmsv']);
+        if ($info) {
+            $html2pdf->pdf->SetAuthor($info['name']);
+        }
+        if ($subject) {
+            $html2pdf->pdf->SetSubject($subject);
+        }
+        if ($title) {
+            $html2pdf->pdf->SetTitle($title);
+        }
+
+        $html2pdf->pdf->SetDisplayMode('fullpage', 'SinglePage', 'UseNone');
+
+        /* if tidy extension is loaded we repair html content */
+        if (extension_loaded('tidy')) {
+            $config = array(
+                'indent' => true,
+                'output-html' => true,
+                'indent-spaces' => 4,
+                'join-styles' => true,
+                'join-classes' => true,
+                'fix-bad-comments' => true,
+                'fix-backslash' => true,
+                'repeated-attributes' => 'keep-last',
+                'drop-proprietary-attribute' => true,
+                'sort-attributes' => 'alpha',
+                'hide-comments' => true,
+                'new-blocklevel-tags' => 'page, page_header, page_footer, barcode',
+                'wrap' => 200
+            );
+
+            $tidy = new tidy;
+            $content = $tidy->repairString($content, $config, 'utf8');
+        }
+
+        $html2pdf->WriteHTML($content);
+
+        if ($copy) {
+            /* add watermark only for contract & annex */
+            if (($type == DOC_CONTRACT) || ($type == DOC_ANNEX)) {
+                $html2pdf->AddFont('courier', '', 'courier.php');
+                $html2pdf->AddFont('courier', 'B', 'courierb.php');
+                $html2pdf->pdf->SetTextColor(255, 0, 0);
+
+                $PageWidth = $html2pdf->pdf->getPageWidth();
+                $PageHeight = $html2pdf->pdf->getPageHeight();
+                $PageCount = $html2pdf->pdf->getNumPages();
+                $txt = trim(preg_replace("/(.)/i", "\${1} ", trans('COPY')));
+                $w = $html2pdf->pdf->getStringWidth($txt, 'courier', 'B', 120);
+                $x = ($PageWidth / 2) - (($w / 2) * sin(45));
+                $y = ($PageHeight / 2) + 50;
+
+                for ($i = 1; $i <= $PageCount; $i++) {
+                    $html2pdf->pdf->setPage($i);
+                    $html2pdf->pdf->SetAlpha(0.2);
+                    $html2pdf->pdf->SetFont('courier', 'B', 120);
+                    $html2pdf->pdf->StartTransform();
+                    $html2pdf->pdf->Rotate(45, $x, $y);
+                    $html2pdf->pdf->Text($x, $y, $txt);
+                    $html2pdf->pdf->StopTransform();
+                }
+                $html2pdf->pdf->SetAlpha(1);
+            }
+        }
+
+        if (($type == DOC_CONTRACT) || ($type == DOC_ANNEX)) {
+            /* set signature additional information */
+            $info = array(
+                'Name' => $info['name'],
+                'Location' => $subject,
+                'Reason' => $title,
+                'ContactInfo' => $info['description'],
+            );
+
+            /* setup your cert & key file */
+            $cert = 'file://' . LIB_DIR . DIRECTORY_SEPARATOR . 'tcpdf' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'lms.cert';
+            $key = 'file://' . LIB_DIR . DIRECTORY_SEPARATOR . 'tcpdf' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'lms.key';
+
+            /* set document digital signature & protection */
+            if (file_exists($cert) && file_exists($key)) {
+                $html2pdf->pdf->setSignature($cert, $key, 'lms-documents', '', 1, $info);
+            }
+        }
+
+        $password = ConfigHelper::getConfig('phpui.document_password', '', true);
+        if (!empty($password)) {
+            $html2pdf->pdf->SetProtection(array('modify', 'annot-forms', 'fill-forms', 'extract', 'assemble'), '', $password, '1');
+        }
+
+        // cache pdf file
+        if ($md5sum) {
+            $html2pdf->Output(DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum, 0, 2) . DIRECTORY_SEPARATOR . $md5sum . '.pdf', 'F');
+        }
+
+        switch ($dest) {
+            case 'D':
+                if (function_exists('mb_convert_encoding')) {
+                    $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
+                } else {
+                    $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
+                }
+                $html2pdf->Output($filename . '.pdf', 'D');
+                break;
+            case 'S':
+                return $html2pdf->Output('', 'S');
+                break;
+            default:
+                $html2pdf->Output();
+                break;
+        }
+    } else {
+        $pipes = null;
+        $process = proc_open(
+            $html2pdf_command,
+            array(
+                0 => array('pipe', 'r'),
+                1 => array('pipe', 'w'),
+                2 => array('pipe', 'w'),
+            ),
+            $pipes
+        );
+        if (is_resource($process)) {
+            fwrite($pipes[0], $content);
+            fclose($pipes[0]);
+
+            $content = stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+
+            $error = stream_get_contents($pipes[2]);
+            fclose($pipes[2]);
+
+            $result = proc_close($process);
+
+            if (!$result) {
+                // cache pdf file
+                if ($md5sum) {
+                    file_put_contents(
+                        DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum, 0, 2) . DIRECTORY_SEPARATOR . $md5sum . '.pdf',
+                        $content
+                    );
+                }
+
+                switch ($dest) {
+                    case 'D':
+                        if (function_exists('mb_convert_encoding')) {
+                            $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
+                        } else {
+                            $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
+                        }
+
+                        header('Cache-Control: private, must-revalidate, post-check=0, pre-check=0, max-age=1');
+                        //header('Cache-Control: public, must-revalidate, max-age=0'); // HTTP/1.1
+                        header('Pragma: public');
+                        header('Expires: Sat, 26 Jul 1997 05:00:00 GMT'); // Date in the past
+                        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+                        // force download dialog
+                        header('Content-Type: application/pdf');
+                        // use the Content-Disposition header to supply a recommended filename
+                        header('Content-Disposition: attachment; filename="' . basename($name) . '"');
+                        header('Content-Transfer-Encoding: binary');
+
+                        echo $content;
+
+                        break;
+
+                    case 'S':
+                        return $content;
+
+                    default:
+                        header('Content-Type: application/pdf');
+                        header('Cache-Control: private, must-revalidate, post-check=0, pre-check=0, max-age=1');
+                        //header('Cache-Control: public, must-revalidate, max-age=0'); // HTTP/1.1
+                        header('Pragma: public');
+                        header('Expires: Sat, 26 Jul 1997 05:00:00 GMT'); // Date in the past
+                        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+                        header('Content-Disposition: inline; filename="' . basename($name) . '"');
+
+                        echo $content;
+
+                        break;
+                }
+            }
+        }
     }
 }
 
@@ -1171,7 +1218,7 @@ function trans()
     $content = preg_replace('/<![^>]+>/', '', $content);
     return $content;
 }
-        
+
 function check_url($url)
 {
     $components = parse_url($url);
@@ -1402,4 +1449,23 @@ function geocode($location)
         'longitude' => $longitude,
         'raw-result' => $page,
     );
+}
+
+function exchangeratesapi_get_currency_value($currency, $date = null)
+{
+    $result = file_get_contents('https://api.exchangeratesapi.io/'
+        . (empty($date) ? 'latest' : date('Y-m-d', $date)) . '?base=' . $currency . '&symbols=' . LMS::$currency);
+    if ($result === false) {
+        return null;
+    }
+
+    $result = json_decode($result, true);
+    if ($result === null) {
+        return null;
+    }
+
+    if (!isset($result['rates'][LMS::$currency])) {
+        return null;
+    }
+    return $result['rates'][LMS::$currency];
 }

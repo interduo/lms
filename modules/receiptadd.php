@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -32,14 +32,15 @@ function GetCustomerCovenants($id)
         return null;
     }
 
-    if ($invoicelist = $DB->GetAllByKey('SELECT docid AS id, cdate, SUM(value)*-1 AS value, number, numberplans.template,
+    if ($invoicelist = $DB->GetAllByKey('SELECT docid AS id, cdate, SUM(value)*-1 AS value,
+                cash.currency, cash.currencyvalue, number, numberplans.template,
 				d.customerid, reference AS ref,
 				(SELECT dd.id FROM documents dd WHERE dd.reference = docid AND dd.closed = 0 LIMIT 1) AS reference
 			FROM cash
 			LEFT JOIN documents d ON (docid = d.id)
 			LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 			WHERE cash.customerid = ? AND d.type IN (?,?) AND d.closed = 0
-			GROUP BY docid, cdate, number, numberplans.template, reference, d.customerid
+			GROUP BY docid, cdate, number, numberplans.template, reference, d.customerid, cash.currency, cash.currencyvalue
 			HAVING SUM(value) < 0
 			ORDER BY cdate DESC', 'id', array($id, DOC_INVOICE, DOC_CNOTE))) {
         foreach ($invoicelist as $idx => $row) {
@@ -59,12 +60,13 @@ function GetCustomerCovenants($id)
             if ($row['reference']) {
                 // get cnotes values if those values decreases invoice value
                 if ($cnotes = $DB->GetAll(
-                    'SELECT SUM(value) AS value, cdate, number, numberplans.template, d.customerid
+                    'SELECT SUM(value) AS value, cash.currency, cash.currencyvalue,
+                            cdate, number, numberplans.template, d.customerid
 						FROM cash
 						LEFT JOIN documents d ON (docid = d.id)
 						LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 						WHERE reference = ? AND d.closed = 0
-						GROUP BY docid, cdate, number, numberplans.template, d.customerid',
+						GROUP BY docid, cdate, number, numberplans.template, d.customerid, cash.currency, cash.currencyvalue',
                     array($row['id'])
                 )) {
                     $invoicelist[$idx]['number'] .= ' (';
@@ -89,12 +91,14 @@ function GetCustomerCovenants($id)
     }
 
     if ($notelist = $DB->GetAllByKey('
-		SELECT d.id, d.cdate, number, np.template, d.customerid, SUM(value) AS value
+		SELECT d.id, d.cdate, number, np.template, d.customerid, SUM(n.value) AS value,
+		    c.currency, c.currencyvalue
 		FROM documents d
 		LEFT JOIN debitnotecontents n ON (n.docid = d.id)
+		JOIN cash c ON c.docid = d.id AND c.itemid = n.itemid
 		LEFT JOIN numberplans np ON (numberplanid = np.id)
 		WHERE d.customerid = ? AND d.type = ? AND d.closed = 0
-		GROUP BY d.id, d.cdate, number, np.template, d.customerid
+		GROUP BY d.id, d.cdate, number, np.template, d.customerid, c.currency, c.currencyvalue
 		ORDER BY d.cdate DESC', 'id', array($id, DOC_DNOTE))) {
         foreach ($notelist as $idx => $row) {
             $notelist[$idx]['number'] = docnumber(array(
@@ -192,12 +196,12 @@ function additem(&$content, $item)
     }
 }
 
-$SESSION->restore('receiptcontents', $contents);
-$SESSION->restore('receiptcustomer', $customer);
-$SESSION->restore('receipt', $receipt);
-$SESSION->restore('receiptregid', $receipt['regid']);
-$SESSION->restore('receipttype', $receipt['type']);
-$SESSION->restore('receiptadderror', $error);
+$SESSION->restore('receiptcontents', $contents, true);
+$SESSION->restore('receiptcustomer', $customer, true);
+$SESSION->restore('receipt', $receipt, true);
+$SESSION->restore('receiptregid', $receipt['regid'], true);
+$SESSION->restore('receipttype', $receipt['type'], true);
+$SESSION->restore('receiptadderror', $error, true);
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -208,6 +212,9 @@ switch ($action) {
             unset($contents);
             unset($customer);
             unset($error);
+
+        $receipt['currency_locked'] = false;
+        $receipt['currency'] = LMS::$default_currency;
 
         // get default receipt's numberplanid and next number
         $receipt['regid'] = isset($_GET['regid']) ? $_GET['regid'] : $oldreg;
@@ -224,9 +231,9 @@ switch ($action) {
         if (!$receipt['regid'] || !$receipt['type']) {
             break;
         }
-        
+
         $receipt['cdate'] = time();
-        
+
         if ($receipt['type'] == 'in') {
             $receipt['numberplanid'] = $DB->GetOne('SELECT in_numberplanid FROM cashregs WHERE id=?', array($receipt['regid']));
         } elseif ($receipt['type'] == 'out') {
@@ -235,7 +242,7 @@ switch ($action) {
                 $error['regid'] = trans('There is no cash in selected registry!');
             }
         }
-        
+
         if ($receipt['numberplanid']) {
             if (strpos($DB->GetOne('SELECT template FROM numberplans WHERE id=?', array($receipt['numberplanid'])), '%I')!==false) {
                 $receipt['extended'] = true;
@@ -296,6 +303,7 @@ switch ($action) {
                 }
             }
         }
+
         break;
 
     case 'setreg':
@@ -374,15 +382,17 @@ switch ($action) {
             $cash = $DB->GetOne('SELECT SUM(value) FROM receiptcontents WHERE regid = ?', array($receipt['regid']));
 
             foreach ($_POST['marks'] as $id) {
-                $row = $DB->GetRow('SELECT SUM(value) AS value, number, cdate, numberplans.template, documents.type AS type, documents.customerid,
+                $row = $DB->GetRow('SELECT SUM(value) AS value, cash.currency, cash.currencyvalue,
+                            number, cdate, numberplans.template, documents.type AS type, documents.customerid,
 						    (SELECT dd.id FROM documents dd WHERE dd.reference = docid AND dd.closed = 0 LIMIT 1) AS reference
 						    FROM cash 
 						    LEFT JOIN documents ON (docid = documents.id)
 						    LEFT JOIN numberplans ON (numberplanid = numberplans.id)
 						    WHERE docid = ?
-						    GROUP BY docid, number, cdate, numberplans.template, documents.type, documents.customerid', array($id));
+						    GROUP BY docid, number, cdate, numberplans.template, documents.type, documents.customerid,
+						        cash.currency, cash.currencyvalue', array($id));
 
-                $itemdata['value'] = $receipt['type']=='in' ? -$row['value'] : $row['value'];
+                $itemdata['value'] = ($receipt['type']=='in' ? -$row['value'] : $row['value']) * $row['currencyvalue'];
                 $itemdata['docid'] = $id;
                 $itemdata['posuid'] = (string) (getmicrotime()+$id);
 
@@ -684,6 +694,10 @@ switch ($action) {
         if ($contents && $customer) {
             $receipt['customer'] = $customer;
             $receipt['contents'] = $contents;
+            $receipt['currencyvalue'] = $LMS->getCurrencyValue($receipt['currency'], $receipt['cdate']);
+            if (!isset($receipt['currencyvalue'])) {
+                die('Fatal error: couldn\'t get quote for ' . $receipt['currency'] . ' currency!<br>');
+            }
             $result = $LMS->AddReceipt($receipt);
             if (is_array($result)) {
                 $error = array_merge($error, $result);
@@ -702,6 +716,10 @@ switch ($action) {
         } elseif ($contents && ($receipt['o_type'] == 'other'
                 || $receipt['o_type'] == 'advance')) {
             $receipt['contents'] = $contents;
+            $receipt['currencyvalue'] = $LMS->getCurrencyValue($receipt['currency'], $receipt['cdate']);
+            if (!isset($receipt['currencyvalue'])) {
+                die('Fatal error: couldn\'t get quote for ' . $receipt['currency'] . ' currency!<br>');
+            }
             $result = $LMS->AddReceipt($receipt);
             if (is_array($result)) {
                 $error = array_merge($error, $result);
@@ -713,14 +731,15 @@ switch ($action) {
         }
 
         if (isset($print)) {
-            $SESSION->remove('receiptcontents');
-            $SESSION->remove('receiptcustomer');
-            $SESSION->remove('receipt');
-            $SESSION->remove('receiptadderror');
+            $SESSION->remove('receiptcontents', true);
+            $SESSION->remove('receiptcustomer', true);
+            $SESSION->remove('receipt', true);
+            $SESSION->remove('receiptadderror', true);
 
             if (isset($_GET['print'])) {
-                $SESSION->save('receiptprint', array('receipt' => $rid,
-                    'which' => (isset($_GET['which']) ? $_GET['which'] : '')));
+                $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
+                $SESSION->save('receiptprint', array('receipt' => $rid, 'which' => $which), true);
             }
 
             $SESSION->redirect('?m=receiptlist&regid='.$receipt['regid'].'#'.$rid);
@@ -737,6 +756,11 @@ switch ($action) {
             if ($cash < $value) {
                 $error['nocash'] = trans('There is no cash in selected registry! You can expense only $a.', moneyf($cash));
                 break;
+            }
+
+            $receipt['currencyvalue'] = $LMS->getCurrencyValue($receipt['currency'], $receipt['cdate']);
+            if (!isset($receipt['currencyvalue'])) {
+                die('Fatal error: couldn\'t get quote for ' . $receipt['currency'] . ' currency!<br>');
             }
 
             $DB->BeginTrans();
@@ -788,11 +812,13 @@ switch ($action) {
                 'name' => '',
                 'closed' => 1,
                 'fullnumber' => $fullnumber,
+                'currency' => isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                'currencyvalue' => isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
             );
-            $DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+            $DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
-            $rid = $DB->GetOne('SELECT id FROM documents WHERE type=? AND number=? AND cdate=? AND numberplanid=?', array(DOC_RECEIPT, $receipt['number'], $receipt['cdate'], $receipt['numberplanid']));
+            $rid = $DB->GetLastInsertID('documents');
 
             if ($SYSLOG) {
                 unset($args[SYSLOG::RES_USER]);
@@ -851,11 +877,13 @@ switch ($action) {
                 SYSLOG::RES_USER => Auth::GetCurrentUser(),
                 'closed' => 1,
                 'fullnumber' => $fullnumber,
+                'currency' => isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                'currencyvalue' => isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
             );
-            $DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, userid, closed, fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?)', array_values($args));
+            $DB->Execute('INSERT INTO documents (type, number, numberplanid, cdate, userid, closed, fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
-            $did = $DB->GetOne('SELECT id FROM documents WHERE type=? AND number=? AND cdate=? AND numberplanid=?', array(DOC_RECEIPT, $number, $receipt['cdate'], $numberplan));
+            $did = $DB->GetLastInsertID('documents');
 
             if ($SYSLOG) {
                 $args[SYSLOG::RES_DOC] = $did;
@@ -879,12 +907,13 @@ switch ($action) {
 
             $DB->CommitTrans();
 
-            $SESSION->remove('receipt');
-            $SESSION->remove('receiptadderror');
+            $SESSION->remove('receipt', true);
+            $SESSION->remove('receiptadderror', true);
 
             if (isset($_GET['print'])) {
-                $SESSION->save('receiptprint', array('receipt' => $rid,
-                    'which' => (isset($_GET['which']) ? $_GET['which'] : '')));
+                $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
+                $SESSION->save('receiptprint', array('receipt' => $rid, 'which' => $which), true);
             }
 
             $SESSION->redirect('?m=receiptlist&regid='.$receipt['regid'].'#'.$rid);
@@ -896,12 +925,12 @@ if (!isset($cashreglist)) {
     $cashreglist = $LMS->GetCashRegistries($receipt['customerid']);
 }
 
-$SESSION->save('receipt', $receipt);
-$SESSION->save('receiptregid', $receipt['regid']);
-$SESSION->save('receipttype', $receipt['type']);
-$SESSION->save('receiptcontents', isset($contents) ? $contents : null);
-$SESSION->save('receiptcustomer', isset($customer) ? $customer : null);
-$SESSION->save('receiptadderror', isset($error) ? $error : null);
+$SESSION->save('receipt', $receipt, true);
+$SESSION->save('receiptregid', $receipt['regid'], true);
+$SESSION->save('receipttype', $receipt['type'], true);
+$SESSION->save('receiptcontents', isset($contents) ? $contents : null, true);
+$SESSION->save('receiptcustomer', isset($customer) ? $customer : null, true);
+$SESSION->save('receiptadderror', isset($error) ? $error : null, true);
 
 if ($action != '') {
     $SESSION->redirect('?m=receiptadd');
@@ -926,7 +955,7 @@ $invoicelist = array();
 if (isset($list)) {
     if ($contents) {
         foreach ($list as $idx => $row) {
-            for ($i=0, $x=count($contents); $i<$x; $i++) {
+            for ($i = 0, $x = count($contents); $i < $x; $i++) {
                 if (isset($contents[$i]['docid']) && $row['id'] == $contents[$i]['docid']) {
                     break;
                 }
@@ -939,6 +968,19 @@ if (isset($list)) {
         $invoicelist = $list;
     }
     $invoicelist = array_slice($invoicelist, 0, 10);
+}
+
+if ($contents) {
+    $locked = false;
+    foreach ($contents as $item) {
+        if (isset($item['docid'])) {
+            $locked = true;
+        }
+    }
+    if ($locked) {
+        $receipt['currency'] = LMS::$currency;
+        $receipt['currency_locked'] = true;
+    }
 }
 
 if (!ConfigHelper::checkConfig('phpui.big_networks')) {

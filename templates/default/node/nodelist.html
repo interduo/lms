@@ -2,6 +2,59 @@
 {block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
 <!--// $Id$ //-->
+<style>
+	@media screen and (max-width: 500px) {
+		.lms-ui-filter-container {
+			flex-wrap: wrap;
+		}
+
+		thead tr {
+			display: flex;
+			flex-direction: column;
+		}
+		thead td.text-right {
+			text-align: left;
+		}
+		thead td:last-child {
+			text-align: right;
+		}
+		thead img {
+			display: none;
+		}
+
+		tbody tr {
+			display: flex;
+			flex-direction: column;
+		}
+		tbody td.text-right{
+			text-align: left;
+			padding-left: 0.3em;
+		}
+		tbody td:not(:first-child) img {
+			display: none;
+		}
+		tbody td:first-child img:first-child {
+			display: none;
+		}
+
+		tfoot tr {
+			display: flex;
+			justify-content: space-between;
+		}
+		tfoot td{
+			flex-grow: 1
+		}
+
+		table.lmsbox>tfoot>tr:first-child, table.lmsbox>thead>tr:first-child {
+			border-top: 0px;
+		}
+
+		.lms-ui-filter-definition label {
+			text-align: left;
+		}
+	}
+</style>
+
 <H1>{$layout.pagetitle}</H1>
 
 {$lastonline_limit = ConfigHelper::getConfig('phpui.lastonline_limit')}
@@ -46,7 +99,7 @@
 			<div class="lms-ui-filter-definition">
 
 				<SPAN class="bold">{trans("Filter:")}</SPAN>&nbsp;
-				<SPAN class="nobr">{trans("Status:")}
+				<label for="s"><SPAN class="nobr">{trans("Status:")}
 				<SELECT SIZE="1" NAME="s" ONCHANGE="document.choosefilter.submit();">
 					<OPTION VALUE="0"{if $filter.status == 0} SELECTED{/if}>{trans("- all -")}</OPTION>
 					<OPTION VALUE="1"{if $filter.status == 1} SELECTED{/if}>{trans("connected<!plural:item>")}</OPTION>
@@ -55,48 +108,53 @@
 					<OPTION VALUE="4"{if $filter.status == 4} SELECTED{/if}>{trans("without tariff")}</OPTION>
 					<OPTION VALUE="5"{if $filter.status == 5} SELECTED{/if}>{trans("TERRIT not specified")}</OPTION>
 					<OPTION VALUE="6"{if $filter.status == 6} SELECTED{/if}>{trans("Net Device not specified")}</OPTION>
+					<option value="9"{if $filter.status == 9} selected{/if}>{trans("without radio sector")}</option>
 					<OPTION VALUE="7"{if $filter.status == 7} SELECTED{/if}>{trans("with warning")}</OPTION>
 					<OPTION value="8"{if $filter.status == 8} selected{/if}>{trans("without gps coords")}</OPTION>
 				</SELECT></SPAN>
+				</label>
 
 				{if count($networks) > 1}
-					<SPAN class="nobr">{trans("Network:")}</SPAN>
+					<label for="n" class="nobr"><SPAN>{trans("Network:")}</SPAN>
 					<SELECT SIZE="1" NAME="n" ONCHANGE="document.choosefilter.submit();">
 						<OPTION value="0" {if !$filter.network} SELECTED {/if}>{trans("- all networks -")}</OPTION>
 						{section name=networks loop=$networks}
 						<OPTION value="{$networks[networks].id}" {if $filter.network == $networks[networks].id} SELECTED {/if}>{$networks[networks].name|truncate:30:"...":true}</OPTION>
 						{/section}
 					</SELECT>
+					</label>
 				{else}
 					<input type="hidden" name="n" value="0">
 				{/if}
 
 				{if !empty($nodegroups) && count($nodegroups)}
-					<SPAN class="nobr">{trans("Group:")}</SPAN>
+					<label for="ng"><SPAN class="nobr">{trans("Group:")}</SPAN>
 					<SELECT SIZE="1" NAME="ng" ONCHANGE="document.choosefilter.submit();">
 						<OPTION value="" {if !$filter.nodegroup} SELECTED {/if}>{trans("- all groups -")}</OPTION>
 						{foreach from=$nodegroups item=nodegroup}
 						<OPTION value="{$nodegroup.id}" {if $filter.nodegroup == $nodegroup.id} SELECTED {/if}>{$nodegroup.name|truncate:30:"...":true}</OPTION>
 						{/foreach}
 					</SELECT>
+					</label>
 				{else}
 					<input type="hidden" name="ng" value="">
 				{/if}
 
 				{if !empty($customergroups) && count($customergroups)}
-					<SPAN class="nobr">{trans("Customers Group:")}</SPAN>
+					<label for="g"><SPAN class="nobr">{trans("Customers Group:")}</SPAN>
 					<SELECT SIZE="1" NAME="g" ONCHANGE="document.choosefilter.submit();">
 						<OPTION value="" {if !$filter.customergroup} SELECTED {/if}>{trans("- all groups -")}</OPTION>
 						{section name=customergroups loop=$customergroups}
 						<OPTION value="{$customergroups[customergroups].id}" {if $filter.customergroup == $customergroups[customergroups].id} SELECTED {/if}>{$customergroups[customergroups].name|truncate:30:"...":true}</OPTION>
 						{/section}
 					</SELECT>
+					</label>
 				{else}
 					<input type="hidden" name="g" value="">
 				{/if}
 
 				{if !empty($NNprojects)}
-					<SPAN class="nobr">{trans("Project:")}</SPAN>
+					<label for="p"><SPAN class="nobr">{trans("Project:")}</SPAN>
 					<SELECT SIZE="1" NAME="p" ONCHANGE="document.choosefilter.submit();">
 						<OPTION VALUE="-1"{if $filter.search.project == -1} selected{/if}>- {trans("all")} -</OPTION>
 						<OPTION VALUE="-2"{if $filter.search.project == -2} selected{/if}>- {trans("without project")} -</OPTION>
@@ -104,6 +162,7 @@
 						<OPTION VALUE="{$project.id}"{if $filter.search.project == $project.id} selected{/if}>{$project.name}</OPTION>
 						{/foreach}
 					</SELECT>
+					</label>
 				{else}
 					<input type="hidden" name="p" value="-1">
 				{/if}
@@ -131,12 +190,12 @@
 	</TR>
 	{/if}
 	<TR>
-		<TD colspan="3" class="text-right bold">
+		<TD colspan="4" class="text-right bold">
 			{trans("Total:")}<BR>
 			{trans("Connected<!nodes>:")}<BR>
 			{trans("Disconnected:")}
 		</TD>
-		<TD colspan="2" class="text-right bold">
+		<TD colspan="1" class="text-left bold">
 			{if $filter.total}{$filter.total}{else}0{/if}<BR>
 			{if $filter.totalon}{$filter.totalon}{else}0{/if}<BR>
 			{if $filter.totaloff}{$filter.totaloff}{else}0{/if}
@@ -147,18 +206,18 @@
 	<TBODY>
 	{block name="nodelist-list-body"}
 	{foreach $nodelist as $node}
-	<TR class="highlight {if ! $node.access} blend{/if}" data-target-url="?m=nodeinfo&id={$node.id}">
+	<TR class="highlight {if ! $node.access} blend{/if}" data-target-url="?m=nodeinfo&id={$node.id}" data-name="{$node.name}">
 		<TD class="nobr">
 			<span class="bold">
 			<A name="{$node.id}">
 			{if $node.lastonline}
-			    {if ($smarty.now-$node.lastonline) > $lastonline_limit}
-				<img src="img/node_off.gif" alt="">
-			    {else}
-				<img src="img/node_on.gif" alt="">
-			    {/if}
+				{if ($smarty.now-$node.lastonline) > $lastonline_limit}
+					<i class="lms-ui-icon-nodeoff" {tip a=$node.lastonlinedate text="Last online: \$a"}></i>
+				{else}
+					<i class="lms-ui-icon-nodeon" {tip a="on-line" text="Last online: \$a"}></i>
+				{/if}
 			{else}
-			    <img src="img/node_unk.gif" alt="">
+				<i class="lms-ui-icon-nodeunk"></i>
 			{/if}
 			{if $node.info}
 			    <IMG src="img/info1.gif" alt="" {tip text=$node.info}>
@@ -180,7 +239,7 @@
 		<TD class="lms-ui-buttons nobr">
 			<a href="?m=nodeset&amp;id={$node.id}"><img src="img/{if ! $node.access}no{/if}access.gif" alt="{if ! $node.access}{trans("Connect")}{else}{trans("Disconnect")}{/if}" title="{if ! $node.access}{trans("Connect")}{else}{trans("Disconnect")}{/if}"></A>
 			<a href="?m=nodewarn&amp;id={$node.id}"><img src="img/warning{if ! $node.warning}off{else}on{/if}.gif" alt="{if ! $node.warning}{trans("Enable notice")}{else}{trans("Disable notice")}{/if}" title="{if ! $node.warning}{trans("Enable notice")}{else}{trans("Disable notice")}{/if}"></A>
-			<a onClick="return confirmLink(this, '{t a=$node.name}Are you sure, you want to remove node \'$a\' from database?{/t}')" href="?m=nodedel&amp;id={$node.id}"><img src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
+			<a class="delete-node" href="?m=nodedel&id={$node.id}"><img src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
 			<a href="?m=nodeedit&amp;id={$node.id}"><img src="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 			<a href="?m=nodeinfo&amp;id={$node.id}"><img src="img/info.gif" alt="{trans("Info")}" title="{trans("Info")}"></A>
 		</TD>
@@ -197,4 +256,13 @@
 	</TBODY>
 </TABLE>
 </FORM>
+<script>
+	$('.delete-node').click(function() {
+		var name = $(this).closest('tr').attr('data-name');
+		confirmDialog($t("Are you sure, you want to remove node '$a' from database?", name), this).done(function() {
+			location.href = $(this).attr('href');
+		});
+		return false;
+	});
+</script>
 {/block}

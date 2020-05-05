@@ -228,11 +228,21 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
 
     public function GetNetDevIPs($id)
     {
-        return $this->db->GetAll('SELECT n.id, n.name, mac, ipaddr, inet_ntoa(ipaddr) AS ip, 
-			ipaddr_pub, inet_ntoa(ipaddr_pub) AS ip_pub, access, info, port, n.netid, net.name AS netname, n.authtype
+        $result = $this->db->GetAll('SELECT n.id, n.name, mac, ipaddr, inet_ntoa(ipaddr) AS ip, 
+			ipaddr_pub, inet_ntoa(ipaddr_pub) AS ip_pub, access, info, port, n.netid, net.name AS netname, n.authtype,
+			n.lastonline
 			FROM vnodes n
 			JOIN networks net ON net.id = n.netid
 			WHERE ownerid IS NULL AND netdev = ?', array($id));
+
+        if ($result) {
+            foreach ($result as &$node) {
+                $node['lastonlinedate'] = lastonline_date($node['lastonline']);
+            }
+            unset($node);
+        }
+
+        return $result;
     }
 
     public function GetNetworkList(array $search)
@@ -248,7 +258,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
         list($order, $direction) = sscanf($order, '%[^,],%s');
 
         ($direction == 'desc') ? $direction = 'desc' : $direction = 'asc';
-        
+
         switch ($order) {
             case 'name':
                 $sqlord = ' ORDER BY n.name';
@@ -292,7 +302,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             $p = '';
             $search['compareType'] = '=';
         }
-        
+
         foreach ($search as $k => $v) {
             if ($v != '') {
                 switch ($k) {
@@ -361,7 +371,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             'SELECT 
 				n.id, h.name AS hostname, n.name, inet_ntoa(address) AS address, 
 				address AS addresslong, mask, interface, gateway, dns, dns2, 
-				domain, wins, dhcpstart, dhcpend,
+				domain, wins, dhcpstart, dhcpend, inet_ntoa(snat) AS snat,
 				mask2prefix(inet_aton(mask)) AS prefix,
 				broadcast(address, inet_aton(mask)) AS broadcastlong, vlanid,
 				inet_ntoa(broadcast(address, inet_aton(mask))) AS broadcast,
@@ -403,7 +413,7 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
             $networks['order'] = $order;
             $networks['direction'] = $direction;
         }
-        
+
         return $networks;
     }
 
@@ -639,6 +649,69 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
         return $counter;
     }
 
+    public function MoveHostsBetweenNetworks($src, $dst)
+    {
+        $network['source'] = $this->GetNetworkRecord($src);
+        $network['dest'] = $this->GetNetworkRecord($dst);
+
+        if ($network['source']['prefix'] != $network['dest']['prefix']) {
+            return array(trans('Networks don\'t have the same mask!'));
+        }
+
+        $errors = array();
+        $srcnet = $network['source']['addresslong'];
+        $dstnet = $network['dest']['addresslong'];
+        $dstnodes = array();
+
+        foreach ($network['source']['nodes']['id'] as $idx => $nodeid) {
+            if ($nodeid) {
+                if ($network['dest']['nodes']['id'][$idx]) {
+                    $errors[] = trans(
+                        'Source address $a ($b) collides with destination address $c ($d)!',
+                        long_ip($srcnet + $idx),
+                        $network['source']['name'],
+                        long_ip($dstnet + $idx),
+                        $network['dest']['name']
+                    );
+                } else {
+                    $dstnodes[$dstnet + $idx] = $nodeid;
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return $errors;
+        }
+
+        foreach ($dstnodes as $dstip => $nodeid) {
+            $srcip = $srcnet + ($dstip - $dstnet);
+            if ($this->db->Execute('UPDATE nodes SET ipaddr=?, netid=? WHERE netid=? AND ipaddr=?', array($dstip, $dst, $src, $srcip))) {
+                if ($this->syslog) {
+                    $node = $this->db->GetRow('SELECT id, ownerid FROM vnodes WHERE netid = ? AND ipaddr = ?', array($dst, $srcip));
+                    $args = array(
+                        SYSLOG::RES_NODE => $node['id'],
+                        SYSLOG::RES_CUST => $node['ownerid'],
+                        SYSLOG::RES_NETWORK => $dst,
+                        'ipaddr' => $dstip,
+                    );
+                    $this->syslog->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
+                }
+            } elseif ($this->db->Execute('UPDATE nodes SET ipaddr_pub=? WHERE ipaddr_pub=?', array($dstip, $srcip))) {
+                if ($this->syslog) {
+                    $node = $this->db->GetRow('SELECT id, ownerid FROM vnodes WHERE netid = ? AND ipaddr_pub = ?', array($dst, $srcip));
+                    $args = array(
+                        SYSLOG::RES_NODE => $node['id'],
+                        SYSLOG::RES_CUST => $node['ownerid'],
+                        'ipaddr' => $dstip,
+                    );
+                    $this->syslog->AddMessage(SYSLOG::RES_NODE, SYSLOG::OPER_UPDATE, $args);
+                }
+            }
+        }
+
+        return count($dstnodes);
+    }
+
     public function GetNetworkRecord($id, $page = 0, $plimit = 4294967296, $firstfree = false)
     {
         $network = $this->db->GetRow('SELECT no.ownerid, ne.id, ne.name, ne.vlanid, inet_ntoa(ne.address) AS address,
@@ -781,5 +854,29 @@ class LMSNetworkManager extends LMSManager implements LMSNetworkManagerInterface
     public function GetPublicNetworkID($netid)
     {
         return $this->db->GetOne('SELECT pubnetid FROM networks WHERE id = ?', array($netid));
+    }
+
+    public function getFirstFreeAddress($netid)
+    {
+        $reservedaddresses = intval(ConfigHelper::getConfig('phpui.first_reserved_addresses', 0, true));
+        $net = $this->GetNetworkRecord($netid);
+        $ip = false;
+
+        foreach ($net['nodes']['id'] as $idx => $nodeid) {
+            if ($idx < $reservedaddresses) {
+                continue;
+            }
+            if ($nodeid) {
+                $firstnodeid = $idx;
+                $ip = false;
+            }
+            if (!$nodeid && !isset($net['nodes']['name'][$idx]) && empty($ip)) {
+                $ip = $net['nodes']['address'][$idx];
+                if (isset($firstnodeid)) {
+                    break;
+                }
+            }
+        }
+        return $ip;
     }
 }

@@ -13,15 +13,12 @@
 <!--
 	function prints()
 	{
-		var add = "";
-		if (document.page.original.checked && document.page.copy.checked)
-			add = "&which=original,copy";
-		else if (document.page.original.checked && !document.page.copy.checked)
-			add = "&which=original";
-		else if (!document.page.original.checked && document.page.copy.checked)
-			add = "&which=copy";
+		var which = 0;
+		$('form[name="page"] [name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
 
-		document.page.action = "?m=receipt&print=cached" + add;
+		document.page.action = "?m=receipt&print=cached&which=" + which;
 		document.page.target = "_blank";
 		document.page.submit();
 	}
@@ -82,7 +79,7 @@
 	</TR>
 	<TR>
 		<TD colspan="7">
-				<B>{trans("Filter:")} </B> 
+				<B>{trans("Filter:")} </B>
 				<INPUT name="search" type="text" value="{$listdata.search}" size="15" {tip text="Enter value of searching data and select category"}>&nbsp;
 				<SELECT size="1" name="cat">
 					<OPTION value=""{if $listdata.cat == ""} SELECTED{/if}>{trans("- select filter -")}</OPTION>
@@ -112,28 +109,28 @@
     <TBODY class="lms-ui-multi-check">
 	{foreach $receiptlist as $receipt}
 	{assign var=receiptid value=$receipt.id}
-	<TR class="highlight">
+	<TR class="highlight" data-name="{$receipt.number}">
 		<TD WIDTH="1%" NOWRAP><A id="{$receipt.id}"></A>
-			{if !$receipt.closed}<span class="lms-ui-error">{/if}
+			{if !$receipt.closed}<span class="lms-ui-alert">{/if}
 			{$receipt.cdate|date_format:"%Y/%m/%d %H:%M"}<BR>
 			{$receipt.user|truncate:"16":"...":true}
-			{if !$receipt.closed}</span>{/if}		
+			{if !$receipt.closed}</span>{/if}
 		</TD>
-		<TD WIDTH="1%" NOWRAP align="right"{if !$receipt.closed} class="lms-ui-error"{/if}>
+		<TD WIDTH="1%" NOWRAP align="right"{if !$receipt.closed} class="lms-ui-alert"{/if}>
 			{$receipt.number}
 		</TD>
-		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT"{if !$receipt.closed} class="lms-ui-error"{/if}>
-			{if $receipt.value > 0}{$receipt.value|money_format}{else}-{/if}
+		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT"{if !$receipt.closed} class="lms-ui-alert"{/if}>
+			{if $receipt.value > 0}{moneyf($receipt.value, $receipt.currency)}{else}-{/if}
 		</TD>
-		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT"{if !$receipt.closed} class="lms-ui-error"{/if}>
-			{if $receipt.value < 0}{($receipt.value*-1)|money_format}{else}-{/if}
+		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT"{if !$receipt.closed} class="lms-ui-alert"{/if}>
+			{if $receipt.value < 0}{moneyf($receipt.value*-1, $receipt.currency)}{else}-{/if}
 		</TD>
-		<TD WIDTH="45%"{if !$receipt.closed} class="lms-ui-error"{/if}>
+		<TD WIDTH="45%"{if !$receipt.closed} class="lms-ui-alert"{/if}>
 			{if $receipt.customerid}<A HREF="?m=customerinfo&id={$receipt.customerid}">{/if}
 			{$receipt.customer|truncate:"60":"...":true}
 			{if $receipt.customerid}</A>{/if}
 		</TD>
-		<TD WIDTH="50%"{if !$receipt.closed} class="lms-ui-error"{/if}>
+		<TD WIDTH="50%"{if !$receipt.closed} class="lms-ui-alert"{/if}>
 			{if $receipt.title}
 			{$receipt.title|truncate:"80":"...":true}
 			{/if}
@@ -142,7 +139,7 @@
 			{if !$receipt.closed}
 			<A HREF="?m=receiptadv&id={$receipt.id}"><IMG SRC="img/eraser.gif" alt="{trans("Settle advance")}" title="{trans("Settle advance")}"></A>
 			{/if}
-			<A onClick="return confirmLink(this, '{t a=$receipt.number}Are you sure, you want to remove receipt \'$a\' from database?{/t}')" HREF="?m=receiptdel&id={$receipt.id}"><IMG SRC="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
+			<A class="delete-receipt" HREF="?m=receiptdel&id={$receipt.id}"><IMG SRC="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
 			<A HREF="?m=receiptedit&id={$receipt.id}"><IMG SRC="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 			<A HREF="?m=receipt&id={$receipt.id}" TARGET="_blank"><IMG src="img/printr.gif" alt="{trans("Print")}" title="{trans("Print")}"></A>
 			<INPUT TYPE="checkbox" NAME="marks[{$receipt.id}]" VALUE="{$receipt.id}" class="lms-ui-multi-check"{if $marks.$receiptid} checked{/if}>
@@ -153,7 +150,7 @@
 		<TD COLSPAN="7" class="empty-table">
 			<p>{trans("No such receipts in database.")}</p>
 		</TD>
-	</TR>	
+	</TR>
 	{/foreach}
     </TBODY>
     <TFOOT>
@@ -171,12 +168,16 @@
 					<TD ALIGN="left" nowrap>
 						<A HREF="javascript:prints();">{trans("Print")} <IMG SRC="img/printr.gif" ALT="" ></A>&nbsp;
 						 <label>
-							<INPUT type="checkbox" id="original" name="original"{if preg_match('/original/i', $default_printpage)} checked{/if}>
-							{trans("original")}
+							<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_ORIGINAL}]"
+									value="{$smarty.const.DOC_ENTITY_ORIGINAL}"
+									{if preg_match('/original/i', $default_printpage)} checked{/if}>
+							{$_DOCENTITIES[$smarty.const.DOC_ENTITY_ORIGINAL]}
 						</label>
 						<label>
-							<INPUT type="checkbox" id="copy" name="copy"{if preg_match('/copy/i', $default_printpage)} checked{/if}>
-							{trans("copy")}
+							<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_COPY}]"
+									value="{$smarty.const.DOC_ENTITY_COPY}"
+									{if preg_match('/copy/i', $default_printpage)} checked{/if}>
+							{$_DOCENTITIES[$smarty.const.DOC_ENTITY_COPY]}
 						</label>
 					</TD>
 					<TD class="text-right nobr">
@@ -199,18 +200,19 @@
 		</TD>
 		<TD class="nobr text-right valign-top">
 			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
-			{$listdata.totalincome|money_format}<HR>
-			{$listdata.startbalance|money_format}<BR>
-			{$listdata.endbalance|money_format}
+			{moneyf($listdata.totalincome)}<HR>
+			{moneyf($listdata.startbalance)}<BR>
+			{moneyf($listdata.endbalance)}
 			{/if}
 		</TD>
 		<TD nowrap align="right" style="vertical-align: top;">
 			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
-			{$listdata.totalexpense|money_format}<HR>
+			{moneyf($listdata.totalexpense)}<HR>
 			{/if}
 		</TD>
 		<TD colspan="3" align="right">
-			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}<H1>{trans("Cash state:")} <B>{$listdata.cashstate|money_format}</B></H1>{/if}
+			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
+			<H1>{trans("Cash state:")} <B>{moneyf($listdata.cashstate)}</B></H1>{/if}
 			<A href="?m=cashreglogview&regid={$listdata.regid}">{trans("Cash history")} <img src="img/value.gif" alt=""></A>&nbsp;
 			<A href="?m=receiptadd&type=in&action=init&regid={$listdata.regid}"><img src="img/kp.png" alt=""> {trans("New Cash-in Receipt")}</A>&nbsp;
 			<A href="?m=receiptadd&type=out&action=init&regid={$listdata.regid}"><img src="img/kw.png" alt=""> {trans("New Cash-out Receipt")}</A>
@@ -229,7 +231,7 @@
 		<TD WIDTH="1%" nowrap>
 			{$logentry.time|date_format:"%x %H:%M"} &nbsp;
 			<B>
-			{if $logentry.value<0}<span class="lms-ui-error">{/if}{$logentry.value|money_format}{if $logentry.value<0}</span>{/if}
+			{if $logentry.value<0}<span class="lms-ui-alert">{/if}{$logentry.value|money_format}{if $logentry.value<0}</span>{/if}
 			<span class="blend">({trans("Cash state:")} {$logentry.snapshot|money_format})</span> &nbsp;
 			</B>
 		</TD>
@@ -240,4 +242,13 @@
 </TABLE>
 </P>
 {/if}
+	<script>
+		$('.delete-receipt').click(function() {
+			var name = $(this).closest('tr').attr('data-name');
+			confirmDialog($t("Are you sure, you want to remove receipt '$a' from database?", name), this).done(function() {
+				location.href = $(this).attr('href');
+			});
+			return false;
+		});
+	</script>
 {/block}

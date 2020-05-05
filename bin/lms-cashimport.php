@@ -148,15 +148,23 @@ $LMS = new LMS($DB, $AUTH, $SYSLOG);
 $LMS->ui_lang = $_ui_language;
 $LMS->lang = $_language;
 
+LMS::$currency = $_currency;
+LMS::$default_currency = ConfigHelper::getConfig('phpui.default_currency', '', true);
+if (empty(LMS::$default_currency) || !isset($CURRENCIES[LMS::$default_currency])) {
+    LMS::$default_currency = $_currency;
+}
+
 $plugin_manager = new LMSPluginManager();
 $LMS->setPluginManager($plugin_manager);
 
 if (array_key_exists('import-file', $options)) {
     $import_file = $options['import-file'];
     $import_filename = basename($import_file);
+    $filemtime = filemtime($import_file);
 } else {
     $import_file = 'php://stdin';
     $import_filename = strftime('%Y%m%d%H%M%S.csv');
+    $filemtime = time();
 }
 
 $import_config = ConfigHelper::getConfig('phpui.import_config', 'cashimportcfg.php');
@@ -171,11 +179,14 @@ if (!isset($patterns) || !is_array($patterns)) {
 if ($import_file != 'php://stdin' && !is_readable($import_file)) {
     die("Couldn't read contents from $import_file file!" . PHP_EOL);
 }
-$contents = file_get_contents($import_file);
 
-$LMS->CashImportParseFile($import_filename, $contents, $patterns, $quiet);
+$LMS->CashImportParseFile(
+    $import_filename,
+    file_get_contents($import_file),
+    $patterns,
+    $quiet,
+    ConfigHelper::checkConfig('cashimport.use_file_date') ? $filemtime : null
+);
 if (ConfigHelper::checkConfig('cashimport.autocommit')) {
     $LMS->CashImportCommit();
 }
-
-?>

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2015 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,11 +23,6 @@
  *
  *  $Id$
  */
-
-define('PDF_MARGIN_BOTTOM', 40);
-define('PDF_MARGIN_TOP', 40);
-define('PDF_MARGIN_LEFT', 30);
-define('PDF_MARGIN_RIGHT', 30);
 
 // brzydkie hacki dla ezpdf
 @setlocale(LC_NUMERIC, 'C');
@@ -80,7 +75,9 @@ class LMSEzpdfBackend extends Cezpdf
         $this->addInfo('Title', $title);
         $this->addInfo('Creator', 'LMS '.$layout['lmsv']);
         $this->setPreferences('FitWindow', '1');
-        $this->ezSetMargins(PDF_MARGIN_TOP, PDF_MARGIN_BOTTOM, PDF_MARGIN_LEFT, PDF_MARGIN_RIGHT);
+        list ($margin_top, $margin_right, $margin_bottom, $margin_left) =
+            explode(',', ConfigHelper::getConfig('invoices.ezpdf_margins', '40,30,40,30'));
+        $this->ezSetMargins(trim($margin_top), trim($margin_bottom), trim($margin_left), trim($margin_right));
         $this->setLineStyle(0.5);
         $this->setFontFamily('arial', array('b' => 'arialbd'));
         $this->selectFont(

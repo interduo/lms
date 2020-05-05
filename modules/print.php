@@ -71,6 +71,7 @@ switch ($type) {
         $list['customerid'] = $id;
 
         if ($tslist = $DB->GetAll('SELECT c.id AS id, time, c.type, c.value AS value,
+                    c.currency, c.currencyvalue,
 				    taxes.label AS taxlabel, c.customerid, c.comment, vusers.name AS username,
 				    c.docid, d.number, d.cdate, d.type AS doctype, numberplans.template
 				    FROM cash c
@@ -99,9 +100,9 @@ switch ($type) {
             $saldolist['balance'] = 0;
 
             foreach ($saldolist['id'] as $i => $v) {
-                $saldolist['after'][$i] = $saldolist['balance'] + $saldolist['value'][$i];
-                $saldolist['balance'] += $saldolist['value'][$i];
-                    $saldolist['date'][$i] = date('Y/m/d H:i', $saldolist['time'][$i]);
+                $saldolist['after'][$i] = $saldolist['balance'] + $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
+                $saldolist['balance'] += $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
+                $saldolist['date'][$i] = date('Y/m/d H:i', $saldolist['time'][$i]);
 
                 if ($saldolist['time'][$i]>=$date['from'] && $saldolist['time'][$i]<=$date['to']) {
                     $list['id'][] = $saldolist['id'][$i];
@@ -113,17 +114,18 @@ switch ($type) {
                     $list['date'][] = date('Y/m/d H:i', $saldolist['time'][$i]);
                     $list['username'][] = $saldolist['username'][$i];
                     $list['comment'][] = $saldolist['comment'][$i];
-                    $list['summary'] += $saldolist['value'][$i];
+                    $list['currency'][] = $saldolist['currency'][$i];
+                    $list['summary'] += $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
 
                     if ($saldolist['type'][$i]) {
                         if ($saldolist['value'][$i] > 0) {
                                 //income
-                                $list['income'] += $saldolist['value'][$i];
+                                $list['income'] += $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
                         } else { //expense
-                                $list['expense'] -= $saldolist['value'][$i];
+                                $list['expense'] -= $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
                         }
                     } else {
-                        $list['liability'] -= $saldolist['value'][$i];
+                        $list['liability'] -= $saldolist['value'][$i] * $saldolist['currencyvalue'][$i];
                     }
                 }
             }
@@ -205,7 +207,7 @@ switch ($type) {
 
         if (isset($date['from'])) {
             $lastafter = $DB->GetOne(
-                'SELECT SUM(CASE WHEN c.customerid IS NOT NULL AND type=0 THEN 0 ELSE value END)
+                'SELECT SUM(CASE WHEN c.customerid IS NOT NULL AND type=0 THEN 0 ELSE value * c.currencyvalue END)
 					FROM cash c '
                     .($group ? 'LEFT JOIN customerassignments a ON (c.customerid = a.customerid) ' : '')
                     .'WHERE time<?'
@@ -225,7 +227,8 @@ switch ($type) {
             $lastafter = 0;
         }
 
-        if ($balancelist = $DB->GetAll('SELECT c.id AS id, time, userid, c.value AS value,
+        if ($balancelist = $DB->GetAll('SELECT c.id AS id, time, userid,
+                    c.value AS value, c.currency, c.currencyvalue,
 					taxes.label AS taxlabel, c.customerid, comment, c.type AS type
 					FROM cash c
 					LEFT JOIN taxes ON (taxid = taxes.id) '
@@ -260,6 +263,8 @@ switch ($type) {
                 }
 
                 $list[$x]['value'] = $row['value'];
+                $list[$x]['currency'] = $row['currency'];
+                $list[$x]['currencyvalue'] = $row['currencyvalue'];
                 $list[$x]['taxlabel'] = $row['taxlabel'];
                 $list[$x]['time'] = $row['time'];
                 $list[$x]['comment'] = $row['comment'];
@@ -269,16 +274,16 @@ switch ($type) {
                             // customer covenant
                         $list[$x]['after'] = $lastafter;
                     $list[$x]['covenant'] = true;
-                    $listdata['liability'] -= $row['value'];
+                    $listdata['liability'] -= $row['value'] * $row['currencyvalue'];
                 } else {
                     //customer payment
-                    $list[$x]['after'] = $lastafter + $list[$x]['value'];
+                    $list[$x]['after'] = $lastafter + $list[$x]['value'] * $row['currencyvalue'];
 
                     if ($row['value'] > 0) {
                             //income
-                        $listdata['income'] += $list[$x]['value'];
+                        $listdata['income'] += $list[$x]['value'] * $row['currencyvalue'];
                     } else { //expense
-                        $listdata['expense'] -= $list[$x]['value'];
+                        $listdata['expense'] -= $list[$x]['value'] * $row['currencyvalue'];
                     }
                 }
 
@@ -342,7 +347,7 @@ switch ($type) {
         $layout['pagetitle'] = trans('Total Invoiceless Income ($a to $b)', ($from ? $from : ''), $to);
 
         $incomelist = $DB->GetAll(
-            'SELECT floor(time/86400)*86400 AS date, SUM(value) AS value
+            'SELECT floor(time/86400)*86400 AS date, SUM(value * currencyvalue) AS value
 			FROM cash c
 			WHERE value>0 AND time>=? AND time<=? AND docid IS NULL
 				AND NOT EXISTS (
@@ -583,7 +588,7 @@ switch ($type) {
                     'SELECT a.customerid AS id, '.$DB->Concat('UPPER(lastname)', "' '", 'c.name').' AS customername, '
                     .$DB->Concat('city', "' '", 'address').' AS address, ten,
 					SUM((((((100 - a.pdiscount) * t.value) / 100) - a.vdiscount) *
-						((CASE a.suspended WHEN 0 THEN 100.0 ELSE '.$suspension_percentage.' END) / 100))
+						((CASE WHEN a.suspended = 0 AND allsuspended.suspended IS NULL THEN 100.0 ELSE '.$suspension_percentage.' END) / 100))
 					* (CASE a.period
 						WHEN '.YEARLY.' THEN 12
 						WHEN '.HALFYEARLY.' THEN 6
@@ -596,45 +601,62 @@ switch ($type) {
 						WHEN '.HALFYEARLY.' THEN 1.0/6
 						WHEN '.QUARTERLY.' THEN 1.0/3
 						ELSE 1 END)
-					) AS value
-					FROM assignments a, tariffs t, customerview c
-					WHERE a.customerid = c.id AND status = 3
-					AND a.tariffid = t.id AND t.taxid=?
-					AND c.deleted=0
-					AND (a.datefrom<=? OR a.datefrom=0) AND (a.dateto>=? OR a.dateto=0)
-					AND ((a.period='.DISPOSABLE.' AND a.at=?)
-						OR (a.period='.WEEKLY.'. AND a.at=?)
-						OR (a.period='.MONTHLY.' AND a.at=?)
-						OR (a.period='.QUARTERLY.' AND a.at=?)
-						OR (a.period='.HALFYEARLY.' AND a.at=?)
-						OR (a.period='.YEARLY.' AND a.at=?)) '
-                    . ($customerid ? ' AND a.customerid=' . $customerid : '')
-                    . ($divisionid ? ' AND c.divisionid=' . $divisionid : '')
-                    . ' GROUP BY a.customerid, lastname, c.name, city, address, ten ',
+					) AS value, t.currency
+                    FROM assignments a
+                    LEFT JOIN tariffs t ON t.id = a.tariffid
+                    LEFT JOIN customerview c ON c.id = a.customerid
+                    LEFT JOIN (
+                        SELECT COUNT(id) AS suspended, customerid FROM assignments
+                        WHERE tariffid IS NULL AND liabilityid IS NULL
+                            AND datefrom <= ? AND (dateto >= ? OR dateto = 0)
+                        GROUP BY customerid
+                    ) allsuspended ON allsuspended.customerid = a.customerid
+                    WHERE c.status = ?
+                        AND t.taxid=?
+                        AND c.deleted=0
+                        AND a.datefrom <= ? AND (a.dateto >= ? OR a.dateto = 0)
+                        AND ((a.period='.DISPOSABLE.' AND a.at=?)
+                            OR (a.period='.WEEKLY.'. AND a.at=?)
+                            OR (a.period='.MONTHLY.' AND a.at=?)
+                            OR (a.period='.QUARTERLY.' AND a.at=?)
+                            OR (a.period='.HALFYEARLY.' AND a.at=?)
+                            OR (a.period='.YEARLY.' AND a.at=?)) '
+                        . ($customerid ? ' AND a.customerid=' . $customerid : '')
+                        . ($divisionid ? ' AND c.divisionid=' . $divisionid : '')
+                    . ' GROUP BY a.customerid, lastname, c.name, city, address, ten, t.currency',
                     'id',
-                    array($tax['id'], $reportday, $reportday, $today, $weekday, $monthday, $quarterday, $halfyear, $yearday)
+                    array($reportday, $reportday, CSTATUS_CONNECTED, $tax['id'], $reportday, $reportday, $today, $weekday, $monthday, $quarterday, $halfyear, $yearday)
                 );
 
                 $list2 = $DB->GetAllByKey(
                     'SELECT a.customerid AS id, '.$DB->Concat('UPPER(lastname)', "' '", 'c.name').' AS customername, '
                     .$DB->Concat('city', "' '", 'address').' AS address, ten,
 					SUM(((((100 - a.pdiscount) * l.value) / 100) - a.vdiscount) *
-						((CASE a.suspended WHEN 0 THEN 100.0 ELSE '.$suspension_percentage.' END) / 100)) AS value
-					FROM assignments a, liabilities l, customerview c
-					WHERE a.customerid = c.id AND status = 3
-					AND a.liabilityid = l.id AND l.taxid=?
-					AND c.deleted=0
-					AND (a.datefrom<=? OR a.datefrom=0) AND (a.dateto>=? OR a.dateto=0)
-					AND ((a.period='.DISPOSABLE.' AND a.at=?)
-						OR (a.period='.WEEKLY.'. AND a.at=?)
-						OR (a.period='.MONTHLY.' AND a.at=?)
-						OR (a.period='.QUARTERLY.' AND a.at=?)
-						OR (a.period='.HALFYEARLY.' AND a.at=?)
-						OR (a.period='.YEARLY.' AND a.at=?)) '
-                    .($customerid ? 'AND a.customerid='.$customerid : '').
-                    ' GROUP BY a.customerid, lastname, c.name, city, address, ten ',
+						((CASE WHEN a.suspended = 0 AND allsuspended.customerid IS NULL THEN 100.0 ELSE '.$suspension_percentage.' END) / 100)) AS value,
+						l.currency
+                    FROM assignments a
+                    LEFT JOIN liabilities l ON l.id = a.liabilityid
+                    LEFT JOIN customerview c ON c.id = a.customerid
+                    LEFT JOIN (
+                        SELECT COUNT(id) AS suspended, customerid FROM assignments
+                        WHERE tariffid IS NULL AND liabilityid IS NULL
+                            AND datefrom <= ? AND (dateto >= ? OR dateto = 0)
+                        GROUP BY customerid
+                    ) allsuspended ON allsuspended.customerid = a.customerid
+                    WHERE c.status = ?
+                        AND l.taxid=?
+                        AND c.deleted=0
+                        AND a.datefrom <= ? AND (a.dateto>=? OR a.dateto=0)
+                        AND ((a.period='.DISPOSABLE.' AND a.at=?)
+                            OR (a.period='.WEEKLY.'. AND a.at=?)
+                            OR (a.period='.MONTHLY.' AND a.at=?)
+                            OR (a.period='.QUARTERLY.' AND a.at=?)
+                            OR (a.period='.HALFYEARLY.' AND a.at=?)
+                            OR (a.period='.YEARLY.' AND a.at=?)) '
+                        .($customerid ? 'AND a.customerid='.$customerid : '').
+                    ' GROUP BY a.customerid, lastname, c.name, city, address, ten, l.currency',
                     'id',
-                    array($tax['id'], $reportday, $reportday, $today, $weekday, $monthday, $quarterday, $halfyear, $yearday)
+                    array($reportday, $reportday, CSTATUS_CONNECTED, $tax['id'], $reportday, $reportday, $today, $weekday, $monthday, $quarterday, $halfyear, $yearday)
                 );
 
                 if (empty($list1) && empty($list2)) {
@@ -651,13 +673,29 @@ switch ($type) {
                             $reportlist[$idx]['customername'] = $row['customername'];
                             $reportlist[$idx]['address'] = $row['address'];
                             $reportlist[$idx]['ten'] = $row['ten'];
+                            $reportlist[$idx]['values'] = array();
                         }
-                        $reportlist[$idx]['value'] += $row['value'];
-                        $reportlist[$idx][$tax['id']]['netto'] = round($row['value']/($tax['value']+100)*100, 2);
-                        $reportlist[$idx][$tax['id']]['tax'] = $row['value'] - $reportlist[$idx][$tax['id']]['netto'];
-                        $reportlist[$idx]['taxsum'] += $reportlist[$idx][$tax['id']]['tax'];
-                        $total['netto'][$tax['id']] += $reportlist[$idx][$tax['id']]['netto'];
-                        $total['tax'][$tax['id']] += $reportlist[$idx][$tax['id']]['tax'];
+                        if (!isset($reportlist[$idx]['values'][$row['currency']])) {
+                            $reportlist[$idx]['values'][$row['currency']] = array(
+                                'value' => 0,
+                                'taxsum' => 0,
+                            );
+                        }
+                        $reportlist[$idx]['values'][$row['currency']]['value'] += $row['value'];
+                        $reportlist[$idx]['values'][$row['currency']][$tax['id']]['netto'] =
+                            round($row['value']/($tax['value']+100)*100, 2);
+                        $reportlist[$idx]['values'][$row['currency']][$tax['id']]['tax'] =
+                            $row['value'] - $reportlist[$idx]['values'][$row['currency']][$tax['id']]['netto'];
+                        $reportlist[$idx]['values'][$row['currency']]['taxsum'] +=
+                            $reportlist[$idx]['values'][$row['currency']][$tax['id']]['tax'];
+                        if (!isset($total['netto'][$row['currency']][$tax['id']])) {
+                            $total['netto'][$row['currency']][$tax['id']] = 0;
+                            $total['tax'][$row['currency']][$tax['id']] = 0;
+                        }
+                        $total['netto'][$row['currency']][$tax['id']] +=
+                            $reportlist[$idx]['values'][$row['currency']][$tax['id']]['netto'];
+                        $total['tax'][$row['currency']][$tax['id']] +=
+                            $reportlist[$idx]['values'][$row['currency']][$tax['id']]['tax'];
                     }
                 }
             }
@@ -751,7 +789,7 @@ switch ($type) {
 
         if ($from > 0) {
             $listdata['startbalance'] = $DB->GetOne(
-                'SELECT SUM(value) FROM receiptcontents
+                'SELECT SUM(value * d.currencyvalue) FROM receiptcontents
 						LEFT JOIN documents d ON (docid = d.id AND type = ?)
 						WHERE cdate < ?'
                         .($registry ? ' AND regid='.$registry : '')
@@ -770,7 +808,7 @@ switch ($type) {
         $listdata['advances'] = 0;
 
         if ($list = $DB->GetAll(
-            'SELECT d.id AS id, SUM(value) AS value, number, cdate, customerid,
+            'SELECT d.id AS id, SUM(value) AS value, d.currency, d.currencyvalue, number, cdate, customerid,
 				d.name, address, zip, city, numberplans.template, extnumber, closed,
 				MIN(description) AS title, COUNT(*) AS posnumber
 			FROM documents d
@@ -801,19 +839,19 @@ switch ($type) {
 
                 // summary
                 if ($row['value'] > 0) {
-                    $listdata['totalincome'] += $row['value'];
+                    $listdata['totalincome'] += $row['value'] * $row['currencyvalue'];
                 } else {
-                    $listdata['totalexpense'] += -$row['value'];
+                    $listdata['totalexpense'] += -$row['value'] * $row['currencyvalue'];
                 }
 
                 if ($idx==0) {
-                    $list[$idx]['after'] = $listdata['startbalance'] + $row['value'];
+                    $list[$idx]['after'] = $listdata['startbalance'] + $row['value'] * $row['currencyvalue'];
                 } else {
-                    $list[$idx]['after'] = $list[$idx-1]['after'] + $row['value'];
+                    $list[$idx]['after'] = $list[$idx-1]['after'] + $row['value'] * $row['currencyvalue'];
                 }
 
                 if (!$row['closed']) {
-                    $listdata['advances'] -= $row['value'];
+                    $listdata['advances'] -= $row['value'] * $row['currencyvalue'];
                 }
             }
         }
@@ -880,9 +918,9 @@ switch ($type) {
                 $page = $x;
 
                 if ($row['value']>0) {
-                    $totals[$page]['income'] += $row['value'];
+                    $totals[$page]['income'] += $row['value'] * $row['currencyvalue'];
                 } else {
-                    $totals[$page]['expense'] += -$row['value'];
+                    $totals[$page]['expense'] += -$row['value'] * $row['currencyvalue'];
                 }
 
                 $totals[$page]['rows'] = $rows;

@@ -1,9 +1,11 @@
 <?php
 
+use PragmaRX\Google2FA\Google2FA;
+
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -28,6 +30,23 @@ $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if (!$LMS->UserExists($id)) {
     $SESSION->redirect('?m=userlist');
 }
+
+if (isset($_GET['fromuser'])) {
+    header('Content-Type: application/json');
+    die(json_encode($LMS->GetUserRights($_GET['fromuser'])));
+}
+
+if (isset($_GET['removetrusteddevices'])) {
+    $AUTH->removeTrustedDevices($id, isset($_GET['deviceid']) ? $_GET['deviceid'] : null);
+    $SESSION->redirect($_SERVER['HTTP_REFERER']);
+}
+
+if (isset($_GET['forcepasswdchange'])) {
+    $LMS->forcePasswordChange($id);
+    $SESSION->redirect($_SERVER['HTTP_REFERER']);
+}
+
+include(MODULES_DIR . DIRECTORY_SEPARATOR . 'usercopypermissions.inc.php');
 
 $userinfo = isset($_POST['userinfo']) ? $_POST['userinfo'] : false;
 
@@ -89,10 +108,39 @@ if ($userinfo) {
         $userinfo['ntype'] = array_sum(Utils::filterIntegers($userinfo['ntype']));
     }
 
+    if ($userinfo['twofactorauth'] == 1) {
+        if (strlen($userinfo['twofactorauthsecretkey']) != 16) {
+            $error['twofactorauthsecretkey'] = trans('Incorrect secret key format!');
+        } else {
+            $google2fa = new Google2FA();
+            if ($google2fa->removeInvalidChars($userinfo['twofactorauthsecretkey']) != $userinfo['twofactorauthsecretkey']) {
+                $error['twofactorauthsecretkey'] = trans('Secret key contains invalid characters!');
+            }
+        }
+    }
+
     if (!$error) {
+        if ($userinfo['twofactorauth'] == -1) {
+            $userinfo['twofactorauth'] = 1;
+            $google2fa = new Google2FA();
+            $userinfo['twofactorauthsecretkey'] = $google2fa->generateSecretKey();
+        }
+
         $userinfo['accessfrom'] = $accessfrom;
         $userinfo['accessto'] = $accessto;
         $LMS->UserUpdate($userinfo);
+
+        if (isset($userinfo['copy-permissions']) && !empty($userinfo['src_userid'])) {
+            $LMS->CopyPermissions($userinfo['src_userid'], $userinfo['id'], array_flip($userinfo['copy-permissions']));
+            $LMS->executeHook(
+                'user_modify_copy_permissions',
+                array(
+                    'src-userid' => $userinfo['src_userid'],
+                    'dst-userid' => $userinfo['id'],
+                    'copy-permissions' => $userinfo['copy-permissions'],
+                )
+            );
+        }
 
         if ($SYSLOG) {
             $groups = $DB->GetAll(
@@ -177,6 +225,7 @@ if ($SYSLOG && (ConfigHelper::checkConfig('privileges.superuser') || ConfigHelpe
 
 $SMARTY->assign('accesslist', $accesslist);
 $SMARTY->assign('available', $DB->GetAllByKey('SELECT id, name FROM customergroups ORDER BY name', 'id'));
+$SMARTY->assign('users', $LMS->GetUserNames());
 $SMARTY->assign('userinfo', $userinfo);
 $SMARTY->assign('error', $error);
 

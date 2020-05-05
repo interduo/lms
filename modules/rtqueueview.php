@@ -126,11 +126,16 @@ if (isset($_GET['ts'])) {
 if (isset($_GET['vids'])) {
     if (is_array($_GET['vids'])) {
         $filter['verifierids'] = Utils::filterIntegers($_GET['vids']);
-    } elseif (intval($_GET['vids'])) {
+        if (count($filter['verifierids']) == 1 && reset($filter['verifierids']) <= 0) {
+            $filter['verifierids'] = intval(reset($filter['verifierids']));
+        }
+    } elseif (intval($_GET['vids']) > 0) {
         $filter['verifierids'] = Utils::filterIntegers(array($_GET['vids']));
-    } elseif ($_GET['vids'] == 'all') {
-        $filter['verifierids'] = null;
+    } else {
+        $filter['verifierids'] = intval($_GET['vids']);
     }
+} elseif (!isset($filter['verifierids'])) {
+    $filter['verifierids'] = 'all';
 }
 
 // project id's
@@ -168,7 +173,7 @@ if (isset($_GET['owner'])) {
         $filter['owner'] = intval($_GET['owner']);
     }
 } elseif (!isset($filter['owner'])) {
-    $filter['owner'] = -1;
+    $filter['owner'] = 'all';
 }
 
 // removed or not?
@@ -235,6 +240,10 @@ if (isset($_GET['unread'])) {
     $filter['unread'] = -1;
 }
 
+if (!is_array($_GET['parent']) && !empty($_GET['parent'])) {
+    $filter['parent'] = intval($_GET['parent']);
+}
+
 if (isset($_GET['rights'])) {
     $filter['rights'] = $_GET['rights'];
 } else {
@@ -289,6 +298,7 @@ unset($queue['deadline']);
 unset($queue['service']);
 unset($queue['type']);
 unset($queue['unread']);
+unset($queue['parent']);
 unset($queue['rights']);
 unset($queue['verifier']);
 unset($queue['netnode']);
@@ -310,10 +320,19 @@ if (isset($_GET['action'])) {
     switch ($_GET['action']) {
         case 'assign':
             if (!empty($_GET['ticketid'])) {
+                if (isset($_GET['check-conflict'])) {
+                    header('Content-Type: application/json');
+                    die(json_encode($LMS->TicketIsAssigned($_GET['ticketid'])));
+                }
                 $LMS->TicketChange($_GET['ticketid'], array('owner' => Auth::GetCurrentUser()));
                 $SESSION->redirect(str_replace('&action=assign', '', $_SERVER['REQUEST_URI'])
                 . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
             }
+            break;
+        case 'assign2':
+                $LMS->TicketChange($_GET['ticketid'], array('verifierid' => Auth::GetCurrentUser()));
+                $SESSION->redirect(str_replace('&action=assign2', '', $_SERVER['REQUEST_URI'])
+                . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
             break;
         case 'unlink':
             $LMS->TicketChange($_GET['ticketid'], array('parentid' => null));

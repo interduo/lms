@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2013 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,20 +24,6 @@
  *  $Id$
  */
 
-function ConfigOptionExists($params)
-{
-    extract($params);
-    $DB = LMSDB::getInstance();
-    if (isset($section)) {
-        return $DB->GetOne(
-            'SELECT id FROM uiconfig WHERE section = ? AND var = ?',
-            array($section, $variable)
-        );
-    } else {
-        return $DB->GetOne('SELECT id FROM uiconfig WHERE id = ?', array($id));
-    }
-}
-
 if (isset($_GET['s']) && isset($_GET['v'])) {
     $params = array(
         'section' => $_GET['s'],
@@ -47,27 +33,23 @@ if (isset($_GET['s']) && isset($_GET['v'])) {
     $params['id'] = $_GET['id'];
 }
 
-$id = ConfigOptionExists($params);
-if (empty($id)) {
+if (!($id = $LMS->ConfigOptionExists($params))) {
     $SESSION->redirect('?m=configlist');
 }
 
 if (isset($_GET['statuschange'])) {
-    if ($SYSLOG) {
-        $disabled = $DB->GetOne('SELECT disabled FROM uiconfig WHERE id = ?', array($id));
-        $args = array(
-            SYSLOG::RES_UICONF => $id,
-            'disabled' => $disabled ? 0 : 1
-        );
-        $SYSLOG->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_UPDATE, $args);
-    }
-    $DB->Execute('UPDATE uiconfig SET disabled = CASE disabled WHEN 0 THEN 1 ELSE 0 END WHERE id = ?', array($id));
+    $LMS->toggleConfigOption($id);
     $SESSION->redirect('?m=configlist');
 }
 
 $config = $DB->GetRow('SELECT * FROM uiconfig WHERE id = ?', array($id));
 $option = $config['section'] . '.' . $config['var'];
 $config['type'] = ($config['type'] == CONFIG_TYPE_AUTO) ? $LMS->GetConfigDefaultType($option) : $config['type'];
+
+$configusers = $DB->GetAll('SELECT c.*, u.login, u.firstname, u.lastname
+    FROM uiconfig c
+    LEFT JOIN users u on c.userid = u.id
+    WHERE c.configid = ?', array($config['id']));
 
 if (isset($_POST['config'])) {
     $cfg = $_POST['config'];
@@ -92,7 +74,7 @@ if (isset($_POST['config'])) {
     }
 
     if (($cfg['var']!=$config['var'] || $cfg['section']!=$config['section'])
-        && $LMS->GetConfigOptionId($cfg['var'], $cfg['section'])
+        && $LMS->ConfigOptionExists(array('section' => $cfg['section'], 'variable' => $cfg['var']))
     ) {
         $error['var'] = trans('Option exists!');
     }
@@ -128,6 +110,8 @@ if (isset($_POST['config'])) {
             'type' => $cfg['type'],
             SYSLOG::RES_UICONF => $cfg['id']
         );
+
+        $DB->BeginTrans();
         $DB->Execute(
             'UPDATE uiconfig SET section = ?, var = ?, value = ?, description = ?, disabled = ?, type = ? WHERE id = ?',
             array_values($args)
@@ -137,6 +121,26 @@ if (isset($_POST['config'])) {
             $SYSLOG->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_UPDATE, $args);
         }
 
+        if ($cfg['section'] != $config['section'] || $cfg['var'] != $config['var'] || $cfg['type'] != $config['type']) {
+            $userargs = array(
+                'newsection' => $cfg['section'],
+                'newvar' => $cfg['var'],
+                'type' => $cfg['type'],
+                'oldsection' => $config['section'],
+                'oldvar' => $config['var'],
+                SYSLOG::RES_UICONF => $cfg['id']
+            );
+
+            $DB->Execute(
+                'UPDATE uiconfig SET section = ?, var = ? , type = ? WHERE section = ? AND var = ?',
+                array_values($userargs)
+            );
+
+            if ($SYSLOG) {
+                $SYSLOG->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_UPDATE, $userargs);
+            }
+        }
+        $DB->CommitTrans();
         $SESSION->redirect('?m=configlist');
     }
     $config = $cfg;
@@ -146,7 +150,10 @@ $layout['pagetitle'] = trans('Option Edit: $a', $option);
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
+$config['documentation'] = Utils::MarkdownToHtml(Utils::LoadMarkdownDocumentation($option));
+
 $SMARTY->assign('sections', $LMS->GetConfigSections());
 $SMARTY->assign('error', $error);
 $SMARTY->assign('config', $config);
+$SMARTY->assign('configusers', $configusers);
 $SMARTY->display('config/configedit.html');

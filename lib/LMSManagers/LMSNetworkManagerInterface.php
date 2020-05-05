@@ -73,11 +73,15 @@ interface LMSNetworkManagerInterface
 
     public function NetworkRemap($src, $dst);
 
+    public function MoveHostsBetweenNetworks($src, $dst);
+
     public function GetNetworkRecord($id, $page = 0, $plimit = 4294967296, $firstfree = false);
-    
+
     public function ScanNodes();
 
     public function GetNetworkPageForIp($netid, $ip);
 
     public function GetPublicNetworkID($netid);
+
+    public function getFirstFreeAddress($netid);
 }

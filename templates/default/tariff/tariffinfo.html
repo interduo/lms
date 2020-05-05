@@ -7,7 +7,7 @@
 <!--
     function getText(index) {
         {section name=lt loop=$tariffs}
-        if (index == {$tariffs[lt].id}) return '{$tariffs[lt].name|escape} ({$tariffs[lt].value|money_format})';
+        if (index == {$tariffs[lt].id}) return '{$tariffs[lt].name|escape} ({moneyf($tariffs[lt].value, $tariffs[lt].currency)})';
         {/section}
     }
 
@@ -16,6 +16,9 @@
     }
 //-->
 </script>
+
+{$speed_unit_type = ConfigHelper::getConfig('phpui.speed_unit_type', 1000)}
+{$speed_unit_aggregation_threshold = ConfigHelper::getConfig('phpui.speed_unit_aggregation_threshold', 5)}
 
 <STYLE>
     .tariff_tab tr td {
@@ -30,11 +33,11 @@
 </STYLE>
 
 {function bitrate_restrictions}
-    {if $day}{convert_to_units($day * 1000)}/s{else}{trans("no limits")}{/if}
+    {if $day}{convert_to_units($day * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}{trans("no limits")}{/if}
 
     ({trans("night:")}
 
-    {if $night}{convert_to_units($night * 1000)}/s{else}{trans("not defined")}{/if})
+    {if $night}{convert_to_units($night * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}{trans("not defined")}{/if})
 {/function}
 
 {function restrictions}
@@ -88,7 +91,7 @@
                                 <TD><IMG SRC="img/value.gif" ALT=""></TD>
                                 <TD>{trans("Value:")}</TD>
                                 <TD>
-                                    {$tariff.value|money_format}
+                                    {moneyf($tariff.value, $tariff.currency)}
                                     {if $tariff.period}
                                         {assign var=tperiod value=$tariff.period}({$_PERIODS.$tperiod})
                                     {else}
@@ -123,6 +126,19 @@
                                 <TD><IMG SRC="img/money.gif" ALT=""></TD>
                                 <TD>{trans("Type:")}</TD>
                                 <TD>{$_SERVICETYPES[$tariff.type]}</TD>
+                            </TR>
+
+                            <TR>
+                                <TD><i class="lms-ui-icon-tags"></i></TD>
+                                <TD>{trans("Tags:")}</TD>
+                                <TD>
+                                    {foreach $tariff.tags as $tarifftag}
+                                        <span class="dark tag-bar"><a href="?m=tarifftaginfo&id={$tarifftag.id}">{$tarifftag.name}</a></span>
+                                        {if !$tarifftag@last} / {/if}
+                                    {foreachelse}
+                                        -
+                                    {/foreach}
+                                </TD>
                             </TR>
 
                             {if isset($tariff.numberplan)}
@@ -169,7 +185,12 @@
                             <TR>
                                 <TD><IMG SRC="img/values.gif" ALT=""></TD>
                                 <TD>{trans("Avg. monthly income:")}</TD>
-                                <TD>{$tariff.totalval|money_format}</TD>
+                                <td>
+                                    {foreach $tariff.totalval as $currency => $totalval}
+                                        {if !$totalval@first}<br>{/if}
+                                        {moneyf($totalval, $currency)}
+                                    {/foreach}
+                                </td>
                             </TR>
                             {/if}
 
@@ -178,8 +199,8 @@
                                 <TD>
                                     <img src="img/netdev.gif">
                                 </TD>
-                                <TD>
-                                    {trans("Type:")}
+                                <TD class="bold">
+                                    {trans("Purpose:")}
                                 </TD>
                                 <TD>
                                     <ol class="lms-inline-list">
@@ -367,7 +388,7 @@
             </A>
 
             {if $tariff.count == 0}
-            <A HREF="?m=tariffdel&id={$tariff.id}" onclick="return confirmLink(this,'{trans("Are you sure, you want to delete that tariff?")}');">
+            <A id="delete-tariff" HREF="?m=tariffdel&id={$tariff.id}">
                 {trans("Delete")} <IMG SRC="img/delete.gif" ALT="">
             </A>
             {/if}
@@ -406,7 +427,7 @@
                     {section name=l2 loop=$tariff.customers start=$smarty.section.l1.index step=$tariff.rows}
                      <TD WIDTH="33%" class="highlight {cycle}" {cycle print=false} onclick="return self.location.href='?m=customerinfo&id={$tariff.customers[l2].id}'">
                         <IMG SRC="img/customer.gif" ALT="">
-                        <A HREF="?m=customerinfo&id={$tariff.customers[l2].id}">
+                        <A HREF="?m=customerinfo&id={$tariff.customers[l2].id}"{if !$tariff.customers[l2].active} class="blend"{/if}>
                             ({$tariff.customers[l2].id|string_format:"%04d"})
                             {$tariff.customers[l2].customername|truncate:50:" ..."}
                             {if $tariff.customers[l2].cnt > 1}({$tariff.customers[l2].cnt}){/if}
@@ -441,7 +462,7 @@
                             <SELECT SIZE="1" NAME="to">
                                 {foreach from=$tariffs item=v}
                                     {if $v.id != $tariff.id}
-                                        <OPTION VALUE="{$v.id}">{$v.name} ({$v.value|money_format})</OPTION>
+                                        <OPTION VALUE="{$v.id}">{$v.name} ({moneyf($v.value, $v.currency)})</OPTION>
                                     {/if}
                                 {/foreach}
                             </SELECT>
@@ -454,5 +475,12 @@
     </TR>
     </TBODY>
 </TABLE>
-
+    <script>
+        $('#delete-tariff').click(function() {
+            confirmDialog($t("Are you sure, you want to delete that tariff?"), this).done(function() {
+                location.href = $(this).attr('href');
+            });
+            return false;
+        });
+    </script>
 {/block}

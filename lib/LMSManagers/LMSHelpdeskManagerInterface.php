@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C); 2001-2019 LMS Developers
+ *  Copyright (C); 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -121,15 +121,27 @@ interface LMSHelpdeskManagerInterface
 
     public function DetermineSenderEmail($queue_email, $ticket_email, $user_email, $forced_order = null);
 
-    public function GetTicketPhoneFrom($ticketid);
+    public function GetTicketRequestorPhone($ticketid);
 
     public function CheckTicketAccess($ticketid);
 
-    public function GetRelatedTicketIds($ticketid);
+    public function GetRelatedTickets($ticketid);
+
+    public function GetChildTickets($ticketid);
+
+    public function getTickets($ticketids);
 
     public function GetTicketParentID($ticketid);
 
     public function IsTicketLoop($ticketid, $parentid);
 
     public function GetRTSmtpOptions();
+
+    public function CopyQueuePermissions($src_userid, $dst_userid);
+
+    public function CopyCategoryPermissions($src_userid, $dst_userid);
+
+    public function TicketIsAssigned($ticketid);
+
+    public function getTicketImageGalleries(&$ticket);
 }

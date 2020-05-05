@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2019 LMS Developers
+ *  Copyright (C) 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -45,6 +45,20 @@ class LMSFileManager extends LMSManager implements LMSFileManagerInterface
             $container['description'] = wordwrap($container['description'], 120, '<br>', true);
             $container['files'] = $this->db->GetAll('SELECT * FROM files
 				WHERE containerid = ?', array($container['id']));
+
+            $container['images'] = array();
+            foreach ($container['files'] as &$file) {
+                if (strpos($file['contenttype'], 'image') === 0) {
+                    $url = '?m=attachments&type=' . $type . '&attachmentaction=viewfile&fileid='
+                        . $file['id'] . '&api=1';
+                    $container['images'][] = array(
+                        'image' => $url,
+                        'thumb' => $url . '&thumbnail=200',
+                        'title' => $file['filename'],
+                    );
+                }
+            }
+            unset($file);
         }
         unset($container);
 
@@ -118,6 +132,7 @@ class LMSFileManager extends LMSManager implements LMSFileManagerInterface
      * @param array $params
      *      description - string - container description
      *      files - array() of file description structures
+     *          if 'data' component of file structure is defined then we treat it as file contents
      *      type - string - type of assigned resource (customerid, netdevid, netnodeid, etc.)
      */
     public function AddFileContainer(array $params)
@@ -140,26 +155,44 @@ class LMSFileManager extends LMSManager implements LMSFileManagerInterface
         $document_manager = new LMSDocumentManager($this->db, $this->auth, $this->cache, $this->syslog);
 
         foreach ($params['files'] as $file) {
-            $md5sum = md5_file($file['name']);
+            if (isset($file['data'])) {
+                $md5sum = md5($file['data']);
+            } else {
+                $md5sum = md5_file($file['name']);
+            }
             $filename = basename($file['name']);
 
             $path = DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum, 0, 2);
             $name = $path . DIRECTORY_SEPARATOR . $md5sum;
 
-            if (($document_manager->DocumentAttachmentExists($md5sum)
-                    || $this->FileExists($md5sum))
-                && (filesize($name) != filesize($file['name'])
-                    || hash_file('sha256', $name) != hash_file('sha256', $file['name']))) {
-                die(trans('Specified file exists in database!'));
-                break;
+            if ($document_manager->DocumentAttachmentExists($md5sum)
+                || $this->FileExists($md5sum)) {
+                if (isset($file['data'])) {
+                    $filesize = strlen($file['data']);
+                    $sha256sum = hash('sha256', $file['data']);
+                } else {
+                    $filesize = filesize($file['name']);
+                    $sha256sum = hash_file('sha256', $file['name']);
+                }
+                if (filesize($name) != $filesize
+                    || hash_file('sha256', $name) != $sha256sum) {
+                    die(trans('Specified file exists in database!'));
+                    break;
+                }
             }
 
             $this->db->Execute('INSERT INTO files (containerid, filename, contenttype, md5sum)
 				VALUES(?, ?, ?, ?)', array($containerid, $filename, $file['type'], $md5sum));
 
             @mkdir($path, 0700);
-            if (!file_exists($name) && !@rename($file['name'], $name)) {
-                die(trans('Can\'t save file in "$a" directory!', $path));
+            if (!file_exists($name)) {
+                if (isset($file['data'])) {
+                    if (file_put_contents($name, $file['data']) === false) {
+                        die(trans('Can\'t save file in "$a" directory!', $path));
+                    }
+                } elseif (!@rename($file['name'], $name)) {
+                    die(trans('Can\'t save file in "$a" directory!', $path));
+                }
             }
         }
     }

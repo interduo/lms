@@ -103,6 +103,45 @@
 		</TD>
 	</TR>
 	<TR>
+		<td class="bold nobr">
+			<label for="passwdforcechange">
+				<IMG src="img/pass.gif" alt=""> {trans("Force password change:")}
+			</label>
+		</td>
+		<TD>
+			<input type="checkbox" name="useradd[passwdforcechange]" value="1"
+					id="passwdforcechange"{if isset($useradd.passwdforcechange)} checked{/if}>
+		</TD>
+	</TR>
+	<TR>
+		<TD class="bold">
+			<IMG src="img/pass.gif" alt=""> {trans("Two factor authentication:")}
+		</TD>
+		<TD>
+			<label>
+				<INPUT type="radio" name="useradd[twofactorauth]" value="1"{if $useradd.twofactorauth == 1} checked{/if}>
+				{trans("yes")}
+			</label>
+			<label>
+				<INPUT type="radio" name="useradd[twofactorauth]" value="0"{if !$useradd.twofactorauth} checked{/if}>
+				{trans("no")}
+			</label>
+			<label>
+				<INPUT type="radio" name="useradd[twofactorauth]" value="-1"{if $useradd.twofactorauth == -1} checked{/if}>
+				{trans("generate secret key")}
+			</label>
+		</TD>
+	</TR>
+	<TR id="twofactorauthsecretkey"{if $useradd.twofactorauth != 1} style="display: none;"{/if}>
+		<TD class="bold">
+			<IMG src="img/pass.gif" alt=""> {trans("Secret key:")}
+		</TD>
+		<TD>
+			<input type="text" name="useradd[twofactorauthsecretkey]" value="{$useradd.twofactorauthsecretkey}"
+					maxlength="16" {tip trigger="twofactorauthsecretkey"}>
+		</TD>
+	</TR>
+	<TR>
 		<TD class="bold nobr">
 			<IMG src="img/ip.gif" alt=""> {trans("Allowed hosts:")}
 		</TD>
@@ -128,23 +167,46 @@
 		</TD>
 		<TD class="nobr">
 			<table style="width: 100%;">
-				<tr>
-					<td style="width: 50%;" class="valign-top nobr">
-						{foreach $accesslist as $name => $access}
-						{if $access@index <= floor($access@total / 2) - 1}
-						<INPUT type="checkbox" id="acl_{$access@index}" name="acl[{$name}]" value="1" {if $access.enabled} checked{/if}> <label for="acl_{$access@index}">{$access.name}</label><BR>
-						{/if}
-						{/foreach}
-					</td>
-					<td style="width: 50%;" class="valign-top nobr">
-						{foreach $accesslist as $name => $access}
-						{if $access@index > floor($access@total / 2) - 1}
-						<INPUT type="checkbox" id="acl_{$access@index}" name="acl[{$name}]" value="1" {if $access.enabled} checked{/if}> <label for="acl_{$access@index}">{$access.name}</label><BR>
-						{/if}
-						{/foreach}
-						{assign var="name" value=""}
-					</td>
-				</tr>
+				<colgroup>
+					<col style="width: 50%;">
+					<col style="width: 50%;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<td colspan="2">
+							{button icon="clone" id="copy-rights" label="Copy rights"}
+							&nbsp;{trans("of selected user:")}
+							&nbsp;
+							<select id="from-user" name="useradd[src_userid]">
+								<option value="">{trans("<!access-rights>- empty -")}</option>
+								{foreach $users as $user}
+									<option value="{$user.id}"
+											{if isset($useradd.src_userid) && $useradd.src_userid == $user.id} selected{/if}>{$user.rname} ({$user.login})</option>
+								{/foreach}
+							</select>
+							{include file="user/usercopypermissions.html" form_variable_prefix="useradd" variables=$useradd}
+						</td>
+					</tr>
+					<tr id="user-rights">
+						<td class="valign-top nobr">
+							{foreach $accesslist as $name => $access}
+							{if $access@index <= floor($access@total / 2) - 1}
+							<INPUT type="checkbox" data-right-name="{$name}" id="acl_{$access@index}"
+								   name="acl[{$name}]" value="1" {if $access.enabled} checked{/if}> <label for="acl_{$access@index}">{$access.name}</label><BR>
+							{/if}
+							{/foreach}
+						</td>
+						<td class="valign-top nobr">
+							{foreach $accesslist as $name => $access}
+							{if $access@index > floor($access@total / 2) - 1}
+							<INPUT type="checkbox" data-right-name="{$name}" id="acl_{$access@index}"
+								   name="acl[{$name}]" value="1" {if $access.enabled} checked{/if}> <label for="acl_{$access@index}">{$access.name}</label><BR>
+							{/if}
+							{/foreach}
+							{assign var="name" value=""}
+						</td>
+					</tr>
+				</tbody>
 			</table>
 		</TD>
 	</TR>
@@ -157,19 +219,43 @@
 		</TD>
 	</TR>
 	<TR>
-		<TD colspan="2" class="text-right">
-			<A href="javascript:document.useradd.submit();" accesskey="s">{trans("Submit")} <IMG src="img/save.gif" alt=""></A>
-			<A href="?m=userlist">{trans("Cancel")} <IMG src="img/cancel.gif" alt=""></A>
+		<TD colspan="2" class="lms-ui-box-buttons">
+			{button type="submit" icon="save" label="Submit"}
+			{button icon="cancel" icon="cancel" label="Cancel" onclick="location.href = '?m=userlist';"}
 		</TD>
 	</TR>
     </TBODY>
 </TABLE>
 </FORM>
-<SCRIPT type="text/javascript">
-<!--
-$(function() {
-	$('form[name="useradd"] [name="useradd[login]"]').focus();
-});
-//-->
-</SCRIPT>
+<script>
+
+	$(function() {
+		$('form[name="useradd"] [name="useradd[login]"]').focus();
+
+		$('[name="useradd[twofactorauth]"]').click(function() {
+			var twofactorauth = parseInt($(this).val());
+			$('#twofactorauthsecretkey').toggle(twofactorauth == 1);
+		});
+
+		$('#copy-rights').click(function() {
+			$('[data-right-name]').prop('checked', false);
+			var from_user;
+			if (from_user = parseInt($('#from-user').val())) {
+				$.ajax({
+					data: {
+						fromuser: from_user
+					},
+					dataType: "json",
+					success: function(data) {
+						var user_rights = $('#user-rights');
+						$.each(data, function(key, value) {
+							$('[data-right-name="'  + value + '"]', user_rights).prop('checked', true);
+						});
+					}
+				});
+			}
+		});
+	});
+
+</script>
 {/block}

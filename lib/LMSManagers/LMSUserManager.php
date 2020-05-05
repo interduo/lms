@@ -41,13 +41,41 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     {
         $args = array(
             'passwd' => crypt($passwd),
+            'passwdforcechange' => 0,
             SYSLOG::RES_USER => $id
         );
-        $this->db->Execute('UPDATE users SET passwd=?, passwdlastchange=?NOW? WHERE id=?', array_values($args));
+        $this->db->Execute('UPDATE users SET passwd = ?, passwdlastchange = ?NOW?, passwdforcechange = ?
+            WHERE id=?', array_values($args));
         $this->db->Execute('INSERT INTO passwdhistory (userid, hash) VALUES (?, ?)', array($id, crypt($passwd)));
         if ($this->syslog) {
             unset($args['passwd']);
             $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_USERPASSWDCHANGE, $args);
+        }
+    }
+
+    public function forcePasswordChange($id)
+    {
+        $args = array(
+            'passwdforcechange' => 1,
+            SYSLOG::RES_USER => $id
+        );
+        $this->db->Execute('UPDATE users SET passwdforcechange = ? WHERE id = ?', array_values($args));
+        if ($this->syslog) {
+            $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_UPDATE, $args);
+        }
+    }
+
+    public function SetUserAuthentication($id, $twofactorauth, $twofactorauthsecretkey)
+    {
+        $args = array(
+            'twofactorauth' => $twofactorauth,
+            'twofactorauthsecretkey' => $twofactorauthsecretkey,
+            SYSLOG::RES_USER => $id,
+        );
+        $this->db->Execute('UPDATE users SET twofactorauth = ?, twofactorauthsecretkey = ?
+            WHERE id = ?', array_values($args));
+        if ($this->syslog) {
+            $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_USERAUTCHANGE, $args);
         }
     }
 
@@ -83,7 +111,7 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
      */
     public function getUserNames()
     {
-        return $this->db->GetAll('SELECT id, name, rname,
+        return $this->db->GetAll('SELECT id, login, name, rname,
 				(CASE WHEN access = 1 AND accessfrom <= ?NOW? AND (accessto >=?NOW? OR accessto = 0) THEN 1 ELSE 0 END) AS access
 			FROM vusers WHERE deleted=0 ORDER BY rname ASC');
     }
@@ -103,51 +131,55 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     public function getUserList()
     {
         $userlist = $this->db->GetAll(
-            'SELECT id, login, name, phone, lastlogindate, lastloginip, passwdexpiration, passwdlastchange, access, accessfrom, accessto, rname
+            'SELECT id, login, name, phone, lastlogindate, lastloginip, passwdexpiration, passwdlastchange, access,
+                accessfrom, accessto, rname, twofactorauth
             FROM vusers
             WHERE deleted=0
             ORDER BY login ASC'
         );
         if ($userlist) {
-            foreach ($userlist as $idx => $row) {
+            foreach ($userlist as &$row) {
                 if ($row['id'] == Auth::GetCurrentUser()) {
                     $row['lastlogindate'] = $this->auth->last;
-                    $userlist[$idx]['lastlogindate'] = $this->auth->last;
+                    $row['lastlogindate'] = $this->auth->last;
                     $row['lastloginip'] = $this->auth->lastip;
-                    $userlist[$idx]['lastloginip'] = $this->auth->lastip;
+                    $row['lastloginip'] = $this->auth->lastip;
                 }
 
                 if ($row['accessfrom']) {
-                    $userlist[$idx]['accessfrom'] = date('Y/m/d', $row['accessfrom']);
+                    $row['accessfrom'] = date('Y/m/d', $row['accessfrom']);
                 } else {
-                    $userlist[$idx]['accessfrom'] = '-';
+                    $row['accessfrom'] = '-';
                 }
 
                 if ($row['accessto']) {
-                    $userlist[$idx]['accessto'] = date('Y/m/d', $row['accessto']);
+                    $row['accessto'] = date('Y/m/d', $row['accessto']);
                 } else {
-                    $userlist[$idx]['accessto'] = '-';
+                    $row['accessto'] = '-';
                 }
 
                 if ($row['lastlogindate']) {
-                    $userlist[$idx]['lastlogin'] = date('Y/m/d H:i', $row['lastlogindate']);
+                    $row['lastlogin'] = date('Y/m/d H:i', $row['lastlogindate']);
                 } else {
-                    $userlist[$idx]['lastlogin'] = '-';
+                    $row['lastlogin'] = '-';
                 }
 
                 if ($row['passwdlastchange']) {
-                    $userlist[$idx]['passwdlastchange'] = date('Y/m/d H:i', $row['passwdlastchange']);
+                    $row['passwdlastchange'] = date('Y/m/d H:i', $row['passwdlastchange']);
                 } else {
-                    $userlist[$idx]['passwdlastchange'] = '-';
+                    $row['passwdlastchange'] = '-';
                 }
 
                 if (check_ip($row['lastloginip'])) {
-                    $userlist[$idx]['lastloginhost'] = gethostbyaddr($row['lastloginip']);
+                    // moved to '?m=dns&revdns=1&api=1'
+                    //$row['lastloginhost'] = gethostbyaddr($row['lastloginip']);
+                    $row['lastloginhost'] = '-';
                 } else {
-                    $userlist[$idx]['lastloginhost'] = '-';
-                    $userlist[$idx]['lastloginip'] = '-';
+                    $row['lastloginhost'] = '-';
+                    $row['lastloginip'] = '-';
                 }
             }
+            unset($row);
         }
 
         $userlist['total'] = empty($userlist) ? 0 : count($userlist);
@@ -184,14 +216,18 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             'position' => $user['position'],
             'ntype' => !empty($user['ntype']) ? $user['ntype'] : null,
             'phone' => !empty($user['phone']) ? $user['phone'] : null,
+            'passwdforcechange' => isset($user['passwdforcechange']) ? 1 : 0,
             'passwdexpiration' => !empty($user['passwdexpiration']) ? $user['passwdexpiration'] : 0,
             'access' => !empty($user['access']) ? 1 : 0,
             'accessfrom' => !empty($user['accessfrom']) ? $user['accessfrom'] : 0,
             'accessto' => !empty($user['accessto']) ? $user['accessto'] : 0,
+            'twofactorauth' => $user['twofactorauth'],
+            'twofactorauthsecretkey' => $user['twofactorauthsecretkey'],
         );
         $user_inserted = $this->db->Execute(
-            'INSERT INTO users (login, firstname, lastname, email, passwd, rights, hosts, position, ntype, phone, passwdexpiration, access, accessfrom, accessto)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO users (login, firstname, lastname, email, passwd, rights, hosts, position, ntype, phone,
+                passwdforcechange, passwdexpiration, access, accessfrom, accessto, twofactorauth, twofactorauthsecretkey)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             array_values($args)
         );
         if ($user_inserted) {
@@ -275,6 +311,17 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     {
         $userinfo = $this->db->GetRow('SELECT * FROM vusers WHERE id = ?', array($id));
         if ($userinfo) {
+            $userinfo['trusteddevices'] = $this->db->GetAll(
+                'SELECT id, useragent, useragent, INET_NTOA(ipaddr) AS ip, expires
+                    FROM twofactorauthtrusteddevices
+                    WHERE userid = ?
+                    ORDER BY expires',
+                array($id)
+            );
+            if (empty($userinfo['trusteddevices'])) {
+                $userinfo['trusteddevices'] = array();
+            }
+
             $this->cache->setCache('users', $id, null, $userinfo);
 
             if ($userinfo['id'] == Auth::GetCurrentUser()) {
@@ -347,14 +394,18 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             'position' => $user['position'],
             'ntype' => !empty($user['ntype']) ? $user['ntype'] : null,
             'phone' => !empty($user['phone']) ? $user['phone'] : null,
+            'passwdforcechange' => isset($user['passwdforcechange']) ? 1 : 0,
             'passwdexpiration' => !empty($user['passwdexpiration']) ? $user['passwdexpiration'] : 0,
             'access' => !empty($user['access']) ? 1 : 0,
             'accessfrom' => !empty($user['accessfrom']) ? $user['accessfrom'] : 0,
             'accessto' => !empty($user['accessto']) ? $user['accessto'] : 0,
+            'twofactorauth' => empty($user['twofactorauth']) ? 0 : 1,
+            'twofactorauthsecretkey' => $user['twofactorauthsecretkey'],
             SYSLOG::RES_USER => $user['id']
         );
         $res = $this->db->Execute('UPDATE users SET login=?, firstname=?, lastname=?, email=?, rights=?,
-				hosts=?, position=?, ntype=?, phone=?, passwdexpiration=?, access=?, accessfrom=?, accessto=? WHERE id=?', array_values($args));
+				hosts=?, position=?, ntype=?, phone=?, passwdforcechange=?, passwdexpiration=?, access=?,
+				accessfrom=?, accessto=?, twofactorauth=?, twofactorauthsecretkey=? WHERE id=?', array_values($args));
         if ($res && $this->syslog) {
             $this->syslog->AddMessage(SYSLOG::RES_USER, SYSLOG::OPER_UPDATE, $args);
         }
@@ -387,5 +438,14 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             }
         }
         return false;
+    }
+
+    public function checkPassword($password)
+    {
+        $dbpasswd = $this->db->GetOne(
+            'SELECT passwd FROM users WHERE id = ?',
+            array(Auth::GetCurrentUser())
+        );
+        return crypt($password, $dbpasswd) == $dbpasswd;
     }
 }

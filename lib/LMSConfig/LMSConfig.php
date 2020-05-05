@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2013 LMS Developers
+ *  Copyright (C) 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -26,9 +26,6 @@
 
 /**
  * LMSConfig
- *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
- * @author Tomasz Chiliński <tomasz.chilinski@chilan.com>
  */
 class LMSConfig
 {
@@ -179,6 +176,10 @@ class LMSConfig
             $ui_config = self::getUiConfig($options);
             $ini_config = self::$ini_config;
             $rights_config = self::$user_rights_config;
+        } elseif (isset($options['force_user_settings_only'])) {
+            $ui_config = self::getUiConfig($options);
+            $ini_config = self::$ini_config;
+            $rights_config = self::$user_rights_config;
         } elseif (isset($options['force_user_rights_only'])) {
             try {
                 $rights_config = self::getUserRightsConfig($options);
@@ -215,7 +216,11 @@ class LMSConfig
             $config = self::overrideConfigs($ini_config, $ui_config);
         }
 
-        return self::appendOneConfigSectionsToAnother($config, $rights_config);
+        if (empty($rights_config)) {
+            return $config;
+        } else {
+            return self::appendOneConfigSectionsToAnother($config, $rights_config);
+        }
     }
 
     /**

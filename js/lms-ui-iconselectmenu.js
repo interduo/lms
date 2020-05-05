@@ -26,10 +26,22 @@ $.widget( "custom.iconselectmenu", $.ui.selectmenu, {
 	_renderItem: function( ul, item ) {
 	    var li = $('<li' + (item.disabled ? ' class="ui-state-disabled"' : '') +
             '>');
-	    var wrapper = '<div>' + (item.element.attr("data-style") ? '<span style="' + item.element.attr("data-style") +
-            '" class="ui-icon ' + item.element.attr("data-class") + '"></span>' : '') + item.label + '</div>';
+	    var wrapper = '<div>' + (item.element.attr("data-icon") ? '<i class="' +
+            (item.element.attr("data-class") ? item.element.attr("data-class") : '') +
+            ' ' + item.element.attr("data-icon") + '"></i>' : '') + item.label + '</div>';
 
         return li.append(wrapper).appendTo(ul);
+    },
+    _renderButtonItem: function(item) {
+        var buttonItem = $("<span>", {
+            "class": "ui-selectmenu-text"
+        });
+        this._setText(buttonItem, item.label);
+        buttonItem.html('<i class="' + item.element.attr('data-icon') + '"></i> ' + buttonItem.html());
+
+        buttonItem.css("background-color", item.value);
+
+        return buttonItem;
     }
 });
 
@@ -65,12 +77,16 @@ LmsUiIconSelectMenu.prototype.init = function() {
  *
  * \param address_list
  */
-LmsUiIconSelectMenu.prototype.setAddressList = function( address_list ) {
+LmsUiIconSelectMenu.prototype.setAddressList = function( address_list, preselection ) {
     // clear addresses list
     this._clearList();
 
+    if (typeof(preselection) === 'undefined') {
+        preselection = true;
+    }
+
     // insert new addresses
-    this.appendAddressList( address_list );
+    this.appendAddressList( address_list, preselection );
 }
 
 /*!
@@ -78,9 +94,13 @@ LmsUiIconSelectMenu.prototype.setAddressList = function( address_list ) {
  *
  * \param address_list
  */
-LmsUiIconSelectMenu.prototype.appendAddressList = function( address_list ) {
+LmsUiIconSelectMenu.prototype.appendAddressList = function( address_list, preselection ) {
+    if (typeof(preselection) === 'undefined') {
+        preselection = true;
+    }
+
     // append addresses
-    this._appendAddressList( address_list );
+    this._appendAddressList( address_list, preselection );
 
     // refresh list
     this.refresh();
@@ -89,7 +109,7 @@ LmsUiIconSelectMenu.prototype.appendAddressList = function( address_list ) {
 /*!
  * \brief Pseudo private method for append address list to current select.
  */
-LmsUiIconSelectMenu.prototype._appendAddressList = function( address_list ) {
+LmsUiIconSelectMenu.prototype._appendAddressList = function( address_list, preselection ) {
     var icon;
     var select_id = this.select_id; // can't use 'this' inside of each
 
@@ -123,32 +143,31 @@ LmsUiIconSelectMenu.prototype._appendAddressList = function( address_list ) {
 		}
 		return 0;
 	});
-    $.each( addresses, function() {
+    var html = '<option value="-1">---</option>';
+	$.each( addresses, function() {
         switch ( this.location_address_type ) {
-            case "0": icon = "img/post.gif";     break; // postal address
-            case "1": icon = "img/customer.gif"; break; // billing address
-            case "2": icon = "img/location.png"; break; // location/recipient address
-            case "3": icon = "img/pin_blue.png"; break; // default location address
-            case "4": icon = "img/info3.gif";    break; // invoice address
+            case "0": icon = "lms-ui-icon-mail fa-fw";     break; // postal address
+            case "1": icon = "lms-ui-icon-home fa-fw"; break; // billing address
+            case "2": icon = "lms-ui-icon-customer-location fa-fw"; break; // location/recipient address
+            case "3": icon = "lms-ui-icon-default-customer-location fa-fw"; break; // default location address
+            case "4": icon = "lms-ui-icon-document fa-fw";    break; // invoice address
 
             default:
                 icon = "";
         }
 
-        $( select_id ).append( $('<option>', {
-            value: this.address_id,
-            text: this.location,
-            'data-style': "background-image: url(" + icon + ")"
-        } ));
+        html += '<option value="' + this.address_id  + '" data-icon="' + icon + '"' +
+            (preselection && this.hasOwnProperty('default_address') ? ' selected' : '') + '>' +
+            this.location + '</option>';
     });
+    $( select_id ).html(html);
 }
 
 /*!
  * \brief Clear select.
  */
 LmsUiIconSelectMenu.prototype._clearList = function() {
-    $( this.select_id ).empty()
-                       .append( $('<option>', {value: -1, text: "---", 'data-style': "background-image: url()"}) );
+    $( this.select_id ).html('<option value="-1">---</option>');
 
     this.refresh();
 }

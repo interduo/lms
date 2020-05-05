@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2018 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -23,6 +23,7 @@
  *
  *  $Id$
  */
+
 $id = intval($_GET['id']);
 
 if (!$LMS->NetDevExists($id)) {
@@ -34,11 +35,38 @@ include(MODULES_DIR . DIRECTORY_SEPARATOR . 'netdevxajax.inc.php');
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
 if (!isset($_POST['xjxfun'])) {                  // xajax was called and handled by netdevxajax.inc.php
+    $netdev = $LMS->GetNetDev($id);
+    if (!empty($netdev['ownerid'])) {
+        $assignments = $LMS->GetCustomerAssignments($netdev['ownerid'], true, false);
+        $assignments = $LMS->GetNetDevCustomerAssignments($id, $assignments);
+        $SMARTY->assign(array(
+            'assignments' => $assignments,
+            'customerinfo' => array(
+                'id' => $netdev['ownerid'],
+            )
+        ));
+    }
     $attachmenttype = 'netdevid';
     $attachmentresourceid = $id;
+    $SMARTY->assign('attachmenttype', $attachmenttype);
+    $SMARTY->assign('attachmentresourceid', $attachmentresourceid);
+
+    $filecontainers = array(
+        'netdevid' => array(
+            'id' => $id,
+            'prefix' => trans('Device attachments'),
+            'containers' => $LMS->GetFileContainers('netdevid', $id),
+        ),
+        'netdevmodelid' => array(
+            'id' => intval($netdev['modelid']),
+            'prefix' => trans('Model attachments'),
+            'containers' => $LMS->GetFileContainers('netdevmodelid', intval($netdev['modelid'])),
+        ),
+    );
+    $SMARTY->assign('filecontainers', $filecontainers);
+
     include(MODULES_DIR . DIRECTORY_SEPARATOR . 'attachments.php');
 
-    $netdev = $LMS->GetNetDev($id);
     $netdevconnected = $LMS->GetNetDevConnectedNames($id);
     $netcomplist = $LMS->GetNetdevLinkedNodes($id);
     $netdevlist = $LMS->GetNotConnectedDevices($id);

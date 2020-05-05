@@ -111,7 +111,7 @@ if (isset($_POST['customeradd'])) {
     if ($customeradd['name'] == '' && !$customeradd['type']) {
         $error['name'] = trans('First name cannot be empty!');
     }
-    
+
     if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.add_customer_group_required', false))) {
         if ($customeradd['group'] == 0) {
             $error['group'] = trans('Group name required!');
@@ -120,18 +120,23 @@ if (isset($_POST['customeradd'])) {
 
     if ($customeradd['ten'] !='') {
         if (!isset($customeradd['tenwarning']) && !check_ten($customeradd['ten'])) {
-            $error['ten'] = trans('Incorrect Tax Exempt Number! If you are sure you want to accept it, then click "Submit" again.');
+            $warning['ten'] = trans('Incorrect Tax Exempt Number! If you are sure you want to accept it, then click "Submit" again.');
             $customeradd['tenwarning'] = 1;
         }
         $ten_existence_check = ConfigHelper::getConfig('phpui.customer_ten_existence_check', 'none');
-        $ten_exists = $DB->GetOne(
-            "SELECT id FROM customers WHERE id <> ? AND REPLACE(REPLACE(ten, '-', ''), ' ', '') = ?",
-            array($_GET['id'], preg_replace('/- /', '', $customeradd['ten']))
-        ) > 0;
+        $ten_existence_scope = ConfigHelper::getConfig('phpui.customer_ten_existence_scope', 'global');
+        if (preg_match('/^(global|division)$/', $ten_existence_scope)) {
+            $ten_existence_scope = 'global';
+        }
+        $ten_exists = $LMS->checkCustomerTenExistence(
+            $_GET['id'],
+            $customeradd['ten'],
+            $ten_existence_scope == 'global' ? null : $customeradd['divisionid']
+        );
         switch ($ten_existence_check) {
             case 'warning':
                 if (!isset($customeradd['tenexistencewarning']) && $ten_exists) {
-                    $error['ten'] = trans('Customer with specified Tax Exempt Number already exists! If you are sure you want to accept it, then click "Submit" again.');
+                    $warning['ten'] = trans('Customer with specified Tax Exempt Number already exists! If you are sure you want to accept it, then click "Submit" again.');
                     $customeradd['tenexistencewarning'] = 1;
                 }
                 break;
@@ -145,18 +150,23 @@ if (isset($_POST['customeradd'])) {
 
     if ($customeradd['ssn'] != '') {
         if (!isset($customeradd['ssnwarning']) && !check_ssn($customeradd['ssn'])) {
-            $error['ssn'] = trans('Incorrect Social Security Number! If you are sure you want to accept it, then click "Submit" again.');
+            $warning['ssn'] = trans('Incorrect Social Security Number! If you are sure you want to accept it, then click "Submit" again.');
             $customeradd['ssnwarning'] = 1;
         }
         $ssn_existence_check = ConfigHelper::getConfig('phpui.customer_ssn_existence_check', 'none');
-        $ssn_exists = $DB->GetOne(
-            "SELECT id FROM customers WHERE id <> ? AND REPLACE(REPLACE(ssn, '-', ''), ' ', '') = ?",
-            array($_GET['id'], preg_replace('/- /', '', $customeradd['ssn']))
-        ) > 0;
+        $ssn_existence_scope = ConfigHelper::getConfig('phpui.customer_ssn_existence_scope', 'global');
+        if (preg_match('/^(global|division)$/', $ssn_existence_scope)) {
+            $ssb_existence_scope = 'global';
+        }
+        $ssn_exists = $LMS->checkCustomerSsnExistence(
+            $_GET['id'],
+            $customeradd['ssn'],
+            $ssn_existence_scope == 'global' ? null : $customeradd['divisionid']
+        );
         switch ($ssn_existence_check) {
             case 'warning':
                 if (!isset($customeradd['ssnexistencewarning']) && $ssn_exists) {
-                    $error['ssn'] = trans('Customer with specified Social Security Number already exists! If you are sure you want to accept it, then click "Submit" again.');
+                    $warning['ssn'] = trans('Customer with specified Social Security Number already exists! If you are sure you want to accept it, then click "Submit" again.');
                     $customeradd['ssnexistencewarning'] = 1;
                 }
                 break;
@@ -169,7 +179,7 @@ if (isset($_POST['customeradd'])) {
     }
 
     if ($customeradd['icn'] != '' && !isset($customeradd['icnwarning']) && !check_icn($customeradd['icn'])) {
-        $error['icn'] = trans('Incorrect Identity Card Number! If you are sure you want to accept, then click "Submit" again.');
+        $warning['icn'] = trans('Incorrect Identity Card Number! If you are sure you want to accept, then click "Submit" again.');
         $icnwarning = 1;
     }
 
@@ -191,18 +201,28 @@ if (isset($_POST['customeradd'])) {
         $properties['validator']($customeradd, $contacts, $error);
     }
 
-    if (!empty($customeradd['emails'])) {
-        foreach ($customeradd['emails'] as $idx => $val) {
-            if ($val['type'] & (CONTACT_INVOICES | CONTACT_DISABLED)) {
-                $emaileinvoice = true;
+    $customer_invoice_notice_consent_check = ConfigHelper::getConfig('phpui.customer_invoice_notice_consent_check', 'error');
+    if ($customer_invoice_notice_consent_check != 'none') {
+        if (!empty($customeradd['emails'])) {
+            foreach ($customeradd['emails'] as $idx => $val) {
+                if ($val['type'] & (CONTACT_INVOICES | CONTACT_DISABLED)) {
+                    $emaileinvoice = true;
+                }
             }
         }
     }
-    
+
     // check addresses
     foreach ($customeradd['addresses'] as $k => $v) {
         if ($v['location_address_type'] == BILLING_ADDRESS && !$v['location_city_name']) {
             $error['customeradd[addresses][' . $k . '][location_city_name]'] = trans('City name required!');
+            $customeradd['addresses'][ $k ]['show'] = true;
+        }
+
+        if (!ConfigHelper::checkPrivilege('full_access') && ConfigHelper::checkConfig('phpui.teryt_required')
+            && !empty($v['location_city_name']) && ($v['location_country_id'] == 2 || empty($v['location_country_id']))
+            && (!isset($v['teryt']) || empty($v['location_city']))) {
+            $error['customeradd[addresses][' . $k . '][teryt]'] = trans('TERRIT address is required!');
             $customeradd['addresses'][ $k ]['show'] = true;
         }
 
@@ -212,8 +232,15 @@ if (isset($_POST['customeradd'])) {
         }
     }
 
-    if (isset($customeradd['invoicenotice']) && !$emaileinvoice) {
-        $error['invoicenotice'] = trans('If the customer wants to receive an electronic invoice must be checked e-mail address to which to send e-invoices');
+    if (isset($customeradd['consents'][CCONSENT_INVOICENOTICE]) && !$emaileinvoice) {
+        if ($customer_invoice_notice_consent_check == 'error') {
+            $error['chkconsent' . CCONSENT_INVOICENOTICE] =
+                trans('If the customer wants to receive an electronic invoice must be checked e-mail address to which to send e-invoices');
+        } elseif ($customer_invoice_notice_consent_check == 'warning'
+            && !isset($warnings['customeradd-consents--' . CCONSENT_INVOICENOTICE . '-'])) {
+            $warning['customeradd[consents][' . CCONSENT_INVOICENOTICE . ']'] =
+                trans('If the customer wants to receive an electronic invoice must be checked e-mail address to which to send e-invoices');
+        }
     }
 
     if (isset($customeradd['cutoffstopindefinitely'])) {
@@ -226,22 +253,29 @@ if (isset($_POST['customeradd'])) {
         $error['cutoffstop'] = trans('Incorrect date of cutoff suspending!');
     }
 
-        $hook_data = $LMS->executeHook(
-            'customeradd_validation_before_submit',
-            array(
-                'customeradd' => $customeradd,
-                'error' => $error
-            )
-        );
-        $customeradd = $hook_data['customeradd'];
-        $error = $hook_data['error'];
+    if (!preg_match('/^[\-]?[0-9]+$/', $customeradd['paytime'])) {
+        $error['paytime'] = trans('Invalid deadline format!');
+    }
 
-    if (!$error) {
+    $hook_data = $LMS->executeHook(
+        'customeradd_validation_before_submit',
+        array(
+            'customeradd' => $customeradd,
+            'error' => $error,
+            'warning' => $warning,
+        )
+    );
+    $customeradd = $hook_data['customeradd'];
+    $error = $hook_data['error'];
+    $warning = $hook_data['warning'];
+
+    if (!$error && !$warning) {
         $customeradd['cutoffstop'] = $cutoffstop;
 
-        if (!isset($customeradd['consentdate'])) {
-            $customeradd['consentdate'] = 0;
+        if (!isset($customeradd['consents'])) {
+            $customeradd['consents'] = array();
         }
+
         if (!isset($customeradd['divisionid'])) {
             $customeradd['divisionid'] = 0;
         }
@@ -306,6 +340,12 @@ if (isset($_POST['customeradd'])) {
             'type' => 0
         )
     );
+
+    $customeradd['divisionid'] = intval(ConfigHelper::getConfig('phpui.default_divisionid'));
+
+    $customeradd['documentmemo'] = ConfigHelper::getConfig('phpui.default_customer_document_memo', '', true);
+
+    $customeradd['consents'] = Utils::getDefaultCustomerConsents();
 }
 
 if (!isset($customeradd['cutoffstopindefinitely'])) {
@@ -334,7 +374,5 @@ $SMARTY->assign('customeradd', $customeradd);
 if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.add_customer_group_required', false))) {
         $SMARTY->assign('groups', $DB->GetAll('SELECT id,name FROM customergroups ORDER BY id'));
 }
-$SMARTY->assign('error', $error);
-
 
 $SMARTY->display('customer/customeradd.html');

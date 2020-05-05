@@ -44,9 +44,12 @@
 						</div>
 					</div>
 
-					<div class="lms-ui-tab-table-wrapper col-2">
+					<div class="lms-ui-tab-table-wrapper col-3">
 						<div class="lms-ui-tab-table-column title">
 							{trans("Title:")}
+						</div>
+						<div class="lms-ui-tab-table-column description">
+							{trans("Description:")}
 						</div>
 						<div class="lms-ui-tab-table-column period">
 							{trans("Period:")}
@@ -61,8 +64,8 @@
 			{/if}
 
 			{foreach $documents as $doc}
-			<div class="lms-ui-tab-table-row{if $doc.closed} blend{/if}{if $doc.archived} lms-ui-document-archived{/if}">
-
+			<div class="lms-ui-tab-table-row{if $doc.closed} lms-ui-document-closed{/if}{if $doc.archived} lms-ui-document-archived{/if}"
+				 data-senddate="{if $doc.senddate}{$doc.senddate|date_format:"%Y/%m/%d %H:%M"}{else}{$doc.senddate}{/if}">
 				<div class="lms-ui-tab-table-wrapper col-6">
 					<div class="lms-ui-tab-table-wrapper col-4">
 						<div class="lms-ui-tab-table-wrapper col-2">
@@ -84,9 +87,16 @@
 						</div>
 					</div>
 
-					<div class="lms-ui-tab-table-wrapper col-2">
+					<div class="lms-ui-tab-table-wrapper col-3">
 						<div class="lms-ui-tab-table-column title" onclick="window.open('?m=documentview&id={$doc.docid}');">
 							{$doc.title|truncate:40:"...":true}
+						</div>
+						<div class="lms-ui-tab-table-column description">
+							{if $doc.description}
+								{$doc.description|replace:"\n":'<br>'}
+							{else}
+								&ndash;
+							{/if}
 						</div>
 						<div class="lms-ui-tab-table-column period" onclick="window.open('?m=documentview&id={$doc.docid}');">
 							{if $doc.fromdate}{trans("from")} {$doc.fromdate|date_format:"%Y/%m/%d"}{/if}
@@ -98,8 +108,11 @@
 				<div class="lms-ui-tab-table-column buttons" style="flex-direction: column;">
 					<div class="lms-ui-tab-table-column buttons">
 						{if $customerinfo.senddocuments}
-							{button type="link" class="send-doc" icon="mail" href="?m=documentsend&id={$doc.docid}"
-								tip="Document send"}
+							{textformat assign="tip" wrap=5000}
+								{if $doc.senddate}{trans("Send document again")}<br><strong>{t a=$doc.senddate|date_format:"%Y/%m/%d %H:%M"}(already sent on $a){/t}</strong>{else}{trans("Document send")}{/if}
+							{/textformat}
+							{button type="link" class="send-doc" icon="{if $doc.senddate}mailsent{else}mail{/if}" href="?m=documentsend&id={$doc.docid}"
+								tip=$tip}
 						{/if}
 						{assign var=type value=$doc.type}
 						{button type="link" icon="save" href="?m=documentview&id={$doc.docid}&save=1" tip="Save"}
@@ -116,12 +129,12 @@
 							{button type="link" icon="edit" href="?m=documentedit&id={$doc.docid}" tip="Edit"}
 						{/if}
 						{$docattach = $doc.attachments[0]}
-						{if $docattach.main || count($doc.attachments) == 1}
+						{if $docattach.type == 1 || count($doc.attachments) == 1}
 							{documentview id="{$doc.docid}-{$docattach.id}" type=$docattach.contenttype name=$docattach.filename
 							url="?m=documentview&id={$doc.docid}" external=true
-							text="<i class=\"{if preg_match('/pdf/',$docattach.contenttype)}pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)}xls{/if}\"></i>"}
+							text="<i class=\"lms-ui-icon-view{if preg_match('/pdf/',$docattach.contenttype)} pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)} xls{/if}\"></i>"}
 						{/if}
-						{if count($doc.attachments) > 1 || !$doc.attachments[0].main}
+						{if count($doc.attachments) > 1 || !$docattach.type < 1}
 							<a href="#" id="allattachments-toggle-{$doc.docid}" onclick="toggle_all_attachments({$doc.docid}); return false;" title="{trans("more document attachments")}">
 								<img src="img/asc_order.gif">
 							</a>
@@ -130,10 +143,11 @@
 					</div>
 					<div id="allattachments-{$doc.docid}" class="document-attachment-container" style="display: none;">
 						{foreach $doc.attachments as $docattach}
-							{if $docattach@first && $docattach.main}{continue}{/if}
+							{if $docattach@first && $docattach.type == 1}{continue}{/if}
 							{documentview id="{$doc.docid}-{$docattach.id}" type=$docattach.contenttype name=$docattach.filename
-							url="?m=documentview&id={$doc.docid}&attachmentid={$docattach.id}" external=true
-							text="{$docattach.filename} <i class=\"{if preg_match('/pdf/',$docattach.contenttype)}pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)}xls{/if}\"></i>"}
+								url="?m=documentview&id={$doc.docid}&attachmentid={$docattach.id}" external=true
+								text="{$docattach.filename} <i class=\"lms-ui-icon-view{if preg_match('/pdf/',$docattach.contenttype)} pdf{elseif preg_match('/csv|excel|spreadsheet/',$docattach.contenttype)} xls{/if}\"></i>"}
+							{if $docattach.type == -1}<i class="lms-ui-icon-user" title="<strong>{t a=date("Y/m/d H:i", $docattach.cdate)}Sent by customer at $a{/t}</strong>"></i>{/if}
 							<br>
 						{/foreach}
 					</div>
@@ -151,20 +165,20 @@
 {if !empty($documents) && count($documents)}
 		{tab_button_panel}
 			{tab_buttons}
-				<button type="button" id="send-documents" class="lms-ui-button lms-ui-button-mail">
-					<i></i> {trans("Send documents")}
+				<button type="button" id="send-documents" class="lms-ui-button">
+					<i class="lms-ui-icon-mail"></i> {trans("Send documents")}
 				</button>
-				<button type="button" id="print-docs" class="lms-ui-button lms-ui-button-print">
-					<i></i> {trans("Print")}
+				<button type="button" id="print-docs" class="lms-ui-button">
+					<i class="lms-ui-icon-print"></i> {trans("Print")}
 				</button>
-				<button type="button" id="confirm-docs" class="lms-ui-button lms-ui-button-confirm">
-					<i></i> {trans("Confirm")}
+				<button type="button" id="confirm-docs" class="lms-ui-button">
+					<i class="lms-ui-icon-confirm"></i> {trans("Confirm")}
 				</button>
-				<button type="button" id="archive-docs" class="lms-ui-button lms-ui-button-archive">
-					<i></i> {trans("Archive")}
+				<button type="button" id="archive-docs" class="lms-ui-button">
+					<i class="lms-ui-icon-archive"></i> {trans("Archive")}
 				</button>
-				<button type="button" id="delete-docs" class="lms-ui-button lms-ui-button-delete">
-					<i></i> {trans("Delete")}
+				<button type="button" id="delete-docs" class="lms-ui-button">
+					<i class="lms-ui-icon-delete"></i> {trans("Delete")}
 				</button>
 			{/tab_buttons}
 			{tab_buttons}

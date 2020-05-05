@@ -35,12 +35,12 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
     public function GetNetDevLinkedNodes($id)
     {
-        return $this->db->GetAll('SELECT n.id AS id, n.name AS name, linktype, rs.name AS radiosector,
+        $result = $this->db->GetAll('SELECT n.id AS id, n.name AS name, linktype, rs.name AS radiosector,
         		linktechnology, linkspeed,
 			ipaddr, inet_ntoa(ipaddr) AS ip, ipaddr_pub, inet_ntoa(ipaddr_pub) AS ip_pub,
 			n.netdev, port, ownerid,
 			' . $this->db->Concat('c.lastname', "' '", 'c.name') . ' AS owner,
-			net.name AS netname, n.location,
+			net.name AS netname, n.location, lastonline,
 			lc.name AS city_name, lb.name AS borough_name, lb.type AS borough_type,
 			ld.name AS district_name, ls.name AS state_name
 			FROM vnodes n
@@ -53,6 +53,15 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 			LEFT JOIN location_states ls ON ls.id = ld.stateid
 			WHERE n.netdev = ? AND ownerid IS NOT NULL
 			ORDER BY n.name ASC', array($id));
+
+        if ($result) {
+            foreach ($result as &$node) {
+                $node['lastonlinedate'] = lastonline_date($node['lastonline']);
+            }
+            unset($node);
+        }
+
+        return $result;
     }
 
     public function NetDevLinkNode($id, $devid, $link = null)
@@ -280,6 +289,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         if (array_key_exists('clients', $data)) {
             $args['clients'] = empty($data['clients']) ? 0 : $data['clients'];
         }
+        if (array_key_exists('login', $data)) {
+            $args['login'] = empty($data['login']) ? '' : $data['login'];
+        }
         if (array_key_exists('secret', $data)) {
             $args['secret'] = empty($data['secret']) ? '' : $data['secret'];
         }
@@ -341,9 +353,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
             $this->db->Execute(
                 'UPDATE netdevices SET address_id = ? WHERE id = ?',
                 array(
-                                    ($data['customer_address_id'] >= 0 ? $data['customer_address_id'] : null),
-                                    $data['id']
-                                    )
+                    ($data['customer_address_id'] >= 0 ? $data['customer_address_id'] : null),
+                    $data['id']
+                )
             );
         } else {
             if (!$data['address_id'] || $data['address_id'] && $this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($data['address_id']))) {
@@ -405,6 +417,7 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
             'shortname'        => empty($data['shortname']) ? '' : $data['shortname'],
             'nastype'          => empty($data['nastype']) ? 0 : $data['nastype'],
             'clients'          => empty($data['clients']) ? 0 : $data['clients'],
+            'login'            => empty($data['login']) ? '' : $data['login'],
             'secret'           => empty($data['secret']) ? '' : $data['secret'],
             'community'        => empty($data['community']) ? '' : $data['community'],
             'channelid'        => !empty($data['channelid']) ? $data['channelid'] : null,
@@ -439,9 +452,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         if ($this->db->Execute('INSERT INTO netdevices (name,
 				description, producer, model, serialnumber,
 				ports, purchasetime, guaranteeperiod, shortname,
-				nastype, clients, secret, community, channelid,
+				nastype, clients, login, secret, community, channelid,
 				longitude, latitude, invprojectid, netnodeid, status, netdevicemodelid, address_id, ownerid)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))) {
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))) {
             $id = $this->db->GetLastInsertID('netdevices');
 
             if (empty($data['ownerid'])) {
@@ -606,6 +619,9 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 								HAVING COUNT(netlinks.id) >= 0
 							)';
                             break;
+                        case 101:
+                            $where[] = '(no.lastonline IS NOT NULL AND (?NOW? - no.lastonline) <= ' . intval(ConfigHelper::getConfig('phpui.lastonline_limit')) . ')';
+                            break;
                         case 102:
                             $where[] = 'd.id NOT IN (SELECT DISTINCT src FROM netlinks) AND d.id NOT IN (SELECT DISTINCT dst FROM netlinks)';
                             break;
@@ -644,8 +660,15 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
         if ($count) {
             return $this->db->GetOne('SELECT COUNT(d.id)
-				FROM netdevices d
-				LEFT JOIN vaddresses addr       ON d.address_id = addr.id
+				FROM netdevices d ' . ($short ? '' : '
+			    LEFT JOIN (
+			        SELECT netdev AS netdevid, MAX(lastonline) AS lastonline
+			        FROM nodes
+			        WHERE nodes.netdev IS NOT NULL AND nodes.ownerid IS NULL
+			            AND lastonline > 0 
+			        GROUP BY netdev
+			    ) no ON no.netdevid = d.id ') . '
+			    LEFT JOIN vaddresses addr       ON d.address_id = addr.id
 				LEFT JOIN invprojects p         ON p.id = d.invprojectid
 				LEFT JOIN netnodes n            ON n.id = d.netnodeid
 				LEFT JOIN location_streets lst  ON lst.id = addr.street_id
@@ -673,8 +696,15 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 				(CASE WHEN lst.ident IS NULL
 					THEN (CASE WHEN addr.street = \'\' THEN \'99999\' ELSE \'99998\' END)
 					ELSE lst.ident END) AS street_ident,
-				addr.house as location_house, addr.flat as location_flat, addr.location') . '
-			FROM netdevices d
+				addr.house as location_house, addr.flat as location_flat, addr.location, no.lastonline') . '
+			FROM netdevices d ' . ($short ? '' : '
+			    LEFT JOIN (
+			        SELECT netdev AS netdevid, MAX(lastonline) AS lastonline
+			        FROM nodes
+			        WHERE nodes.netdev IS NOT NULL AND nodes.ownerid IS NULL
+			            AND lastonline > 0 
+			        GROUP BY netdev
+			    ) no ON no.netdevid = d.id ') . '
 				LEFT JOIN vaddresses addr       ON d.address_id = addr.id
 				LEFT JOIN invprojects p         ON p.id = d.invprojectid
 				LEFT JOIN netnodes n            ON n.id = d.netnodeid
@@ -691,11 +721,19 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         if (!$short && $netdevlist) {
             $customer_manager = new LMSCustomerManager($this->db, $this->auth, $this->cache, $this->syslog);
 
-            $filecontainers = $this->db->GetAllByKey('SELECT fc.netdevid, '
-                . $this->db->GroupConcat("CASE WHEN fc.description = '' THEN '---' ELSE fc.description END") . ' AS descriptions
+            $filecontainers = $this->db->GetAllByKey('SELECT fc.netdevid
 			FROM filecontainers fc
 			WHERE fc.netdevid IS NOT NULL
 			GROUP BY fc.netdevid', 'netdevid');
+
+            if (!empty($filecontainers)) {
+                if (!isset($file_manager)) {
+                    $file_manager = new LMSFileManager($this->db, $this->auth, $this->cache, $this->syslog);
+                }
+                foreach ($filecontainers as &$filecontainer) {
+                    $filecontainer = $file_manager->GetFileContainers('netdevid', $filecontainer['netdevid']);
+                }
+            }
 
             foreach ($netdevlist as &$netdev) {
                 $netdev['customlinks'] = array();
@@ -707,9 +745,8 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                         . $netdev['borough_ident'] . $netdev['borough_type'];
                 $netdev['simc'] = empty($netdev['city_ident']) ? null : $netdev['city_ident'];
                 $netdev['ulic'] = empty($netdev['street_ident']) ? null : $netdev['street_ident'];
-                $netdev['filecontainers'] = isset($filecontainers[$netdev['id']])
-                    ? explode(',', $filecontainers[$netdev['id']]['descriptions'])
-                    : array();
+                $netdev['filecontainers'] = isset($filecontainers[$netdev['id']]) ? $filecontainers[$netdev['id']] : array();
+                $netdev['lastonlinedate'] = lastonline_date($netdev['lastonline']);
             }
             unset($netdev);
         }
@@ -964,6 +1001,46 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         return $result;
     }
 
+    public function GetModelList($pid = null)
+    {
+        if (!$pid) {
+            return null;
+        }
+
+        $list = $this->db->GetAll(
+            'SELECT m.id, m.name, m.alternative_name,
+			(SELECT COUNT(i.id) FROM netdevices i WHERE i.netdevicemodelid = m.id) AS netdevcount
+			FROM netdevicemodels m
+			WHERE m.netdeviceproducerid = ?
+			ORDER BY m.name ASC',
+            array($pid)
+        );
+
+        $filecontainers = $this->db->GetAllByKey('SELECT fc.netdevmodelid
+			FROM filecontainers fc
+			WHERE fc.netdevmodelid IS NOT NULL
+			GROUP BY fc.netdevmodelid', 'netdevmodelid');
+
+        if (!empty($filecontainers)) {
+            if (!isset($file_manager)) {
+                $file_manager = new LMSFileManager($this->db, $this->auth, $this->cache, $this->syslog);
+            }
+            foreach ($filecontainers as &$filecontainer) {
+                $filecontainer = $file_manager->GetFileContainers('netdevmodelid', $filecontainer['netdevmodelid']);
+            }
+        }
+
+        if (!empty($list)) {
+            foreach ($list as &$model) {
+                $model['customlinks'] = array();
+                $model['filecontainers'] = isset($filecontainers[$model['id']]) ? $filecontainers[$model['id']] : array();
+            }
+            unset($model);
+        }
+
+        return $list;
+    }
+
     public function GetRadioSectors($netdevid, $technology = 0)
     {
         $radiosectors = $this->db->GetAll('SELECT s.*, (CASE WHEN n.computers IS NULL THEN 0 ELSE n.computers END) AS computers,
@@ -1172,5 +1249,31 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
         }
 
         return $res;
+    }
+
+    public function getNetDevCustomerAssignments($netdevid, $assignments)
+    {
+        if (empty($assignments)) {
+            return $assignments;
+        }
+
+        $netdev_assignments = array();
+
+        foreach ($assignments as $assignment) {
+            if (!isset($assignment['nodes'])) {
+                continue;
+            }
+            $netdev_assignment_added = false;
+            foreach ($assignment['nodes'] as $node) {
+                if (empty($node['netdev_ownerid']) || $node['netdev_id'] != $netdevid || $netdev_assignment_added) {
+                    continue;
+                }
+                $netdev_assignment_added = true;
+                $netdev_assignments[] = $assignment;
+                break;
+            }
+        }
+
+        return $netdev_assignments;
     }
 }

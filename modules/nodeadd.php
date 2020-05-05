@@ -187,8 +187,7 @@ if (isset($_POST['nodedata'])) {
 
     // check if customer address is selected or if default location address exists
     // if both are not fullfilled we generate user interface warning
-    $customer_addresses_warning = $_POST['customer_addresses_warning'];
-    if (!$customer_addresses_warning && isset($nodedata['address_id'])
+    if (!isset($warnings['nodedata-address_id-']) && isset($nodedata['address_id'])
         && $nodedata['address_id'] == -1 && !empty($nodedata['ownerid'])) {
         $addresses = $LMS->getCustomerAddresses($nodedata['ownerid'], true);
         if (count($addresses) > 1) {
@@ -201,11 +200,10 @@ if (isset($_POST['nodedata'])) {
             }
             if ($i == count($addresses)) {
                 $customer_addresses_warning = 1;
-                $error['address_id'] = trans('No address has been selected!');
+                $warning['nodedata[address_id]'] = trans('No address has been selected!');
             }
         }
     }
-    $SMARTY->assign('customer_addresses_warning', $customer_addresses_warning);
 
     if ($nodedata['netdev']) {
         $ports = $DB->GetOne('SELECT ports FROM netdevices WHERE id = ?', array($nodedata['netdev']));
@@ -240,6 +238,11 @@ if (isset($_POST['nodedata'])) {
         $nodedata['halfduplex'] = 0;
     }
 
+    if (!ConfigHelper::checkPrivilege('full_access') && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($nodedata['address_id']) && !$LMS->isTerritAddress($nodedata['address_id'])) {
+        $error['address_id'] = trans('TERRIT address is required!');
+    }
+
     if ($nodedata['invprojectid'] == '-1') { // nowy projekt
         if (!strlen(trim($nodedata['projectname']))) {
             $error['projectname'] = trans('Project name is required');
@@ -262,12 +265,14 @@ if (isset($_POST['nodedata'])) {
         array(
             'nodeadd' => $nodedata,
             'error'   => $error,
+            'warning'   => $warning,
         )
     );
     $nodedata = $hook_data['nodeadd'];
     $error = $hook_data['error'];
+    $warning = $hook_data['warning'];
 
-    if (!$error) {
+    if (!$error && !$warning) {
         $nodedata = $LMS->ExecHook('node_add_before', $nodedata);
 
         $ipi = $nodedata['invprojectid'];
@@ -327,6 +332,7 @@ if (isset($_POST['nodedata'])) {
 
     // check if customer address is selected or if default location address exists
     // if both are not fullfilled we generate user interface warning
+/*
     if (isset($_GET['ownerid'])) {
         $addresses = $LMS->getCustomerAddresses($_GET['ownerid'], true);
         if (count($addresses) > 1) {
@@ -342,6 +348,7 @@ if (isset($_POST['nodedata'])) {
             }
         }
     }
+*/
 }
 
 if (empty($nodedata['macs'])) {
@@ -380,8 +387,13 @@ $nodedata = $hook_data['nodeadd'];
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
+if (!empty($nodedata['ownerid'])) {
+    $addresses = $LMS->getCustomerAddresses($nodedata['ownerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
+}
+
 $SMARTY->assign('networks', $LMS->GetNetworks(true));
 $SMARTY->assign('netdevices', $LMS->GetNetDevNames());
-$SMARTY->assign('error', $error);
 $SMARTY->assign('nodedata', $nodedata);
 $SMARTY->display('node/nodeadd.html');

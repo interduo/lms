@@ -239,6 +239,11 @@ if (isset($_POST['nodeedit'])) {
         $error['access'] = trans('Node owner is not connected!');
     }
 
+    if (!ConfigHelper::checkPrivilege('full_access') && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($nodeedit['address_id']) && !$LMS->isTerritAddress($nodeedit['address_id'])) {
+        $error['address_id'] = trans('TERRIT address is required!');
+    }
+
     if ($nodeedit['invprojectid'] == '-1') { // nowy projekt
         if (!strlen(trim($nodeedit['projectname']))) {
             $error['projectname'] = trans('Project name is required');
@@ -334,6 +339,9 @@ if (empty($nodeinfo['macs'])) {
 
 include(MODULES_DIR . '/customer.inc.php');
 
+$nodeassignments = $LMS->GetNodeCustomerAssignments($nodeid, $assignments);
+$SMARTY->assign('nodeassignments', $nodeassignments);
+
 if (!ConfigHelper::checkConfig('phpui.big_networks')) {
     $SMARTY->assign('customers', $LMS->GetCustomerNames());
 }
@@ -354,6 +362,12 @@ $hook_data = $LMS->executeHook(
 $nodeinfo = $hook_data['nodeedit'];
 
 $SMARTY->assign('xajax', $LMS->RunXajax());
+
+if (!empty($nodeinfo['ownerid'])) {
+    $addresses = $LMS->getCustomerAddresses($nodeinfo['ownerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
+}
 
 $nprojects = $LMS->GetProjects();
 $SMARTY->assign('NNprojects', $nprojects);

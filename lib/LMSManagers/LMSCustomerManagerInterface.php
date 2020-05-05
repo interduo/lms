@@ -56,7 +56,11 @@ interface LMSCustomerManagerInterface
 
     public function GetCustomerShortBalanceList($customerid, $limit = 10, $order = 'DESC');
 
+    public function getLastNInTable($body, $customerid, $eol, $aggregate_documents = false);
+
     public function customerStats();
+
+    public function updateCustomerConsents($customerid, $current_consents, $new_consents);
 
     public function customerAdd($customeradd);
 
@@ -68,6 +72,8 @@ interface LMSCustomerManagerInterface
 
     public function GetCustomerNetworks($id, $count = null);
 
+    public function getCustomerConsents($id);
+
     public function GetCustomer($id, $short = false);
 
     public function customerUpdate($customerdata);
@@ -78,15 +84,35 @@ interface LMSCustomerManagerInterface
 
     public function checkCustomerAddress($a_id, $c_id);
 
+    public function determineDefaultCustomerAddress(array &$caddr);
+
     public function getCustomerAddresses($id, $hide_deleted);
 
     public function getAddressForCustomerStuff($customer_id);
 
     public function getFullAddressForCustomerStuff($customer_id);
 
+    public function isTerritAddress($address_id);
+
     public function GetCustomerContacts($id, $mask = null);
 
     public function GetCustomerDivision($id);
 
     public function isSplitPaymentSuggested($customerid, $cdate, $value);
+
+    public function getCustomerSMSOptions();
+
+    public function GetCustomerAddressesWithoutEndPoints($customerid);
+
+    public function checkCustomerTenExistence($customerid, $ten, $divisionid = null);
+
+    public function checkCustomerSsnExistence($customerid, $ssn, $divisionid = null);
+
+    public function checkCustomerConsent($customerid, $consent);
+
+    public function customerNotificationReplaceSymbols($string, $data);
+
+    public function addCustomerConsents($customerid, $consents);
+
+    public function removeCustomerConsents($customerid, $consents);
 }

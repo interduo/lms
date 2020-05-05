@@ -1,4 +1,4 @@
-<i id="lms-ui-menu-panel-toggle" class="fas fa-angle-left"></i>
+<i id="lms-ui-menu-panel-toggle" class="fas fa-angle-left no-print"></i>
 <nav id="lms-ui-menu-panel" class="no-print">
 	<div id="lms-ui-menu-panel-container">
 	<div id="lms-ui-logo">
@@ -11,57 +11,35 @@
 			var mainMenuVisible = getCookie('main-menu-visible');
 			mainMenuVisible = mainMenuVisible === null || mainMenuVisible == 'true';
 			if (mainMenuVisible) {
-				$('#lms-ui-menu-panel-toggle').addClass('visible');
+				$('body').addClass('main-menu-visible');
 			} else {
 				$('#lms-ui-menu-panel').hide();
 				$('#lms-ui-menu-panel-toggle').switchClass('fa-angle-left', 'fa-angle-right');
 			}
 
-
 			$('#lms-ui-menu-panel-toggle').click(function () {
 				var mainMenuVisible = $('#lms-ui-menu-panel').toggle().is(':visible');
 				if (mainMenuVisible) {
-					$('#lms-ui-menu-panel-toggle').addClass('visible')
+					$('body').addClass('main-menu-visible').find('#lms-ui-menu-panel-toggle')
 						.switchClass('fa-angle-right', 'fa-angle-left');
 				} else {
-					$('#lms-ui-menu-panel-toggle').removeClass('visible')
+					$('body').removeClass('main-menu-visible').find('#lms-ui-menu-panel-toggle')
 						.switchClass('fa-angle-left', 'fa-angle-right');
 				}
 				setCookie('main-menu-visible', mainMenuVisible);
 			});
 
-			if ($(window).width() <= 900) {
-				$('#lms-ui-menu-panel').addClass('mobile').css({
-					'min-width': 'unset',
-					'width' : '3em'
-				});
-			} else {
-				$('#lms-ui-menu-panel').removeClass('mobile').css({
-					'width': '15em',
-					'min-width': '15em'
-				});
-			}
+			$('body').toggleClass('main-menu-mobile', $(window).width() <= 900);
 
 			$(window).resize(function() {
-				if ($(window).width() <= 900) {
-					if (!$('#lms-ui-menu-panel').is('.mobile')) {
-						$('#lms-ui-menu-panel').addClass('mobile').css('min-width', 'unset')
-							.stop(true).animate({
-							width: '3em'
-						});
-					}
-				} else {
-					if ($('#lms-ui-menu-panel').is('.mobile')) {
-						$('#lms-ui-menu-panel').removeClass('mobile')
-							.stop(true).animate({
-							width: '15em'
-						}, {
-							complete: function () {
-								$(this).css('min-width', '15em');
-							}
-						});
-					}
-				}
+				$('body').toggleClass('main-menu-mobile', $(window).width() <= 900)
+				.css('margin-top', $('#lms-ui-tool-panels').outerHeight());
+			})
+
+			$(function() {
+				setTimeout(function() {
+					$(window).resize();
+				}, 0);
 			});
 
 		</script>
@@ -95,7 +73,7 @@
 			{/foreach}
 			<div id="menu-logout" class="lms-ui-menu-item">
 				<div class="click-menu bottomline">
-					<div {tip class="tip" text="Allows you to logout" bold=1} onClick="{if ConfigHelper::getConfig('phpui.logout_confirmation')}if (confirm('{trans("Are you sure that you want to logout?")}')) { return self.location.href='?m=logout&amp;is_sure=1'; }{else}self.location.href='?m=logout&amp;is_sure=1';{/if}">
+					<div {tip class="tip" text="Allows you to logout" bold=1} onClick="{if ConfigHelper::getConfig('phpui.logout_confirmation')}confirmDialog('{trans("Are you sure that you want to logout?")}', this).done(function() { return location.href='?m=logout&is_sure=1'; });{else}location.href='?m=logout&is_sure=1';{/if}">
 						<div class="box1">
 							<i class="lms-ui-menu-item-icon lms-ui-icon-logout"></i>
 							{trans("Logout")} {$layout.logname|truncate:10:"..."}
@@ -117,7 +95,7 @@
 			handle: "i,img",
 			axis: "y",
 			opacity: 0.9,
-			update: function (event, ui) {
+			update: function () {
 				data = {};
 				data['main-menu-order'] = $(this).sortable("toArray").join(';');
 				savePersistentSettings(data);
@@ -127,6 +105,10 @@
 		restoreSortable('main-menu', '{$main_menu_sortable_order}');
 
 		</script>
+	</div>
+	<div id="lms-ui-session-expire" title="{trans("Session expires after:")}">
+		{$timeout = ConfigHelper::getConfig('phpui.timeout')}
+		{sprintf("%02d:%02d", floor($timeout / 60), $timeout % 60)}
 	</div>
 	<div id="lms-ui-copyrights">
 		&copy; 2001-{$smarty.now|date_format:'%Y'}<br>
@@ -142,25 +124,39 @@
 
 	$(function() {
 		$('#lms-ui-menu-panel').on('mouseenter touchstart', function () {
-			if ($('#lms-ui-menu-panel').is('.mobile')) {
-				$(this).stop(true).animate({
-					width: '15em'
-				});
-			}
+			$('body').addClass('main-menu-mobile-wide');
 		}).on('mouseleave', function () {
-			if ($('#lms-ui-menu-panel').is('.mobile')) {
-				$(this).stop(true).animate({
-					width: '3em'
-				});
-			}
+			$('body').removeClass('main-menu-mobile-wide');
 		});
 		$('#lms-ui-contents').on('mouseenter touchstart', function () {
-			if ($('#lms-ui-menu-panel').is('.mobile')) {
-				$('#lms-ui-menu-panel').stop(true).animate({
-					width: '3em'
-				});
-			}
+			$('body').removeClass('main-menu-mobile-wide');
 		});
 	});
+
+	var lms_session_expiration_warning_interval = {intval(ConfigHelper::getConfig('phpui.session_expiration_warning_interval', 0))}
+	var lms_session_expiration_warning_dialog = false;
+
+	function session_expiration_warning_reset() {
+		lms_session_expiration_warning_dialog = false;
+	}
+
+	function session_expiration_warning_handler(time_to_expire) {
+		if (lms_session_expiration_warning_interval
+				&& lms_login_timeout_value - 10 >= lms_session_expiration_warning_interval
+				&& time_to_expire < lms_session_expiration_warning_interval) {
+			if (!lms_session_expiration_warning_dialog) {
+				lms_session_expiration_warning_dialog = true;
+				alertDialog($t('Your session is near to expiration! Click "OK" if you want to prevent logout.')).done(function () {
+					$.ajax('?', {
+						async: true,
+						method: 'GET',
+						success: function() {
+							reset_login_timeout();
+						}
+					});
+				});
+			}
+		}
+	}
 
 </script>

@@ -35,11 +35,32 @@ if (!$LMS->CheckTicketAccess($id)) {
 }
 
 $ticket = $LMS->GetTicketContents($id);
-$ticket['relatedtickets'] = $LMS->GetRelatedTicketIds($id);
+$LMS->getTicketImageGalleries($ticket);
+
+if (isset($_GET['ajax']) && isset($_GET['op'])) {
+    header('Content-Type: application/json');
+    if ($_GET['op'] = 'get-image-gallery') {
+        echo json_encode($ticket['images']);
+    } else {
+        echo '[]';
+    }
+    die;
+}
+
+$ticket['childtickets'] = $LMS->GetChildTickets($id);
 
 if (!empty($ticket['relatedtickets'])) {
-    foreach ($ticket['relatedtickets'] as $rid) {
-        $relatedticketscontent[] = $LMS->GetTicketContents($rid);
+    foreach ($ticket['relatedtickets'] as $rticket) {
+        if ($LMS->CheckTicketAccess($rticket['id'])) {
+            $relatedticketscontent[] = $LMS->GetTicketContents($rticket['id']);
+        }
+    }
+}
+
+if (!empty($ticket['parentid'])) {
+    $parentticket = true;
+    if ($LMS->CheckTicketAccess($ticket['parentid'])) {
+        $parentticketcontent[] = $LMS->GetTicketContents($ticket['parentid']);
     }
 }
 
@@ -135,6 +156,7 @@ if (isset($_GET['highlight'])) {
 
 $SMARTY->assign('ticket', $ticket);
 $SMARTY->assign('relatedticketscontent', $relatedticketscontent);
+$SMARTY->assign('parentticketcontent', $parentticketcontent);
 
 $SMARTY->assign('categories', $categories);
 $SMARTY->assign('assignedevents', $assignedevents);

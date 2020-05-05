@@ -58,7 +58,7 @@ class ConfigHelper
 
         return $value == '' && !$allow_empty_value ? $default : $value;
     }
-    
+
     /**
      * Checks if config variable exists
      *
@@ -72,7 +72,7 @@ class ConfigHelper
         if (empty($variable_name)) {
             return false;
         }
-        
+
         if ($section_name === 'privileges') {
             $value = self::getConfig($name);
             return $value;
@@ -85,10 +85,10 @@ class ConfigHelper
         if (!LMSConfig::getConfig()->getSection($section_name)->hasVariable($variable_name)) {
             return false;
         }
-        
+
         return self::checkValue(LMSConfig::getConfig()->getSection($section_name)->getVariable($variable_name)->getValue());
     }
-    
+
     /**
      * Determines if value equals true or false
      *
@@ -114,7 +114,7 @@ class ConfigHelper
             return false;
         }
 
-        trigger_error('Incorrect option value: '.$value);
+        Utils::triggerError('Incorrect option value: ' . $value, E_USER_NOTICE, 15);
     }
 
     public static function variableExists($name)

@@ -110,10 +110,16 @@
 		</TD>
 		<TD>
 			{if $netdev.location}
-			{if $netdev.location_name}{$netdev.location_name}, {/if}{$netdev.location}{if $netdev.borough_name} ({$netdev.state_name} / {$netdev.district_name} / {$_BOROUGHTYPES[$netdev.borough_type]} {$netdev.borough_name}){/if}
+				{if $netdev.location_name}{$netdev.location_name}, {/if}{$netdev.location}
+				{if $netdev.borough_name}
+					({$netdev.state_name} / {$netdev.district_name} / {$_BOROUGHTYPES[$netdev.borough_type]} {$netdev.borough_name})
+				{/if}
 			{else}
-			{$netdev.netnode.location}{if $netdev.netnode.location_borough_name} ({$netdev.netnode.location_state_name} / {$netdev.netnode.location_district_name} / {$_BOROUGHTYPES[$netdev.netnode.location_borough_type]} {$netdev.netnode.location_borough_name}){/if}
-			{trans("(from network node)")}
+				{$netdev.netnode.location}
+				{if $netdev.netnode.location_borough_name}
+					({$netdev.netnode.location_state_name} / {$netdev.netnode.location_district_name} / {$_BOROUGHTYPES[$netdev.netnode.location_borough_type]} {$netdev.netnode.location_borough_name})
+				{/if}
+				{trans("(from network node)")}
 			{/if}
 		</TD>
 	</TR>
@@ -201,18 +207,31 @@
 		</TD>
 	</TR>
 	{/if}
+	{if $netdev.login}
+		<TR>
+			<TD WIDTH="1%">
+				<IMG SRC="img/radius.gif" ALT="">
+			</TD>
+			<TD WIDTH="1%" class="bold nobr">
+				{trans("Login:")}
+			</TD>
+			<TD WIDTH="98%">
+				{$netdev.login}
+			</TD>
+		</TR>
+	{/if}
 	{if $netdev.secret}
 	<TR>
 		<TD WIDTH="1%">
 			<IMG SRC="img/radius.gif" ALT="">
 		</TD>
-		<TD WIDTH="1%" class="nowrap bold">
+		<TD WIDTH="1%" class="bold nobr">
 			{trans("Secret:")}
 		</TD>
 		<TD WIDTH="98%">
 			{if ConfigHelper::checkConfig('phpui.protect_passwords')}
 				<button class="lms-ui-button-clipboard lms-ui-button" data-clipboard-text="{$netdev.secret}">
-					<i></i> {trans("Copy")}
+					<i class="lms-ui-icon-clipboard"></i> {trans("Copy")}
 				</button>
 			{else}
 				{$netdev.secret}
@@ -291,7 +310,7 @@
                 <TD WIDTH="99%" COLSPAN="2">
                         <TABLE WIDTH="100%" CELLPADDING="5">
                                 <TR>
-                                        <TD class="fall superlight">
+                                        <TD class="fall superlight lms-ui-autolinker">
 						{$netdev.description|escape|replace:"\n":"<BR>"}
                                         </TD>
                                 </TR>
@@ -339,18 +358,25 @@
 			<a href="?m=netdevadd&id={$netdev.id}&clone=1">{trans("Clone")} <img src="img/clone.gif" alt="{trans("Clone")}"</a>
 			<A href="javascript:void(0);" onclick="javascript:openSelectWindow('?m=choosenetdevreplace&id={$netdev.id}', 'Replace netdev', 600, 290, 1, 1);">{trans("Replace")} <img src="img/alias.gif" ALT="{trans("Replace")}"></A>
 			<A href="?m=netdevedit&id={$netdev.id}" ACCESSKEY="E">{trans("Edit")} <IMG src="img/edit.gif" ALT="{trans("Edit")}"></A>
-			<A href="?m=netdevdel&id={$netdev.id}" OnClick="return confirmLink(this, '{t a=$netdev.name}Are you sure, you want to remove device \'$a\' from database?{/t}');">{trans("Delete")} <img src="img/delete.gif" ALT=""></A>
+			<A id="delete-netdev" href="?m=netdevdel&id={$netdev.id}&is_sure=1" data-name="{$netdev.name}">{trans("Delete")} <img src="img/delete.gif" ALT=""></A>
 			{/block}
 		</TD>
 	</TR>
     </TBODY>
 </TABLE>
 {if $devicepanel}
-<SCRIPT type="text/javascript">
-<!--
+<SCRIPT>
 if (getCookie('devicepanel') == '1') {
 	$('#devicepanel').show();
 }
-//-->
 </SCRIPT>
 {/if}
+<script>
+	$('#delete-netdev').click(function() {
+		var name = $(this).attr('data-name');
+		confirmDialog($t("Are you sure, you want to remove device '$a' from database?", name), this).done(function() {
+			location.href = $(this).attr('href');
+		});
+		return false;
+	});
+</script>

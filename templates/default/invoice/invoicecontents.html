@@ -137,7 +137,7 @@
                     <OPTION value="{$smarty.const.DISCOUNT_AMOUNT}"{if $row.vdiscount != 0} selected{/if}>{$_DISCOUNTTYPES[$smarty.const.DISCOUNT_AMOUNT]}</OPTION>
                 </SELECT>
                 <span class="invoice-contents-field-value nobr">
-					{if $item.pdiscount != 0}{$item.pdiscount|string_format:"%.2f %%"}{else}{if $item.vdiscount != 0}{$item.vdiscount|money_format}{/if}{/if}
+					{if $item.pdiscount != 0}{$item.pdiscount|string_format:"%01.2f %%"}{else}{if $item.vdiscount != 0}{$item.vdiscount|string_format:"%01.2f"}{/if}{/if}
 				</span>
             </TD>
             <TD class="text-right">
@@ -145,14 +145,14 @@
 					value="{$row.valuenetto}" data-old-value="{$valuenetto}" SIZE="6"
                     {tip text="Enter unitary value without discount"} style="display: none;">
 				<span class="invoice-contents-field-value nobr">
-				    {$item.valuenetto|money_format}
+				    {$item.valuenetto|string_format:"%01.2f"}
 				</span>
 				{if isset($item.valuenetto_custom_contents)}
 					{$item.valuenetto_custom_contents}
 				{/if}
 				<span class="invoice-contents-field-value nobr">
 				    <BR>
-				    {$item.s_valuenetto|money_format}
+				    {$item.s_valuenetto|string_format:"%01.2f"}
 				</span>
 				{if isset($item.s_valuenetto_custom_contents)}
 					{$item.s_valuenetto_custom_contents}
@@ -174,14 +174,14 @@
 					value="{$row.valuebrutto}" data-old-value="{$valuebrutto}"
                     {tip text="Enter unitary value without discount"} style="display: none;">
 				<span class="invoice-contents-field-value nobr">
-				{$item.valuebrutto|money_format}
+				{$item.valuebrutto|string_format:"%01.2f"}
 				</span>
 				{if isset($item.valuebrutto_custom_contents)}
 					{$item.valuebrutto_custom_contents}
 				{/if}
 				<span class="invoice-contents-field-value nobr">
 				<BR>
-				{$item.s_valuebrutto|money_format}
+				{$item.s_valuebrutto|string_format:"%01.2f"}
 				</span>
 				{if isset($item.s_valuebrutto_custom_contents)}
 					{$item.s_valuebrutto_custom_contents}
@@ -216,8 +216,8 @@
                 &nbsp;
             </TD>
             <TD class="bold text-right nobr">
-                {sum assign="s_valuebrutto" array=$contents column=s_valuebrutto string_format="%01.2f"}
-                {$s_valuebrutto}
+                {sum assign="s_valuebrutto" array=$contents column=s_valuebrutto}
+                {$s_valuebrutto|string_format:"%01.2f"}
                 <input type="hidden" id="s-valuebrutto" value="{$s_valuebrutto}">
             </TD>
             <TD>
@@ -242,8 +242,10 @@
                 <BR>
                 <SELECT SIZE="1" NAME="ttariffid" style="width: 300px" onchange="setItem(document.contents.ttariffid.value)" {tip text="Enter description or select tariff from the list"}>
                     <OPTION value="0">-</OPTION>
-                    {foreach from=$tariffs item=tariff}
-                    <OPTION VALUE="{$tariff.id}">{$tariff.name} ({$tariff.value|money_format})</OPTION>
+                    {foreach $tariffs as $tariff}
+                        {if $tariff.currency == $invoice.currency}
+                            <OPTION VALUE="{$tariff.id}">{$tariff.name} ({moneyf($tariff.value, $tariff.currency)})</OPTION>
+                        {/if}
                     {/foreach}
                 </SELECT>
                 {/block}
@@ -307,17 +309,33 @@
                             {/if}
                         </TD>
                         <TD class="text-right">
-                            <INPUT type="checkbox" name="original"{if preg_match('/original/i', $default_printpage)} checked{/if}> <A HREF="javascript:setType('original');">{trans("original")}</A>
-                            <INPUT type="checkbox" name="copy"{if preg_match('/copy/i', $default_printpage)} checked{/if}> <A HREF="javascript:setType('copy');">{trans("copy")}</A>
-                            <INPUT type="checkbox" name="duplicate"{if preg_match('/duplicate/i', $default_printpage)} checked{/if}> <A HREF="javascript:setType('duplicate');">{trans("duplicate")}</A>&nbsp;
+                            <label>
+                                <INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_ORIGINAL}]"
+                                        value="{$smarty.const.DOC_ENTITY_ORIGINAL}"
+                                        {if preg_match('/original/i', $default_printpage)} checked{/if}>
+                                {$_DOCENTITIES[$smarty.const.DOC_ENTITY_ORIGINAL]}
+                            </label>
+                            <label>
+                                <INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_COPY}]"
+                                        value="{$smarty.const.DOC_ENTITY_COPY}"
+                                        {if preg_match('/copy/i', $default_printpage)} checked{/if}>
+                                {$_DOCENTITIES[$smarty.const.DOC_ENTITY_COPY]}
+                            </label>
+                            <label>
+                                <INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_DUPLICATE}]"
+                                        value="{$smarty.const.DOC_ENTITY_DUPLICATE}"
+                                        {if preg_match('/duplicate/i', $default_printpage)} checked{/if}>
+                                {$_DOCENTITIES[$smarty.const.DOC_ENTITY_DUPLICATE]}
+                            </label>
+                            &nbsp;
                             <A HREF="?m=invoicelist{if $invoice.proforma}&proforma=1{/if}">{trans("Cancel")} <IMG src="img/cancel.gif"></A>
                             <A href="?m={$layout.module}&action=init{if $layout.module == 'invoiceedit'}&id={$invoice.id}{/if}">{trans("Clear Contents")} <IMG src="img/delete.gif" alt=""></A>
                             {if !$customer}
-                            <A HREF="javascript:alert('{trans("Customer not selected!")}');">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
-                            <A HREF="javascript:alert('{trans("Customer not selected!")}');">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
+                                <A class="customer-alert" href="#">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
+                                <A class="customer-alert" href="#">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
                             {elseif !$contents}
-                            <A HREF="javascript:alert('{trans("Invoice have no items!")}');">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
-                            <A HREF="javascript:alert('{trans("Invoice have no items!")}');">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
+                                <A class="invoice-alert" href="#">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
+                                <A class="invoice-alert" href="#">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
                             {else}
                             <A HREF="javascript:saveInvoice()">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
                             <A HREF="javascript:printInvoice()">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
@@ -352,10 +370,6 @@
             e.tariffid.value = '';
             e.count.value = 1
         }
-	}
-
-	function setType(type) {
-		document.contents.elements[type].checked = !document.contents.elements[type].checked;
 	}
 
 	function addItem() {
@@ -400,20 +414,22 @@
 	}
 
 	function saveInvoice() {
-		document.contents.action += '&action=save';
+        var which = 0;
+        $('form[name="contents"] [name^="which"]:checked').each(function() {
+            which += parseInt($(this).val());
+        });
+
+		document.contents.action += '&action=save&which=' + which;
 		document.contents.submit();
 	}
 
 	function printInvoice() {
-		var add = "";
-		if (document.contents.original.checked)
-			add += "&original=1";
-		if (document.contents.copy.checked)
-			add += "&copy=1";
-		if (document.contents.duplicate.checked)
-			add += "&duplicate=1";
+        var which = 0;
+        $('form[name="contents"] [name^="which"]:checked').each(function() {
+            which += parseInt($(this).val());
+        });
 
-		document.contents.action += "&action=save&print=1" + add;
+		document.contents.action += "&action=save&print=1&which=" + which;
 		document.contents.submit();
 	}
 
@@ -461,5 +477,14 @@
         editItem({$error.posuid});
         {/if}
 	});
+
+    $('.customer-alert').click(function() {
+        alertDialog($t("Customer not selected!"), this);
+        return;
+    });
+    $('.invoice-alert').click(function() {
+        alertDialog($t("Invoice have no items!"), this);
+        return;
+    });
 
 </script>

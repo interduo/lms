@@ -6,8 +6,7 @@
 	<THEAD>
 	<TR>
 		<TD class="bold" colspan="2">
-			<IMG src="img/ticket.gif" alt="">
-			{t a=$ticket.ticketid|string_format:"%06d"}Ticket No. $a{/t}
+			<i class="lms-ui-icon-helpdesk"></i> {t a=$ticket.ticketid|string_format:"%06d"}Ticket No. $a{/t}
 		</TD>
 	</TR>
 	</THEAD>
@@ -15,8 +14,7 @@
 	{if $ticket.creatorid}
 	<TR>
 		<TD class="bold nobr">
-			<IMG src="img/users.gif" alt="">
-			{trans("Created by:")}
+			<i class="lms-ui-icon-user"></i> {trans("Created by:")}
 		</TD>
 		<TD>
 			<A href="?m=userinfo&id={$ticket.creatorid}">{$ticket.creator}</a>
@@ -26,8 +24,7 @@
 	{if $ticket.invprojectid}
 	<TR>
 		<TD class="bold nobr">
-			<IMG src="img/money.gif" alt="">
-			{trans("Investment project:")}
+			<i class="lms-ui-icon-money"></i> {trans("Investment project:")}
 		</TD>
 		<TD>
 			{$ticket.invproject_name} ({$ticket.invprojectid})
@@ -36,8 +33,7 @@
 	{/if}
 	<TR>
 		<TD class="bold nobr">
-			<IMG src="img/time.gif" alt="">
-			{trans("Uptime:")}
+			<i class="lms-ui-icon-uptime"></i> {trans("Uptime:")}
 		</TD>
 		<TD>
 			{$ticket.uptime}
@@ -45,8 +41,7 @@
 	</TR>
 	<TR>
 		<TD class="bold nobr">
-			<IMG src="img/desc.gif" alt="">
-			{trans("Cause:")}
+			<i class="lms-ui-icon-cause"></i> {trans("Cause:")}
 		</TD>
 		<TD>
 			{if $ticket.cause==2}{trans("company's side")}
@@ -56,21 +51,30 @@
 	</TR>
 	<TR>
 		<TD class="bold nobr">
-			<IMG src="img/report.gif" alt="">
-			{trans("Priority:")}
+			<i class="lms-ui-icon-priority"></i> {trans("Priority:")}
 		</TD>
 		<TD>
 			{$_RT_PRIORITIES[$ticket.priority]}
 		</TD>
 	</TR>
+        {if $ticket.parentid}
+        <TR>
+                <TD class="bold nobr">
+                        <i class="lms-ui-icon-content lms-ui-icon-parentticket"></i>{trans("Parent ticket:")}
+                </TD>
+                <TD>
+                        <A href="?m=rtticketview&amp;id={$ticket.parentid}">{t a=$ticket.parentid|string_format:"%06d"}$a{/t}</A><br>
+                </TD>
+        </TR>
+        {/if}
 	{if $ticket.relatedtickets}
 	<TR>
 		<TD class="bold nobr">
-			<i class="lms-ui-icon-content lms-ui-icon-reload"></i>{trans("Related tickets:")}
+			<i class="lms-ui-icon-content lms-ui-icon-relatedticket"></i>{trans("Related tickets:")}
 		</TD>
 		<TD>
 			{foreach $ticket.relatedtickets as $i}
-			<A href="?m=rtticketview&amp;id={$i.id}">{t a=$i.id|string_format:"%06d"}$a{/t}</A><br>
+				<A href="?m=rtticketview&id={$i.id}">#{$i.id|string_format:"%06d"} {$i.subject}</A><br>
 			{/foreach}
 		</TD>
 	</TR>
@@ -78,8 +82,7 @@
 	{if $ticket.message}
 	<TR>
 		<TD class="bold">
-			<IMG src="img/info.gif" alt="">
-			{trans("Body:")}
+			<i class="lms-ui-icon-info"></i> {trans("Body:")}
 		</TD>
 		<TD>
 			<TABLE width="{if strlen($ticket.message)<50}100%{/if}" cellpadding="5">
@@ -92,5 +95,13 @@
 		</TD>
 	</TR>
 	{/if}
+	<TR>
+		<TD colspan="2" class="lms-ui-box-buttons">
+		{if $event.ticket.state != $smarty.const.RT_RESOLVED}
+			{button type="link-button" icon="message" label="New Message" href="?m=rtmessageadd&ticketid={$ticket.ticketid}"}
+			{button type="link-button" icon="note" label="New Note" href="?m=rtnoteadd&ticketid={$ticket.ticketid}"}
+		{/if}
+		</TD>
+	</TR>
 	</TBODY>
 </TABLE>

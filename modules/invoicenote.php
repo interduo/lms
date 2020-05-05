@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -42,9 +42,9 @@ if (isset($_GET['id']) && $action == 'init') {
         $SESSION->redirect('?m=invoicelist');
     }
 
-    $SESSION->remove('invoicecontents');
-    $SESSION->remove('cnote');
-    $SESSION->remove('cnoteerror');
+    $SESSION->remove('invoicecontents', true);
+    $SESSION->remove('cnote', true);
+    $SESSION->remove('cnoteerror', true);
 
     $taxeslist = $LMS->GetTaxes($invoice['cdate'], $invoice['cdate']);
 
@@ -97,6 +97,8 @@ if (isset($_GET['id']) && $action == 'init') {
     $cnote['reason'] = '';
     $cnote['paytype'] = $invoice['paytype'];
     $cnote['splitpayment'] = $invoice['splitpayment'];
+    $cnote['currency'] = $invoice['currency'];
+    $cnote['oldcurrency'] = $invoice['currency'];
 
     $t = $invoice['cdate'] + $invoice['paytime'] * 86400;
     $deadline = mktime(23, 59, 59, date('m', $t), date('d', $t), date('Y', $t));
@@ -118,16 +120,16 @@ if (isset($_GET['id']) && $action == 'init') {
     $invoice = $hook_data['invoice'];
     $cnote = $hook_data['cnote'];
 
-    $SESSION->save('cnote', $cnote);
-    $SESSION->save('invoice', $invoice);
-    $SESSION->save('invoiceid', $invoice['id']);
-    $SESSION->save('invoicecontents', $invoicecontents);
+    $SESSION->save('cnote', $cnote, true);
+    $SESSION->save('invoice', $invoice, true);
+    $SESSION->save('invoiceid', $invoice['id'], true);
+    $SESSION->save('invoicecontents', $invoicecontents, true);
 }
 
-$SESSION->restore('invoicecontents', $contents);
-$SESSION->restore('invoice', $invoice);
-$SESSION->restore('cnote', $cnote);
-$SESSION->restore('cnoteerror', $error);
+$SESSION->restore('invoicecontents', $contents, true);
+$SESSION->restore('invoice', $invoice, true);
+$SESSION->restore('cnote', $cnote, true);
+$SESSION->restore('cnoteerror', $error, true);
 
 $numberplanlist = $LMS->GetNumberPlans(array(
     'doctype' => DOC_CNOTE,
@@ -160,6 +162,8 @@ switch ($action) {
         break;
 
     case 'setheader':
+        $oldcurrency = $cnote['oldcurrency'];
+
         $cnote = null;
         $error = null;
 
@@ -240,6 +244,9 @@ switch ($action) {
             }
         }
 
+        $cnote['currency'] = $oldcurrency;
+        $cnote['oldcurrency'] = $oldcurrency;
+
         // finally check if selected customer can use selected numberplan
         $divisionid = !empty($cnote['use_current_division']) ? $invoice['current_divisionid'] : $invoice['divisionid'];
 
@@ -257,7 +264,7 @@ switch ($action) {
 
         $error = array();
 
-        $SESSION->restore('invoiceid', $invoice['id']);
+        $SESSION->restore('invoiceid', $invoice['id'], true);
 
         if (!ConfigHelper::checkPrivilege('invoice_consent_date')) {
             $cnote['cdate'] = $invoice['cdate'];
@@ -307,41 +314,122 @@ switch ($action) {
             $contents[$idx]['vdiscount'] = f_round($contents[$idx]['vdiscount']);
             $taxvalue = $taxeslist[$contents[$idx]['taxid']]['value'];
 
-            if ($contents[$idx]['valuenetto'] != $item['valuenetto']) {
-                $contents[$idx]['valuebrutto'] = $contents[$idx]['valuenetto'] * ($taxvalue / 100 + 1);
-            } elseif (f_round($contents[$idx]['valuebrutto']) == f_round($item['valuebrutto'])) {
-                $contents[$idx]['valuebrutto'] = $item['valuebrutto'];
-            }
-
-            if ((isset($item['deleted']) && $item['deleted']) || empty($contents[$idx]['count'])) {
-                $contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto']);
-                $contents[$idx]['cash'] = f_round($invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
-                $contents[$idx]['count'] = f_round(-1 * $invoicecontents[$idx]['count'], 3);
-            } elseif ($contents[$idx]['count'] == $item['count']) {
-                $contents[$idx]['cash'] = f_round(-1 * f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']) * $contents[$idx]['count'], 2);
-                $contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
-                $contents[$idx]['count'] = 0;
-            } elseif ($contents[$idx]['valuenetto'] != $item['valuenetto']
-                    || $contents[$idx]['valuebrutto'] != $item['valuebrutto']
-                    || (empty($invoicecontents['count']) && !empty($contents[$idx]['count']))) {
-                if (empty($invoicecontents[$idx]['count']) && !empty($contents[$idx]['count'])) {
-                    // cash value for recovered/restored invoice position
+            $contents[$idx]['old_discount_type'] = $invoicecontents[$idx]['pdiscount'] != 0 ? DISCOUNT_PERCENTAGE : DISCOUNT_AMOUNT;
+            $discount_method = ConfigHelper::getConfig('invoices.credit_note_relation_to_invoice', 'first');
+            //if discount was changed
+            if (!(isset($item['deleted']) && $item['deleted'])
+                && $contents[$idx]['valuenetto'] == $item['valuenetto'] && $contents[$idx]['valuebrutto'] == $item['valuebrutto'] && $contents[$idx]['count'] == $item['count']
+                && ($newcontents['discount'][$idx] != $item['pdiscount'] || $newcontents['discount'][$idx] != $item['vdiscount'] || $contents[$idx]['discount_type'] != $contents[$idx]['old_discount_type'])) {
+                if ($contents[$idx]['pdiscount'] == 0 && $contents[$idx]['vdiscount'] == 0) {
+                    //when discount is removed or zeroed restore last document value
+                    if ($contents[$idx]['old_discount_type'] == DISCOUNT_PERCENTAGE) {
+                        $old_valuebrutto = $invoicecontents[$idx]['valuebrutto'] / (1 - $invoicecontents[$idx]['pdiscount'] / 100);
+                        $contents[$idx]['valuebrutto'] = f_round($old_valuebrutto - $invoicecontents[$idx]['valuebrutto']);
+                    } else {
+                        $contents[$idx]['valuebrutto'] = f_round($invoicecontents[$idx]['vdiscount']);
+                    }
+                } else {
+                    //when discount is changed, not removed or zeroed
+                        //if discount type was changed (discount value could be changed too)
+                    if ($contents[$idx]['discount_type'] != $contents[$idx]['old_discount_type']) {
+                        // if document type was changed
+                        if ($contents[$idx]['old_discount_type'] == DISCOUNT_PERCENTAGE) {
+                            $contents[$idx]['diff_pdiscount'] = 0;
+                            //change pdiscount to vdiscount
+                            if ($discount_method == 'first') {
+                                //calculate vdiscount as difference between current value and first document value
+                                $old_valuebrutto = $invoicecontents[$idx]['valuebrutto'] / (1 - $invoicecontents[$idx]['pdiscount'] / 100);
+                                $pdiscount_to_vdiscount = $old_valuebrutto * $invoicecontents[$idx]['pdiscount'] / 100;
+                                $contents[$idx]['diff_vdiscount'] = floatval($contents[$idx]['vdiscount'] - $pdiscount_to_vdiscount);
+                            } else {
+                                //calculate vdiscount as difference between current value and last document value
+                                $old_valuebrutto = $contents[$idx]['valuebrutto'];
+                                $contents[$idx]['diff_vdiscount'] = floatval($contents[$idx]['vdiscount']);
+                            }
+                        } else {
+                            $contents[$idx]['diff_vdiscount'] = 0;
+                            //change vdiscount to pdiscount
+                            if ($discount_method == 'first') {
+                                //calculate pdiscount as difference between current value and first document value
+                                $old_valuebrutto = $invoicecontents[$idx]['valuebrutto'] + $invoicecontents[$idx]['vdiscount'];
+                                $vdiscount_to_pdiscount = ($invoicecontents[$idx]['vdiscount'] / $old_valuebrutto) * 100;
+                            } else {
+                                //calculate pdiscount as difference between current value and last document value
+                                $old_valuebrutto = $contents[$idx]['valuebrutto'];
+                                $vdiscount_to_pdiscount = ($contents[$idx]['vdiscount'] / $old_valuebrutto) * 100;
+                            }
+                            $contents[$idx]['diff_pdiscount'] = floatval($contents[$idx]['pdiscount'] - $vdiscount_to_pdiscount);
+                        }
+                        $contents[$idx]['valuebrutto'] = f_round((($old_valuebrutto - $old_valuebrutto * $contents[$idx]['diff_pdiscount'] / 100) - $contents[$idx]['diff_vdiscount']) - $old_valuebrutto);
+                    } else {
+                        //only discount value was changed and document type was not changed
+                        if ($discount_method == 'first') {
+                            if ($contents[$idx]['discount_type'] == DISCOUNT_PERCENTAGE) {
+                                $orig_valuebrutto = isset($invoice['invoice']['invoice']['content'][$idx]['value']) ? $invoice['invoice']['invoice']['content'][$idx]['value'] : $invoice['invoice']['content'][$idx]['value'];
+                                $new_valuebrutto = f_round($orig_valuebrutto - $orig_valuebrutto * $contents[$idx]['pdiscount'] / 100);
+                                $old_valuebrutto = $invoicecontents[$idx]['valuebrutto'];
+                                $contents[$idx]['valuebrutto'] = f_round($new_valuebrutto - $old_valuebrutto);
+                            } else {
+                                $contents[$idx]['diff_vdiscount'] = !empty($invoicecontents[$idx]['vdiscount']) ? floatval($contents[$idx]['vdiscount'] - $invoicecontents[$idx]['vdiscount']) : 0;
+                                $contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $contents[$idx]['diff_vdiscount'] - $invoicecontents[$idx]['valuebrutto']);
+                            }
+                        } else {
+                            //difference between current value and last document value
+                            $contents[$idx]['diff_pdiscount'] = !empty($invoicecontents[$idx]['pdiscount']) ? floatval($contents[$idx]['pdiscount']) : 0;
+                            $contents[$idx]['diff_vdiscount'] = !empty($invoicecontents[$idx]['vdiscount']) ? floatval($contents[$idx]['vdiscount']) : 0;
+                            $contents[$idx]['valuebrutto'] = f_round((($contents[$idx]['valuebrutto'] - $contents[$idx]['valuebrutto'] * $contents[$idx]['diff_pdiscount'] / 100) - $contents[$idx]['diff_vdiscount']) - $invoicecontents[$idx]['valuebrutto']);
+                        }
+                    }
+                }
+                if (!empty($invoicecontents[$idx]['count']) && !empty($contents[$idx]['count'])) {
+                    //cash value for recovered/restored invoice position
                     $contents[$idx]['cash'] = f_round(-1 * $contents[$idx]['valuebrutto'] * $contents[$idx]['count'], 2);
                 } else {
-                    $contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] * $contents[$idx]['count']
-                        - $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']), 2);
+                    $contents[$idx]['cash'] = 0;
                 }
 
-                // determine new brutto value only if invoice position is NOT recovered/restored
-                if (!empty($invoicecontents[$idx]['count']) || empty($contents[$idx]['count'])) {
-                    $contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
-                }
-
-                $contents[$idx]['count'] = f_round($contents[$idx]['count'] - $invoicecontents[$idx]['count'], 3);
-            } else {
-                $contents[$idx]['cash'] = 0;
-                $contents[$idx]['valuebrutto'] = 0;
                 $contents[$idx]['count'] = 0;
+            } else { // if discount type or discount value dosen't change
+                //zeroing discounts
+                $contents[$idx]['pdiscount'] = 0;
+                $contents[$idx]['vdiscount'] = 0;
+
+                if ($contents[$idx]['valuenetto'] != $item['valuenetto']) {
+                    $contents[$idx]['valuebrutto'] = $contents[$idx]['valuenetto'] * ($taxvalue / 100 + 1);
+                } elseif (f_round($contents[$idx]['valuebrutto']) == f_round($item['valuebrutto'])) {
+                    $contents[$idx]['valuebrutto'] = $item['valuebrutto'];
+                }
+
+                if ((isset($item['deleted']) && $item['deleted']) || empty($contents[$idx]['count'])) {
+                    $contents[$idx]['valuebrutto'] = f_round(-1 * $invoicecontents[$idx]['valuebrutto']);
+                    $contents[$idx]['cash'] = f_round($invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count'], 2);
+                    $contents[$idx]['count'] = f_round(-1 * $invoicecontents[$idx]['count'], 3);
+                } elseif ($contents[$idx]['count'] == $item['count']) {
+                    $contents[$idx]['cash'] = f_round(-1 * f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']) * $contents[$idx]['count'], 2);
+                    $contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
+                    $contents[$idx]['count'] = 0;
+                } elseif ($contents[$idx]['valuenetto'] != $item['valuenetto']
+                    || $contents[$idx]['valuebrutto'] != $item['valuebrutto']
+                    || (empty($invoicecontents['count']) && !empty($contents[$idx]['count']))) {
+                    if (empty($invoicecontents[$idx]['count']) && !empty($contents[$idx]['count'])) {
+                        // cash value for recovered/restored invoice position
+                        $contents[$idx]['cash'] = f_round(-1 * $contents[$idx]['valuebrutto'] * $contents[$idx]['count'], 2);
+                    } else {
+                        $contents[$idx]['cash'] = f_round(-1 * ($contents[$idx]['valuebrutto'] * $contents[$idx]['count']
+                                - $invoicecontents[$idx]['valuebrutto'] * $invoicecontents[$idx]['count']), 2);
+                    }
+
+                    // determine new brutto value only if invoice position is NOT recovered/restored
+                    if (!empty($invoicecontents[$idx]['count']) || empty($contents[$idx]['count'])) {
+                        $contents[$idx]['valuebrutto'] = f_round($contents[$idx]['valuebrutto'] - $invoicecontents[$idx]['valuebrutto']);
+                    }
+
+                    $contents[$idx]['count'] = f_round($contents[$idx]['count'] - $invoicecontents[$idx]['count'], 3);
+                } else {
+                    $contents[$idx]['cash'] = 0;
+                    $contents[$idx]['valuebrutto'] = 0;
+                    $contents[$idx]['count'] = 0;
+                }
             }
             $contents[$idx]['cash'] = str_replace(',', '.', $contents[$idx]['cash']);
             $contents[$idx]['valuebrutto'] = str_replace(',', '.', $contents[$idx]['valuebrutto']);
@@ -349,6 +437,8 @@ switch ($action) {
         }
 
         $cnote['paytime'] = round(($cnote['deadline'] - $cnote['cdate']) / 86400);
+
+        $cnote['currency'] = $cnote['oldcurrency'];
 
         $hook_data = array(
             'invoice' => $invoice,
@@ -375,6 +465,11 @@ switch ($action) {
                 $contents[$idx]['valuenetto'] = $newcontents['valuenetto'][$idx];
             }
             break;
+        }
+
+        $cnote['currencyvalue'] = $LMS->getCurrencyValue($cnote['currency'], $cnote['sdate']);
+        if (!isset($cnote['currencyvalue'])) {
+            die('Fatal error: couldn\'t get quote for ' . $cnote['currency'] . ' currency!<br>');
         }
 
         $DB->BeginTrans();
@@ -410,12 +505,7 @@ switch ($action) {
             }
         }
 
-        $division = $DB->GetRow(
-            'SELECT name, shortname, address, city, zip, countryid, ten, regon,
-						account, inv_header, inv_footer, inv_author, inv_cplace 
-						FROM vdivisions WHERE id = ?',
-            array(!empty($cnote['use_current_division']) ? $invoice['current_divisionid'] : $invoice['divisionid'])
-        );
+        $division = $LMS->GetDivision(!empty($cnote['use_current_division']) ? $invoice['current_divisionid'] : $invoice['divisionid']);
 
         if ($cnote['numberplanid']) {
             $fullnumber = docnumber(array(
@@ -478,6 +568,7 @@ switch ($action) {
             'div_' . SYSLOG::getResourceKey(SYSLOG::RES_COUNTRY) => !empty($division['countryid']) ? $division['countryid'] : null,
             'div_ten' => $division['ten'] ? $division['ten'] : '',
             'div_regon' => $division['regon'] ? $division['regon'] : '',
+            'div_bank' => $division['bank'] ?: null,
             'div_account' => $division['account'] ? $division['account'] : '',
             'div_inv_header' => $division['inv_header'] ? $division['inv_header'] : '',
             'div_inv_footer' => $division['inv_footer'] ? $division['inv_footer'] : '',
@@ -486,14 +577,17 @@ switch ($action) {
             'fullnumber' => $fullnumber,
             'recipient_address_id' => $invoice['recipient_address_id'],
             'post_address_id' => $invoice['post_address_id'],
+            'currency' => $cnote['currency'],
+            'currencyvalue' => $cnote['currencyvalue'],
+            'memo' => $use_current_customer_data ? (empty($customer['documentmemo']) ? null : $customer['documentmemo']) : $invoice['memo'],
         );
         $DB->Execute('INSERT INTO documents (number, numberplanid, type, cdate, sdate, paytime, paytype, splitpayment,
 				userid, customerid, name, address, ten, ssn, zip, city, countryid, reference, reason, divisionid,
 				div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
-				div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber,
-				recipient_address_id, post_address_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-					?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+				div_bank, div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, fullnumber,
+				recipient_address_id, post_address_id, currency, currencyvalue, memo)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+					?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
 
         $id = $DB->GetOne(
             'SELECT id FROM documents WHERE number = ? AND cdate = ? AND type = ?',
@@ -546,14 +640,16 @@ switch ($action) {
                     'time' => $cnote['cdate'],
                     SYSLOG::RES_USER => Auth::GetCurrentUser(),
                     'value' => str_replace(',', '.', $item['cash']),
+                    'currency' => $cnote['currency'],
+                    'currencyvalue' => $cnote['currencyvalue'],
                     SYSLOG::RES_TAX => $item['taxid'],
                     SYSLOG::RES_CUST => $invoice['customerid'],
                     'comment' => $item['name'],
                     SYSLOG::RES_DOC => $id,
                     'itemid' => $idx,
                 );
-                $DB->Execute('INSERT INTO cash (time, userid, value, taxid, customerid, comment, docid, itemid)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+                $DB->Execute('INSERT INTO cash (time, userid, value, currency, currencyvalue, taxid, customerid, comment, docid, itemid)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
                 if ($SYSLOG) {
                     unset($args[SYSLOG::RES_USER]);
                     $args[SYSLOG::RES_CASH] = $DB->GetLastInsertID('cash');
@@ -571,26 +667,26 @@ switch ($action) {
 
         $DB->CommitTrans();
 
-        $SESSION->remove('invoice');
-        $SESSION->remove('invoiceid');
-        $SESSION->remove('cnote');
-        $SESSION->remove('invoicecontents');
-        $SESSION->remove('cnoteerror');
+        $SESSION->remove('invoice', true);
+        $SESSION->remove('invoiceid', true);
+        $SESSION->remove('cnote', true);
+        $SESSION->remove('invoicecontents', true);
+        $SESSION->remove('cnoteerror', true);
 
         if (isset($_GET['print'])) {
-            $SESSION->save('invoiceprint', array('invoice' => $id,
-                'original' => !empty($_GET['original']) ? 1 : 0,
-                'copy' => !empty($_GET['copy']) ? 1 : 0));
+            $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
+            $SESSION->save('invoiceprint', array('invoice' => $id, 'which' => $which), true);
         }
 
         $SESSION->redirect('?m=invoicelist');
         break;
 }
 
-$SESSION->save('invoice', $invoice);
-$SESSION->save('cnote', $cnote);
-$SESSION->save('invoicecontents', $contents);
-$SESSION->save('cnoteerror', $error);
+$SESSION->save('invoice', $invoice, true);
+$SESSION->save('cnote', $cnote, true);
+$SESSION->save('invoicecontents', $contents, true);
+$SESSION->save('cnoteerror', $error, true);
 
 if ($action && !$error) {
     // redirect, to not prevent from invoice break with the refresh
@@ -612,6 +708,7 @@ $SMARTY->assign('invoice', $invoice);
 $SMARTY->assign('refdoc', $invoice);
 $SMARTY->assign('taxeslist', $taxeslist);
 $SMARTY->assign('numberplanlist', $numberplanlist);
+$SMARTY->assign('messagetemplates', $LMS->GetMessageTemplates(TMPL_CNOTE_REASON));
 
 $total_value = 0;
 if (!empty($contents)) {

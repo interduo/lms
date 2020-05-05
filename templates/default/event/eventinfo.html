@@ -1,6 +1,7 @@
 {extends file="layout.html"}
 {block name=title}LMS: {$layout.pagetitle|striphtml}{/block}
 {block name=module_content}
+<script src="js/templates/event/eventlist.js"></script>
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
 <TABLE class="lmsbox">
@@ -190,7 +191,21 @@
 			{trans("Location:")}
 		</TD>
 		<TD class="nobr">
-			{if !empty($event.address_id)}{$event.location}{else}{$event.customerlocation}{/if}
+		{if $event.netnode_name}
+		<i class="lms-ui-icon-netnode"></i> <a href="?m=netnodeinfo&id={$event.netnode_id}">{$event.netnode_name}</a>
+		    {if !empty($event.netnode_location)}<br><i class="lms-ui-icon-location"></i> {$event.netnode_location}{/if}
+                {else}
+                    {if $event.customername}
+                    <i class="lms-ui-icon-customer"></i> <A href="?m=customerinfo&amp;id={$event.customerid}">{$event.customername|truncate:"30":"...":true}</A><br>
+                       {if !empty($event.address_id)}
+                       <i class="lms-ui-icon-location"></i> {$event.location}
+                       {elseif !empty($event.nodeid)}
+                       <a href="?m=nodeinfo&id={$event.nodeid}"> {$event.nodelocation}</a>
+                       {else}
+                       <i class="lms-ui-icon-location"></i> {$event.customerlocation}
+                       {/if}
+                    {/if}
+                {/if}
 		</TD>
 	</TR>
 	{if !empty($event.nodeid)}
@@ -243,19 +258,19 @@
 {if isset($event.ticketid)}
 	<TR>
 		<TD>
-                                    <IMG src="img/helpdesk.png" alt="">
+			<IMG src="img/helpdesk.png" alt="">
 		</TD>
 		<TD class="bold">
-                                    {trans("Helpdesk assignment:")}
-                                </TD>
+			{trans("Helpdesk assignment:")}
+		</TD>
 		<TD>
-                                        <a href="?m=rtticketview&id={$event.ticketid}">#{$event.ticketid}</a>
+			#{$event.ticketid|string_format:"%06d"} <a href="?m=rtticketview&id={$event.ticketid}">{$event.ticket.name}</a>
 		</TD>
 	</TR>
 {/if}
 	<TR>
 		<TD class="text-right" colspan="3">
-			<a href="?m=eventdel&id={$event.id}" OnClick="return confirmLink(this, '{trans("Are you sure, you want to delete that event?")}')"><img src="img/delete.gif" alt=""> {trans("Delete")}</A>
+			<a class="delete-event" href="?m=eventdel&id={$event.id}"><img src="img/delete.gif" alt=""> {trans("Delete")}</A>
 			<A href="?m=eventedit&id={$event.id}"><IMG src="img/edit.gif" alt=""> {trans("Edit")}</A>
 			{if !$event.closed}
 			<A href="?m=eventedit&id={$event.id}&action=close"><IMG src="img/dead.gif" alt=""> {trans("Close")}</A>

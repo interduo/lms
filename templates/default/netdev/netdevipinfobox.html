@@ -93,7 +93,13 @@
 										{trans("Password:")}
 									</td>
 									<td>
-										{$nodeipdata.passwd}
+										{if ConfigHelper::checkConfig('phpui.protect_passwords')}
+											<button class="lms-ui-button-clipboard lms-ui-button" data-clipboard-text="{$nodeipdata.passwd}">
+												<i class="lms-ui-icon-clipboard"></i> {trans("Copy")}
+											</button>
+										{else}
+											{$nodeipdata.passwd}
+										{/if}
 									</td>
 								</tr>
 								{/if}
@@ -165,7 +171,7 @@
                             </table>
 						</td>
 						<td width="50%" class="valign-top">
-							<table width="100%" class="tab-beautify">
+							<table width="100%" class="tab-beautify" id="netdevipinfo">
 								<colgroup>
 									<col style="width: 1%;">
 									<col style="width: 1%;">
@@ -242,8 +248,10 @@
     </tbody>
 </table>
 
-<script type="text/javascript">
-<!--
+<script>
+
+	xajax_getNodeStats({$nodeipdata.id});
+
     {if !$disable_active_links}
     $( function() {
         var link = '?m=netdevedit&id={$netdev.id}';
@@ -289,5 +297,4 @@
 		return false;
 	});
 
-//-->
 </script>

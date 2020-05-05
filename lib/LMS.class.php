@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2019 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -29,8 +29,8 @@
 
 class LMS
 {
-    const SOFTWARE_NAME = 'LMS+';
-    const SOFTWARE_VERSION = '24.29';
+    const SOFTWARE_NAME = 'LMS';
+    const SOFTWARE_VERSION = '25-git';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
 
     public $DB;   // database object
@@ -39,6 +39,8 @@ class LMS
     public $cache;  // internal cache
     public $hooks = array(); // registered plugin hooks
     public $xajax;  // xajax object
+    public static $currency = null;
+    public static $default_currency = null;
     private $mail_object = null;
     private static $lms = null;
     protected $plugin_manager;
@@ -68,7 +70,7 @@ class LMS
 
     public function __construct(&$DB, &$AUTH, &$SYSLOG)
     {
-    // class variables setting
+        // class variables setting
         $this->DB = &$DB;
         $this->AUTH = &$AUTH;
         $this->SYSLOG = &$SYSLOG;
@@ -221,7 +223,7 @@ class LMS
 
     public function DBDump($filename = null, $gzipped = false, $stats = false)
     {
- // dump database to file
+        // dump database to file
         $dbtype = ConfigHelper::getConfig('database.type');
 
         if (!$filename) {
@@ -261,23 +263,23 @@ class LMS
             // Since we're using foreign keys, order of tables is important
             // Note: add all referenced tables to the list
             $order = array(
-                'users', 'countries', 'location_states', 'location_districts',
-                'location_boroughs', 'location_cities', 'location_street_types',
-                'location_streets', 'location_buildings', 'addresses', 'divisions',
-                'customers', 'numberplans', 'states', 'zipcodes', 'customer_addresses',
-                'documents', 'documentcontents', 'documentattachments', 'cashregs',
-                'receiptcontents', 'taxes', 'voipaccounts', 'voip_rule_groups',
-                'voip_prefix_groups', 'voip_rules', 'voip_tariffs', 'voip_rule_states',
-                'voip_prefixes', 'voip_cdr', 'voip_price_groups', 'tariffs', 'voip_numbers',
-                'voip_pool_numbers', 'voip_emergency_numbers', 'liabilities', 'assignments',
-                'voip_number_assignments', 'invoicecontents', 'debitnotecontents',
-                'cashsources', 'sourcefiles', 'cashimport', 'cash', 'pna', 'ewx_channels',
-                'ewx_stm_channels', 'hosts', 'networks', 'invprojects', 'netnodes',
-                'netdeviceproducers', 'netdevicemodels', 'netdevices', 'netradiosectors',
-                'nodes', 'ewx_stm_nodes', 'nodelocks', 'macs', 'nodegroups',
-                'nodegroupassignments', 'nodeassignments', 'tarifftags', 'tariffassignments',
-                'promotions', 'promotionschemas', 'promotionassignments', 'payments',
-                'numberplanassignments', 'customergroups', 'customerassignments',
+                'users', 'twofactorauthcodehistory', 'twofactorauthtrusteddevices',
+                'countries', 'location_states', 'location_districts', 'location_boroughs',
+                'location_cities', 'location_street_types', 'location_streets',
+                'location_buildings', 'addresses', 'divisions', 'customers', 'numberplans',
+                'states', 'zipcodes', 'customer_addresses', 'documents', 'documentcontents',
+                'documentattachments', 'cashregs', 'receiptcontents', 'taxes', 'voipaccounts',
+                'voip_rule_groups', 'voip_prefix_groups', 'voip_rules', 'voip_tariffs',
+                'voip_rule_states', 'voip_prefixes', 'voip_cdr', 'voip_price_groups',
+                'tariffs', 'voip_numbers', 'voip_pool_numbers', 'voip_emergency_numbers',
+                'liabilities', 'assignments', 'voip_number_assignments', 'invoicecontents',
+                'debitnotecontents', 'cashsources', 'sourcefiles', 'cashimport',
+                'customerbalances', 'cash', 'pna', 'ewx_channels', 'ewx_stm_channels', 'hosts',
+                'networks', 'invprojects', 'netnodes', 'netdeviceproducers', 'netdevicemodels',
+                'netdevices', 'netradiosectors', 'nodes', 'ewx_stm_nodes', 'nodelocks', 'macs',
+                'nodegroups', 'nodegroupassignments', 'nodeassignments', 'tarifftags',
+                'tariffassignments', 'promotions', 'promotionschemas', 'promotionassignments',
+                'payments', 'numberplanassignments', 'customergroups', 'customerassignments',
                 'nodesessions', 'stats', 'netlinks', 'rtqueues', 'rttickets',
                 'rtticketlastview', 'rtmessages', 'rtrights', 'rtattachments', 'rtcategories',
                 'rtcategoryusers', 'rtticketcategories', 'rtqueuecategories', 'domains',
@@ -354,7 +356,7 @@ class LMS
 
     public function DatabaseCreate($gzipped = false, $stats = false)
     {
- // create database backup
+        // create database backup
         $basename = 'lms-' . time() . '-' . DBVERSION;
         if (($gzipped) && (extension_loaded('zlib'))) {
             $filename = $basename . '.sql.gz';
@@ -377,6 +379,18 @@ class LMS
     {
         $manager = $this->getUserManager();
         return $manager->setUserPassword($id, $passwd);
+    }
+
+    public function forcePasswordChange($id)
+    {
+        $manager = $this->getUserManager();
+        return $manager->forcePasswordChange($id);
+    }
+
+    public function SetUserAuthentication($id, $twofactorauth, $twofactorauthsecretkey)
+    {
+        $manager = $this->getUserManager();
+        return $manager->SetUserAuthentication($id, $twofactorauth, $twofactorauthsecretkey);
     }
 
     public function GetUserName($id = null)
@@ -457,6 +471,12 @@ class LMS
         return $manager->PasswdExistsInHistory($id, $passwd);
     }
 
+    public function checkPassword($password)
+    {
+        $manager = $this->getUserManager();
+        return $manager->checkPassword($password);
+    }
+
     /*
      *  Customers functions
      */
@@ -521,10 +541,10 @@ class LMS
         return $manager->GetCashByID($id);
     }
 
-    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true)
+    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true, $filemtime = null)
     {
         $manager = $this->getCashManager();
-        return $manager->CashImportParseFile($filename, $contents, $patterns, $quiet);
+        return $manager->CashImportParseFile($filename, $contents, $patterns, $quiet, $filemtime);
     }
 
     public function CashImportCommit()
@@ -537,6 +557,12 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->getCustomerStatus($id);
+    }
+
+    public function getCustomerConsents($id)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerConsents($id);
     }
 
     public function GetCustomer($id, $short = false)
@@ -611,16 +637,34 @@ class LMS
         return $manager->getCustomerShortBalanceList($customerid, $limit, $order);
     }
 
+    public function getLastNInTable($body, $customerid, $eol, $aggregate_documents = false)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getLastNInTable($body, $customerid, $eol, $aggregate_documents);
+    }
+
     public function CustomerStats()
     {
         $manager = $this->getCustomerManager();
         return $manager->customerStats();
     }
 
+    public function updateCustomerConsents($customerid, $current_consents, $new_consents)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->updateCustomerConsents($customerid, $current_consents, $new_consents);
+    }
+
     public function checkCustomerAddress($a_id, $c_id)
     {
         $manager = $this->getCustomerManager();
         return $manager->checkCustomerAddress($a_id, $c_id);
+    }
+
+    public function determineDefaultCustomerAddress(array &$caddr)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->determineDefaultCustomerAddress($caddr);
     }
 
     public function getCustomerAddresses($id, $hide_deleted = false)
@@ -641,6 +685,12 @@ class LMS
         return $manager->getFullAddressForCustomerStuff($customer_id);
     }
 
+    public function isTerritAddress($address_id)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->isTerritAddress($address_id);
+    }
+
     public function GetCustomerContacts($id, $mask = null)
     {
         $manager = $this->getCustomerManager();
@@ -657,6 +707,54 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->isSplitPaymentSuggested($customerid, $cdate, $value);
+    }
+
+    public function getCustomerSMSOptions()
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerSMSOptions();
+    }
+
+    public function GetCustomerAddressesWithoutEndPoints($customerid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->GetCustomerAddressesWithoutEndPoints($customerid);
+    }
+
+    public function checkCustomerTenExistence($customerid, $ten, $divisionid = null)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->checkCustomerTenExistence($customerid, $ten, $divisionid);
+    }
+
+    public function checkCustomerSsnExistence($customerid, $ssn, $divisionid = null)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->checkCustomerSsnExistence($customerid, $ssn, $divisionid);
+    }
+
+    public function checkCustomerConsent($customerid, $consent)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->checkCustomerConsent($customerid, $consent);
+    }
+
+    public function customerNotificationReplaceSymbols($string, $data)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->customerNotificationReplaceSymbols($string, $data);
+    }
+
+    public function addCustomerConsents($customerid, $consents)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->addCustomerConsents($customerid, $consents);
+    }
+
+    public function removeCustomerConsents($customerid, $consents)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->removeCustomerConsents($customerid, $consents);
     }
 
     /*
@@ -1002,6 +1100,12 @@ class LMS
         return $manager->GetNodeLocations($customerid, $address_id);
     }
 
+    public function getNodeCustomerAssignments($nodeid, $assignments)
+    {
+        $manager = $this->getNodeManager();
+        return $manager->getNodeCustomerAssignments($nodeid, $assignments);
+    }
+
     /*
      *  Tarrifs and finances
      */
@@ -1034,6 +1138,12 @@ class LMS
     {
         $manager = $this->getFinanceManager();
         return $manager->GetCustomerAssignments($id, $show_expired, $show_approved);
+    }
+
+    public function GetCustomerServiceSummary($id)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->GetCustomerServiceSummary($id);
     }
 
     public function DeleteAssignment($id)
@@ -1415,10 +1525,22 @@ class LMS
         return $manager->NetworkRemap($src, $dst);
     }
 
+    public function MoveHostsBetweenNetworks($src, $dst)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->MoveHostsBetweenNetworks($src, $dst);
+    }
+
     public function GetNetworkRecord($id, $page = 0, $plimit = 4294967296, $firstfree = false)
     {
         $manager = $this->getNetworkManager();
         return $manager->GetNetworkRecord($id, $page, $plimit, $firstfree);
+    }
+
+    public function GetFirstFreeAddress($netid)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->getFirstFreeAddress($netid);
     }
 
     /*
@@ -1539,6 +1661,12 @@ class LMS
         return $manager->GetModels($producerid);
     }
 
+    public function GetModelList($pid = null)
+    {
+        $manager = $this->getNetDevManager();
+        return $manager->GetModelList($pid);
+    }
+
     public function GetRadioSectors($netdevid, $technology = 0)
     {
         $manager = $this->getNetDevManager();
@@ -1585,6 +1713,12 @@ class LMS
     {
         $manager = $this->getNetDevManager();
         return $manager->updateManagementUrl($type, $id, $url);
+    }
+
+    public function getNetDevCustomerAssignments($netdevid, $assignments)
+    {
+        $manager = $this->getNetDevManager();
+        return $manager->getNetDevCustomerAssignments($netdevid, $assignments);
     }
 
     public function GetNetNode($id)
@@ -1922,10 +2056,10 @@ class LMS
         return $manager->DetermineSenderEmail($queue_email, $ticket_email, $user_email, $forced_order);
     }
 
-    public function GetTicketPhoneFrom($ticketid)
+    public function GetTicketRequestorPhone($ticketid)
     {
         $manager = $this->getHelpdeskManager();
-        return $manager->GetTicketPhoneFrom($ticketid);
+        return $manager->GetTicketRequestorPhone($ticketid);
     }
 
     public function CheckTicketAccess($ticketid)
@@ -1933,10 +2067,23 @@ class LMS
         $manager = $this->getHelpdeskManager();
         return $manager->CheckTicketAccess($ticketid);
     }
-    public function GetRelatedTicketIds($ticketid)
+
+    public function GetRelatedTickets($ticketid)
     {
         $manager = $this->getHelpdeskManager();
-        return $manager->GetRelatedTicketIds($ticketid);
+        return $manager->GetRelatedTickets($ticketid);
+    }
+
+    public function GetChildTickets($ticketid)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->GetChildTickets($ticketid);
+    }
+
+    public function getTickets($ticketids)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->getTickets($ticketids);
     }
 
     public function GetTicketParentID($ticketid)
@@ -1957,14 +2104,38 @@ class LMS
         return $manager->GetRTSmtpOptions();
     }
 
-        /*
-         *  LMS-UI configuration
-         */
+    public function CopyQueuePermissions($src_userid, $dst_userid)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->CopyQueuePermissions($src_userid, $dst_userid);
+    }
 
-    public function GetConfigOptionId($var, $section)
+    public function CopyCategoryPermissions($src_userid, $dst_userid)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->CopyCategoryPermissions($src_userid, $dst_userid);
+    }
+
+    public function TicketIsAssigned($ticketid)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->TicketIsAssigned($ticketid);
+    }
+
+    public function getTicketImageGalleries(&$ticket)
+    {
+        $manager = $this->getHelpdeskManager();
+        $manager->getTicketImageGalleries($ticket);
+    }
+
+    /*
+     *  LMS-UI configuration
+     */
+
+    public function ConfigOptionExists($params)
     {
         $manager = $this->getConfigManager();
-        return $manager->GetConfigOptionId($var, $section);
+        return $manager->ConfigOptionExists($params);
     }
 
     public function GetConfigDefaultType($option)
@@ -1977,6 +2148,30 @@ class LMS
     {
         $manager = $this->getConfigManager();
         return $manager->CheckOption($option, $value, $type);
+    }
+
+    public function GetConfigVariable($config_id)
+    {
+        $manager = $this->getConfigManager();
+        return $manager->GetConfigVariable($config_id);
+    }
+
+    public function CloneConfigSection($section, $new_section, $userid = null)
+    {
+        $manager = $this->getConfigManager();
+        return $manager->CloneConfigSection($section, $new_section, $userid);
+    }
+
+    public function DeleteConfigOption($id, $global = true)
+    {
+        $manager = $this->getConfigManager();
+        return $manager->DeleteConfigOption($id, $global);
+    }
+
+    public function toggleConfigOption($id)
+    {
+        $manager = $this->getConfigManager();
+        return $manager->toggleConfigOption($id);
     }
 
     /*
@@ -2244,7 +2439,7 @@ class LMS
                 return MSG_SENT;
             }
         } elseif (ConfigHelper::getConfig('mail.backend') == 'phpmailer') {
-            $this->mail_object = new PHPMailer();
+            $this->mail_object = new \PHPMailer\PHPMailer\PHPMailer();
             $this->mail_object->isSMTP();
 
             $this->mail_object->SMTPKeepAlive = $persist;
@@ -2311,7 +2506,7 @@ class LMS
                 $this->mail_object->ConfirmReadingTo = $headers['Return-Receipt-To'];
             }
 
-            $this->mail_object->Dsn = isset($headers['Delivery-Status-Notification-To']);
+            $this->mail_object->dsn = isset($headers['Delivery-Status-Notification-To']) ? 'SUCCESS,FAILURE' : '';
 
             preg_match('/^(?:(?<name>.*) )?<?(?<mail>[a-z0-9_\.-]+@[\da-z\.-]+\.[a-z\.]{2,6})>?$/iA', $headers['From'], $from);
             $this->mail_object->setFrom($from['mail'], isset($from['name']) ? trim($from['name'], "\"") : '');
@@ -2392,7 +2587,7 @@ class LMS
         }
     }
 
-    public function SendSMS($number, $message, $messageid = 0, $script_service = null)
+    public function SendSMS($number, $message, $messageid = null, $sms_options = null)
     {
         $msg_len = mb_strlen($message);
 
@@ -2400,14 +2595,21 @@ class LMS
             return trans('SMS message is empty!');
         }
 
-        $debug_phone = ConfigHelper::getConfig('sms.debug_phone');
+        $debug_phone = isset($sms_options['debug_phone']) ? $sms_options['debug_phone'] : ConfigHelper::getConfig('sms.debug_phone');
         if (!empty($debug_phone)) {
-            $number = ConfigHelper::getConfig('sms.debug_phone');
+            $number = $debug_phone;
         }
 
-        $prefix = ConfigHelper::getConfig('sms.prefix', '');
+        $prefix = isset($sms_options['prefix']) ? $sms_options['prefix'] : ConfigHelper::getConfig('sms.prefix', '');
         $number = preg_replace('/[^0-9]/', '', $number);
         $number = preg_replace('/^0+/', '', $number);
+
+        $phone_number_validation_pattern = isset($sms_options['phone_number_validation_pattern'])
+            ? $sms_options['phone_number_validation_pattern']
+            : ConfigHelper::getConfig('sms.phone_number_validation_pattern', '', true);
+        if (!empty($phone_number_validation_pattern) && !preg_match('/' . $phone_number_validation_pattern . '/', $number)) {
+            return trans('Phone number validation failed!');
+        }
 
         // add prefix to the number if needed
         if ($prefix && substr($number, 0, strlen($prefix)) != $prefix) {
@@ -2421,12 +2623,14 @@ class LMS
 
         $message = preg_replace("/\r/", "", $message);
 
-        $transliterate_message = ConfigHelper::checkValue(ConfigHelper::getConfig('sms.transliterate_message', 'false'));
-        if ($transliterate_message) {
+        $transliterate_message = isset($sms_options['transliterate_message']) ? $sms_options['transliterate_message']
+            : ConfigHelper::getConfig('sms.transliterate_message', 'false');
+        if (ConfigHelper::checkValue($transliterate_message)) {
             $message = iconv('UTF-8', 'ASCII//TRANSLIT', $message);
         }
 
-        $max_length = ConfigHelper::getConfig('sms.max_length');
+        $max_length = isset($sms_options['max_length']) ? $sms_options['max_length']
+            : ConfigHelper::getConfig('sms.max_length');
         if (!empty($max_length) && intval($max_length) > 6 && $msg_len > intval($max_length)) {
             $message = mb_substr($message, 0, $max_length - 6) . ' [...]';
         }
@@ -2434,20 +2638,18 @@ class LMS
         // recount message length after potential last changes made a few lines earlier
         $msg_len = mb_strlen($message);
 
-        $service = ConfigHelper::getConfig('sms.service');
-        if ($script_service) {
-            $service = $script_service;
-        } elseif (empty($service)) {
+        $service = isset($sms_options['service']) ? $sms_options['service'] : ConfigHelper::getConfig('sms.service');
+        if (empty($service)) {
             return trans('SMS "service" not set!');
         }
 
         $errors = array();
         foreach (explode(',', $service) as $service) {
             $data = array(
-            'number' => $number,
-            'message' => $message,
-            'messageid' => $messageid,
-            'service' => $service,
+                'number' => $number,
+                'message' => $message,
+                'messageid' => $messageid,
+                'service' => $service,
             );
 
             // call external SMS handler(s)
@@ -2467,23 +2669,22 @@ class LMS
             $message = $data['message'];
             $messageid = $data['messageid'];
 
-
             if (in_array($service, array('smscenter', 'serwersms', 'smsapi'))) {
                 if (!function_exists('curl_init')) {
                     $errors[] = trans('Curl extension not loaded!');
                     continue;
                 }
-                $username = ConfigHelper::getConfig('sms.username');
+                $username = isset($sms_options['username']) ? $sms_options['username'] : ConfigHelper::getConfig('sms.username');
                 if (empty($username)) {
                     $errors[] = trans('SMSCenter username not set!');
                     continue;
                 }
-                $password = ConfigHelper::getConfig('sms.password');
+                $password = isset($sms_options['password']) ? $sms_options['password'] : ConfigHelper::getConfig('sms.password');
                 if (empty($password)) {
                     $errors[] = trans('SMSCenter username not set!');
                     continue;
                 }
-                $from = ConfigHelper::getConfig('sms.from');
+                $from = isset($sms_options['from']) ? $sms_options['from'] : ConfigHelper::getConfig('sms.from');
                 if (empty($from)) {
                     $errors[] = trans('SMS "from" not set!');
                     continue;
@@ -2497,7 +2698,7 @@ class LMS
 
             switch ($service) {
                 case 'smscenter':
-                    if ($transliterate_message) {
+                    if (ConfigHelper::checkValue($transliterate_message)) {
                         if ($msg_len < 160) {
                             $type_sms = 'sms';
                         } else if ($msg_len <= 459) {
@@ -2517,16 +2718,17 @@ class LMS
                         }
                     }
 
-                    $type = ConfigHelper::getConfig('sms.smscenter_type', 'dynamic');
+                    $type = isset($sms_options['smscenter_type']) ? $sms_options['smscenter_type']
+                        : ConfigHelper::getConfig('sms.smscenter_type', 'dynamic');
                     $message .= ($type == 'static') ? "\n\n" . $from : '';
 
                     $args = array(
-                    'user' => ConfigHelper::getConfig('sms.username'),
-                    'pass' => ConfigHelper::getConfig('sms.password'),
-                    'type' => $type_sms,
-                    'number' => $number,
-                    'text' => $message,
-                    'from' => $from
+                        'user' => $username,
+                        'pass' => $password,
+                        'type' => $type_sms,
+                        'number' => $number,
+                        'text' => $message,
+                        'from' => $from
                     );
 
                     $encodedargs = array();
@@ -2597,7 +2799,8 @@ class LMS
                     }
                     break;
                 case 'smstools':
-                    $dir = ConfigHelper::getConfig('sms.smstools_outdir', DIRECTORY_SEPARATOR . 'var' . DIRECTORY_SEPARATOR . 'spool' . DIRECTORY_SEPARATOR . 'sms' . DIRECTORY_SEPARATOR . 'outgoing');
+                    $dir = isset($sms_options['smstools_outdir']) ? $sms_options['smstools_outdir']
+                        : ConfigHelper::getConfig('sms.smstools_outdir', DIRECTORY_SEPARATOR . 'var' . DIRECTORY_SEPARATOR . 'spool' . DIRECTORY_SEPARATOR . 'sms' . DIRECTORY_SEPARATOR . 'outgoing');
 
                     if (!file_exists($dir)) {
                         $errors[] = trans('SMSTools outgoing directory not exists ($a)!', $dir);
@@ -2619,7 +2822,8 @@ class LMS
                         $message = iconv('UTF-8', 'UNICODEBIG', $message);
                     }
 
-                    $queue = ConfigHelper::getConfig('sms.queue', '', true);
+                    $queue = isset($sms_options['queue']) ? $sms_options['queue']
+                        : ConfigHelper::getConfig('sms.queue', '', true);
                     if (!empty($queue)) {
                         $headers['Queue'] = $queue;
                     }
@@ -2643,17 +2847,23 @@ class LMS
                     return MSG_NEW;
                 case 'serwersms':
                     $args = array(
-                    'akcja' => 'wyslij_sms',
-                    'login' => ConfigHelper::getConfig('sms.username'),
-                    'haslo' => ConfigHelper::getConfig('sms.password'),
-                    'numer' => $number,
-                    'wiadomosc' => $message,
-                    'nadawca' => $from,
+                        'akcja' => 'wyslij_sms',
+                        'login' => $username,
+                        'haslo' => $password,
+                        'numer' => $number,
+                        'wiadomosc' => $message,
+                        'nadawca' => $from,
                     );
+                    if (!ConfigHelper::checkValue($transliterate_message)) {
+                        $trans_message = iconv('UTF-8', 'ASCII//TRANSLIT', $message);
+                        if (strlen($message) != strlen($trans_message)) {
+                            $args['kodowanie'] = 'UTF-8';
+                        }
+                    }
                     if ($messageid) {
                         $args['usmsid'] = $messageid;
                     }
-                    $fast = ConfigHelper::getConfig('sms.fast', 'false');
+                    $fast = isset($sms_options['fast']) ? $sms_options['fast'] : ConfigHelper::getConfig('sms.fast', 'false');
                     if (ConfigHelper::checkValue($fast)) {
                         $args['speed'] = 1;
                     }
@@ -2700,15 +2910,15 @@ class LMS
                     return MSG_SENT;
                 case 'smsapi':
                     $args = array(
-                    'username' => ConfigHelper::getConfig('sms.username'),
-                    'password' => md5(ConfigHelper::getConfig('sms.password')),
-                    'to' => $number,
-                    'message' => $message,
-                    'from' => !empty($from) ? $from : 'ECO',
-                    'encoding' => 'utf-8',
+                        'username' => $username,
+                        'password' => md5($password),
+                        'to' => $number,
+                        'message' => $message,
+                        'from' => !empty($from) ? $from : 'ECO',
+                        'encoding' => 'utf-8',
                     );
-                    $fast = ConfigHelper::getConfig('sms.fast');
-                    if (!empty($fast)) {
+                    $fast = isset($sms_options['fast']) ? $sms_options['fast'] : ConfigHelper::getConfig('sms.fast');
+                    if (ConfigHelper::checkValue($fast)) {
                         $args['fast'] = 1;
                     }
                     if ($messageid) {
@@ -2918,6 +3128,18 @@ class LMS
         return $manager->AddDocumentFileAttachments($files);
     }
 
+    public function AddDocumentAttachments($documentid, array $files)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->AddDocumentAttachments($documentid, $files);
+    }
+
+    public function AddDocumentScans($documentid, array $files)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->AddDocumentScans($documentid, $files);
+    }
+
     public function DocumentAttachmentExists($md5sum)
     {
         $manager = $this->getDocumentManager();
@@ -2934,6 +3156,18 @@ class LMS
     {
         $manager = $this->getDocumentManager();
         return $manager->SendDocuments($docs, $type, $params);
+    }
+
+    public function DeleteDocument($docid)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->DeleteDocument($docid);
+    }
+
+    public function CopyDocumentPermissions($src_userid, $dst_userid)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->CopyDocumentPermissions($src_userid, $dst_userid);
     }
 
     /*
@@ -3065,6 +3299,12 @@ class LMS
         return $manager->isDocumentReferenced($id);
     }
 
+    public function MarkDocumentsAsSent($ids)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->MarkDocumentsAsSent($ids);
+    }
+
     public function GetReceiptList(array $params)
     {
         $manager = $this->getFinanceManager();
@@ -3111,6 +3351,36 @@ class LMS
     {
         $manager = $this->getFinanceManager();
         return $manager->GetDocumentLastReference($docid);
+    }
+
+    public function CheckNodeTariffRestrictions($aid, $nodes, $datefrom, $dateto)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->CheckNodeTariffRestrictions($aid, $nodes, $datefrom, $dateto);
+    }
+
+    public function getCurrencyValue($currency, $date = null)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->getCurrencyValue($currency, $date);
+    }
+
+    public function CopyCashRegistryPermissions($src_userid, $dst_userid)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->CopyCashRegistryPermissions($src_userid, $dst_userid);
+    }
+
+    public function CopyPromotionTariffPermissions($src_userid, $dst_userid)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->CopyPromotionTariffPermissions($src_userid, $dst_userid);
+    }
+
+    public function transformProformaInvoice($docid)
+    {
+        $manager = $this->getFinanceManager();
+        return $manager->transformProformaInvoice($docid);
     }
 
     /**
@@ -3284,7 +3554,19 @@ class LMS
         return $manager->GetMessageList($params);
     }
 
-        /**
+    public function addMessage(array $params)
+    {
+        $manager = $this->getMessageManager();
+        return $manager->addMessage($params);
+    }
+
+    public function updateMessageItems(array $params)
+    {
+        $manager = $this->getMessageManager();
+        return $manager->updateMessageItems($params);
+    }
+
+    /**
      * Returns user manager
      *
      * @return \LMSUserManagerInterface User manager
@@ -3916,6 +4198,18 @@ class LMS
         return $manager->TarifftagGetAll();
     }
 
+    public function getTariffTagsForTariff($tariffid)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->getTariffTagsForTariff($tariffid);
+    }
+
+    public function updateTariffTagsForTariff($tariffid, $tags)
+    {
+        $manager = $this->getTariffTagManager();
+        return $manager->updateTariffTagsForTariff($tariffid, $tags);
+    }
+
     /*
      * divisions
      */
@@ -4159,31 +4453,14 @@ class LMS
             $body = preg_replace('/%pin/', $document['document']['customerpin'], $body);
             $body = preg_replace('/%cid/', $doc['customerid'], $body);
             // invoices, debit notes
-            $body = preg_replace('/%value/', moneyf($document['document']['total']), $body);
+            $body = preg_replace('/%value/', moneyf($document['document']['total'], $document['document']['currency']), $body);
             $body = preg_replace('/%cdate-y/', strftime("%Y", $document['document']['cdate']), $body);
             $body = preg_replace('/%cdate-m/', strftime("%m", $document['document']['cdate']), $body);
             $body = preg_replace('/%cdate-d/', strftime("%d", $document['document']['cdate']), $body);
             list ($now_y, $now_m) = explode('/', strftime("%Y/%m", time()));
             $body = preg_replace('/%lastday/', strftime("%d", mktime(12, 0, 0, $now_m + 1, 0, $now_y)), $body);
 
-            if (preg_match('/%last_(?<number>[0-9]+)_in_a_table/', $body, $m)) {
-                $lastN = $this->GetCustomerShortBalanceList($doc['customerid'], $m['number']);
-                if (empty($lastN)) {
-                    $lN = '';
-                } else {
-                    // ok, now we are going to rise up system's load
-                    $lN = "-----------+-----------+-----------+----------------------------------------------------\n";
-                    foreach ($lastN as $row_s) {
-                        $op_time = strftime("%Y/%m/%d", $row_s['time']);
-                        $op_amount = sprintf("%9.2f", $row_s['value']);
-                        $op_after = sprintf("%9.2f", $row_s['after']);
-                        $for_what = sprintf("%-52s", $row_s['comment']);
-                        $lN = $lN . "$op_time | $op_amount | $op_after | $for_what\n";
-                    }
-                    $lN = $lN . "-----------+-----------+-----------+----------------------------------------------------\n";
-                }
-                $body = preg_replace('/%last_[0-9]+_in_a_table/', $lN, $body);
-            }
+            $body = $this->getLastNInTable($body, $doc['customerid'], '<eol>', $aggregate_documents);
 
             $mailto = array();
             $mailto_qp_encoded = array();
@@ -4259,6 +4536,11 @@ class LMS
 
                 if (isset($mail_format) && $mail_format == 'html') {
                     $headers['X-LMS-Format'] = 'html';
+                    $content_type = 'text/html';
+                    $body = str_replace('<eol>', '<br>', $body);
+                } else {
+                    $content_type = 'text/plain';
+                    $body = str_replace('<eol>', "\n", $body);
                 }
 
                 $data = array(
@@ -4273,11 +4555,28 @@ class LMS
 
                 if ($add_message) {
                     $this->DB->Execute(
-                        'INSERT INTO messages (subject, body, cdate, type, userid)
-						VALUES (?, ?, ?NOW?, ?, ?)',
-                        array($subject, $body, MSG_MAIL, Auth::GetCurrentUser())
+                        'INSERT INTO messages (subject, body, cdate, type, userid, contenttype)
+						VALUES (?, ?, ?NOW?, ?, ?, ?)',
+                        array($subject, $body, MSG_MAIL, Auth::GetCurrentUser(), $content_type)
                     );
                     $msgid = $this->DB->GetLastInsertID('messages');
+
+                    if ($message_attachments) {
+                        if (!empty($files)) {
+                            foreach ($files as &$file) {
+                                $file['name'] = $file['filename'];
+                                $file['type'] = $file['content_type'];
+                            }
+                            unset($file);
+                            $this->AddFileContainer(array(
+                                'description' => 'message-' . $msgid,
+                                'files' => $files,
+                                'type' => 'messageid',
+                                'resourceid' => $msgid,
+                            ));
+                        }
+                    }
+
                     foreach (explode(',', $custemail) as $email) {
                         $this->DB->Execute(
                             'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
@@ -4323,6 +4622,7 @@ class LMS
 
                     if ($status == MSG_SENT) {
                         $this->PublishDocuments($doc['id']);
+                        $this->MarkDocumentsAsSent($doc['id']);
                         $published = true;
                     }
 
@@ -4339,6 +4639,40 @@ class LMS
                         }
                         usleep($delay);
                     }
+                }
+            }
+        }
+    }
+
+    public function CopyPermissions($src_userid, $dst_userid, $permissions = null)
+    {
+        if (!isset($permissions)) {
+            $this->CopyQueuePermissions($src_userid, $dst_userid);
+            $this->CopyCategoryPermissions($src_userid, $dst_userid);
+            $this->CopyDocumentPermissions($src_userid, $dst_userid);
+            $this->CopyCashRegistryPermissions($src_userid, $dst_userid);
+            $this->CopyPromotionTariffPermissions($src_userid, $dst_userid);
+        } else {
+            if (empty($permissions)) {
+                return;
+            }
+            foreach ($permissions as $permission) {
+                switch ($permission) {
+                    case 'helpdesk-queues':
+                        $this->CopyQueuePermissions($src_userid, $dst_userid);
+                        break;
+                    case 'helpdesk-categories':
+                        $this->CopyCategoryPermissions($src_userid, $dst_userid);
+                        break;
+                    case 'documents':
+                        $this->CopyDocumentPermissions($src_userid, $dst_userid);
+                        break;
+                    case 'cash-registries':
+                        $this->CopyCashRegistryPermissions($src_userid, $dst_userid);
+                        break;
+                    case 'promotion-tariffs':
+                        $this->CopyPromotionTariffPermissions($src_userid, $dst_userid);
+                        break;
                 }
             }
         }

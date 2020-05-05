@@ -73,7 +73,7 @@ if (!empty($_POST['qs'])) {
         }
     }
     $search = urldecode(trim($search));
-} elseif (!empty($_GET['what'])) {
+} else {
     $search = urldecode(trim($_GET['what']));
     $mode = $_GET['mode'];
 }
@@ -87,12 +87,16 @@ if (isset($qs_properties[$mode])) {
 
 switch ($mode) {
     case 'customer':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, full_address AS address,
 				post_name, post_full_address AS post_address, deleted,
 			    " . $DB->Concat('UPPER(lastname)', "' '", 'c.name') . " AS customername,
 			    va.name AS location_name, va.address AS location_address,
-			    c.status
+			    c.status, c.ten, c.ssn, c.info, c.notes
 				FROM customerview c
 				LEFT JOIN customer_addresses ca ON ca.customer_id = c.id AND ca.type IN (?, ?)
 				LEFT JOIN vaddresses va ON va.id = ca.address_id
@@ -104,8 +108,12 @@ switch ($mode) {
                     . (empty($properties) || isset($properties['post_address']) ? " OR LOWER(post_full_address) ?LIKE? LOWER($sql_search)" : '')
                     . (empty($properties) || isset($properties['location_name']) ? " OR LOWER(va.name) ?LIKE? LOWER($sql_search)" : '')
                     . (empty($properties) || isset($properties['location_address']) ? " OR LOWER(va.address) ?LIKE? LOWER($sql_search)" : '')
-                    . (empty($properties) || isset($properties['email']) ? " OR LOWER(cc.contact) ?LIKE? LOWER($sql_search)" : '') . "
-				ORDER by deleted, customername, cc.contact, full_address
+                    . (empty($properties) || isset($properties['email']) ? " OR LOWER(cc.contact) ?LIKE? LOWER($sql_search)" : '')
+                    . (empty($properties) || isset($properties['ten']) ? " OR REPLACE(REPLACE(c.ten, '-', ''), ' ', '') ?LIKE? REPLACE(REPLACE($sql_search, '-', ''), ' ', '')" : '')
+                    . (empty($properties) || isset($properties['ssn']) ? " OR REPLACE(REPLACE(c.ssn, '-', ''), ' ', '') ?LIKE? REPLACE(REPLACE($sql_search, '-', ''), ' ', '')" : '')
+                    . (empty($properties) || isset($properties['additional-info']) ? " OR LOWER(c.info) ?LIKE? LOWER($sql_search)" : '')
+                    . (empty($properties) || isset($properties['notes']) ? " OR LOWER(c.notes) ?LIKE? LOWER($sql_search)" : '') . "
+                ORDER by deleted, customername, cc.contact, full_address
 				LIMIT ?", array(DEFAULT_LOCATION_ADDRESS, LOCATION_ADDRESS, CONTACT_EMAIL, intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15))));
 
             $result = array();
@@ -156,11 +164,30 @@ switch ($mode) {
                         $description = trans('Address:') . ' ' . $row['location_address'];
                     } else if ((empty($properties) || isset($properties['email'])) && preg_match("~$search~i", $row['email'])) {
                         $description = trans('E-mail:') . ' ' . $row['email'];
+                    } else if ((empty($properties) || isset($properties['ten']))
+                        && preg_match('~' . preg_replace('/[\- ]/', '', $search) . '~i', preg_replace('/[\- ]/', '', $row['ten']))) {
+                        $description = trans('TEN:') . ' ' . $row['ten'];
+                    } else if ((empty($properties) || isset($properties['ssn']))
+                        && preg_match('~' . preg_replace('/[\- ]/', '', $search) . '~i', preg_replace('/[\- ]/', '', $row['ssn']))) {
+                        $description = trans('SSN:') . ' ' . $row['ssn'];
+                    } else if ((empty($properties) || isset($properties['additional-info'])) && preg_match("~$search~i", $row['info'])) {
+                        $description = trans('Additional information:') . ' ' . $row['info'];
+                    } else if ((empty($properties) || isset($properties['notes'])) && preg_match("~$search~i", $row['notes'])) {
+                        $description = trans('Notes:') . ' ' . $row['notes'];
                     }
 
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_customer', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -183,6 +210,10 @@ switch ($mode) {
         $s['zip'] = $search;
         $s['city'] = $search;
         $s['email'] = $search;
+        $s['ten'] = $search;
+        $s['ssn'] = $search;
+        $s['info'] = $search;
+        $s['notes'] = $search;
 
         $SESSION->save('customersearch', $s);
         $SESSION->save('cslk', 'OR');
@@ -196,6 +227,10 @@ switch ($mode) {
         break;
 
     case 'customerext':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT c.id, cc.contact AS email, full_address AS address,
 				post_name, post_full_address AS post_address, deleted, c.status,
@@ -245,6 +280,10 @@ switch ($mode) {
         break;
 
     case 'phone':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $where = array();
             if (empty($properties) || isset($properties['contact'])) {
@@ -295,6 +334,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_customerext', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -320,24 +368,29 @@ switch ($mode) {
 
 
     case 'node':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
         // Build different query for each database engine,
             // MySQL is slow here when vnodes view is used
             if (ConfigHelper::getConfig('database.type') == 'postgres') {
                 $sql_query = 'SELECT n.id, n.name, INET_NTOA(ipaddr) as ip,
-			        INET_NTOA(ipaddr_pub) AS ip_pub, mac, access, lastonline
+			        INET_NTOA(ipaddr_pub) AS ip_pub, mac, location, access, lastonline
 				    FROM vnodes n
 				    WHERE %where
     				ORDER BY n.name LIMIT ?';
             } else {
                 $sql_query = 'SELECT n.id, n.name, INET_NTOA(ipaddr) as ip,
-			        INET_NTOA(ipaddr_pub) AS ip_pub, mac, access, lastonline
+			        INET_NTOA(ipaddr_pub) AS ip_pub, mac, va.location, access, lastonline
 				    FROM nodes n
 				    JOIN (
                         SELECT nodeid, GROUP_CONCAT(mac SEPARATOR \',\') AS mac
                         FROM macs
                         GROUP BY nodeid
                     ) m ON (n.id = m.nodeid)
+                    LEFT JOIN vaddresses va ON va.id = n.address_id
 				    WHERE %where
     				ORDER BY n.name LIMIT ?';
             }
@@ -347,7 +400,8 @@ switch ($mode) {
                 . (empty($properties) || isset($properties['name']) ? " OR LOWER(n.name) ?LIKE? LOWER($sql_search)" : '')
                 . (empty($properties) || isset($properties['ip']) ? " OR INET_NTOA(ipaddr) ?LIKE? $sql_search" : '')
                 . (empty($properties) || isset($properties['public_ip']) ? " OR INET_NTOA(ipaddr_pub) ?LIKE? $sql_search" : '')
-                . (empty($properties) || isset($properties['mac']) ? " OR LOWER(mac) ?LIKE? LOWER(".macformat($search, true) . ")" : '') . "
+                . (empty($properties) || isset($properties['mac']) ? " OR LOWER(mac) ?LIKE? LOWER(".macformat($search, true) . ")" : '')
+                . (empty($properties) || isset($properties['location_address']) ? " OR LOWER(location) ?LIKE? LOWER($sql_search)" : '') . "
 				)
 			    AND NOT EXISTS (
                     SELECT 1 FROM customerassignments a
@@ -390,6 +444,8 @@ switch ($mode) {
                         $description = trans('IP') . ': ' . $row['ip'];
                     } else if ((empty($properties) || isset($properties['public_ip'])) && preg_match("~$search~i", $row['ip_pub'])) {
                         $description = trans('IP') . ': ' . $row['ip_pub'];
+                    } else if ((empty($properties) || isset($properties['location_address'])) && preg_match("~$search~i", $row['location'])) {
+                        $description = trans('Address') . ': ' . $row['location'];
                     } else if ((empty($properties) || isset($properties['mac'])) && preg_match("~" . macformat($search) . "~i", $row['mac'])) {
                         $macs = explode(',', $row['mac']);
                         foreach ($macs as $mac) {
@@ -405,6 +461,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_node', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -435,6 +500,10 @@ switch ($mode) {
         break;
 
     case 'netnode':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT id, name FROM netnodes
                                 WHERE ".(preg_match('/^[0-9]+$/', $search) ? 'id = '.intval($search).' OR ' : '')."
@@ -459,6 +528,15 @@ switch ($mode) {
                                 $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_netnode', $hook_data);
+            $result = $hook_data['result'];
                     header('Content-type: application/json');
             if (!empty($result)) {
                     echo json_encode(array_values($result));
@@ -478,6 +556,10 @@ switch ($mode) {
         break;
 
     case 'netdevice':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT id, name, serialnumber FROM netdevices
 				WHERE "
@@ -508,6 +590,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_netdevice', $hook_data);
+            $result = $hook_data['result'];
                 header('Content-type: application/json');
             if (!empty($result)) {
                     echo json_encode(array_values($result));
@@ -533,6 +624,10 @@ switch ($mode) {
         break;
 
     case 'ticket':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
             foreach ($categories as $category) {
@@ -588,6 +683,9 @@ switch ($mode) {
                         case RT_WAITING:
                             $name_classes[] = 'lms-ui-suggestion-ticket-state-waiting';
                             break;
+                        case RT_VERIFIED:
+                            $name_classes[] = 'lms-ui-suggestion-ticket-state-verified';
+                            break;
                     }
                     $name_class = implode(' ', $name_classes);
 
@@ -608,9 +706,21 @@ switch ($mode) {
                         $description = trans('First/last name') . ': ' . $row['lastname'];
                     }
 
-                    $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
+                    $result[$row['id']] = array_merge(
+                        compact('name', 'name_class', 'description', 'description_class', 'action'),
+                        array('id' => $row['id'])
+                    );
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_ticket', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -631,6 +741,10 @@ switch ($mode) {
         }
         break;
     case 'wireless':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT id, name, type, netdev FROM netradiosectors
                                 WHERE " . (preg_match('/^[0-9]+$/', $search) ? 'id = ' . intval($search) . ' OR ' : '') . "
@@ -656,6 +770,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_wireless', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -673,6 +796,10 @@ switch ($mode) {
         }
         break;
     case 'network':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) { // support for AutoSuggest
             $candidates = $DB->GetAll("SELECT id, name, address FROM networks
                                 WHERE " . (preg_match('/^[0-9]+$/', $search) ? 'id = ' . intval($search) . ' OR ' : '') . "
@@ -697,6 +824,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_network', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -722,6 +858,10 @@ switch ($mode) {
 
         break;
     case 'account':
+        if (empty($search)) {
+            die;
+        }
+
         $ac = explode('@', $search);
 
         if (isset($_GET['ajax'])) { // support for AutoSuggest
@@ -759,6 +899,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_account', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -779,6 +928,10 @@ switch ($mode) {
         break;
 
     case 'document':
+        if (empty($search)) {
+            die;
+        }
+
         if (isset($_GET['ajax'])) {
             $candidates = $DB->GetAll("SELECT d.id, d.type, d.fullnumber,
 					d.customerid AS cid, d.name AS customername
@@ -818,6 +971,15 @@ switch ($mode) {
                     $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
                 }
             }
+            $hook_data = array(
+                'search' => $search,
+                'sql_search' => $sql_search,
+                'properties' => $properties,
+                'session' => $SESSION,
+                'result' => $result
+            );
+            $hook_data = $LMS->executeHook('quicksearch_ajax_document', $hook_data);
+            $result = $hook_data['result'];
             header('Content-type: application/json');
             if (!empty($result)) {
                 echo json_encode(array_values($result));
@@ -853,7 +1015,57 @@ switch ($mode) {
             $target = '?m=customerinfo&id=' . $cid;
         }
         break;
+
+    case 'config':
+        if (isset($_GET['ajax'])) {
+            header('Content-type: application/json');
+
+            $markdown_documentation = Utils::LoadMarkdownDocumentation();
+            if (empty($markdown_documentation)) {
+                die;
+            }
+
+            $quicksearch_limit = intval(ConfigHelper::getConfig('phpui.quicksearch_limit', 15));
+            $i = 1;
+            $result = array();
+            foreach ($markdown_documentation as $section => $variables) {
+                if ($i > $quicksearch_limit) {
+                    break;
+                }
+                if (isset($_GET['section']) && !empty($_GET['section']) && $section != $_GET['section']) {
+                    continue;
+                }
+                foreach ($variables as $variable => $documentation) {
+                    if ($i > $quicksearch_limit) {
+                        break;
+                    }
+                    if (!empty($search) && strpos($variable, $search) === false) {
+                        continue;
+                    }
+                    $name = $variable;
+                    $name_class = '';
+                    $description = trans('Section:') . ' ' . $section;
+                    $description_class = '';
+                    $action = '';
+                    $tip = Utils::MarkdownToHtml($documentation);
+                    $result[$variable . '.' . $section] = compact('name', 'name_class', 'description', 'description_class', 'action', 'section', 'tip');
+                    $i++;
+                }
+            }
+
+            if (!empty($result)) {
+                ksort($result);
+                echo json_encode(array_values($result));
+            }
+
+            $SESSION->close();
+            $DB->Destroy();
+            die;
+        }
+
+        break;
 }
+
 
 $quicksearch = $LMS->executeHook(
     'quicksearch_after_submit',

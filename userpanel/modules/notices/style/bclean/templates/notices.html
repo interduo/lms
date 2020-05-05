@@ -8,37 +8,7 @@
 	</div>
 	{/box}
 {/if}
-{if $notice_urgent}
-	<SCRIPT>
-		$(window).on('load',function(){
-			$('#urgent_modal').modal('show');
-		});
 
-		xajax_setNoticeRead({$notice_urgent.id});
-	</SCRIPT>
-
-	<div class="container" id="dialog">
-		<!-- Modal -->
-		<div class="modal fade" id="urgent_modal" role="dialog">
-			<div class="modal-dialog">
-				<!-- Modal content-->
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title">{$notice_urgent.cdate|date_format:"%Y/%m/%d %H:%M"}<br />{$notice_urgent.subject}</h4>
-						<button type="button" class="close" data-dismiss="modal">&times;</button>
-					</div>
-					<div class="modal-body">
-						<p>{$notice_urgent.body}</p>
-					</div>
-					<div class="modal-footer">
-						<a class="btn btn-primary"href="?m=notices&amp;confirm_urgent={$notice_urgent.id}">{trans("I confirm reading")}</a>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-{/if}
 {box title="Notice to you"}
 {if $notice}
 	<div class="table-responsive">
@@ -68,8 +38,28 @@
 				<tr id="{$items.id}" style="display:none;">
 					<td colspan="4" >
 						<h3>{trans("Body:")}</h3>
-						{$items.body}<br /><br />
-						{if $items.status != $smarty.const.MSG_DELIVERED}<a class="btn btn-primary" href="?m=notices&amp;confirm={$items.id}">{trans("I confirm reading")}</a>{/if}</td>
+						{if $items.mibody}
+							{if $items.contenttype == 'text/plain'}
+								{nl2br(htmlspecialchars($items.mibody), false)}
+							{elseif $items.contenttype == 'text/html'}
+								{$items.mibody}
+							{else}
+								{nl2br($items.mibody, false)}
+							{/if}
+						{else}
+							{if $items.contenttype == 'text/plain'}
+								{nl2br(htmlspecialchars($items.body), false)}
+							{elseif $items.contenttype == 'text/html'}
+								{$items.body}
+							{else}
+								{nl2br($items.body, false)}
+							{/if}
+						{/if}
+						<br><br>
+						{if $items.status != $smarty.const.MSG_DELIVERED}
+							<a class="btn btn-primary" href="?m=notices&confirm={$items.id}">{trans("I confirm reading")}</a>
+						{/if}
+					</td>
 				</tr>
 				<SCRIPT type="text/javascript">
 					<!--

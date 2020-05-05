@@ -56,10 +56,18 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
 
         $where = array();
         foreach ($search as $key => $value) {
-            $val = intval($value);
+            if (is_array($value)) {
+                $val = Utils::filterIntegers($value);
+            } else {
+                $val = intval($value);
+            }
             switch ($key) {
                 case 'type':
-                    if ($val != -1) {
+                    if (is_array($val)) {
+                        if (!in_array(-1, $val)) {
+                            $where[] = 'n.type IN (' . implode(',', $val) . ')';
+                        }
+                    } elseif ($val != -1) {
                         $where[] = 'n.type = ' . $val;
                     }
                     break;
@@ -69,7 +77,13 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
                     }
                     break;
                 case 'invprojectid':
-                    if ($val == -2) {
+                    if (is_array($val)) {
+                        if (in_array(-2, $val)) {
+                            $where[] = 'n.invprojectid IS NULL';
+                        } else {
+                            $where[] = 'n.invprojectid IN (' . implode(',', $val) . ')';
+                        }
+                    } elseif ($val == -2) {
                         $where[] = 'n.invprojectid IS NULL';
                     } elseif ($val != -1) {
                         $where[] = 'n.invprojectid = ' . $val;
@@ -118,12 +132,27 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
         );
 
         if (!$short && $nlist) {
+            $filecontainers = $this->db->GetAllByKey('SELECT fc.netnodeid
+			FROM filecontainers fc
+			WHERE fc.netnodeid IS NOT NULL
+			GROUP BY fc.netnodeid', 'netnodeid');
+
+            if (!empty($filecontainers)) {
+                if (!isset($file_manager)) {
+                    $file_manager = new LMSFileManager($this->db, $this->auth, $this->cache, $this->syslog);
+                }
+                foreach ($filecontainers as &$filecontainer) {
+                    $filecontainer = $file_manager->GetFileContainers('netnodeid', $filecontainer['netnodeid']);
+                }
+            }
+
             foreach ($nlist as &$netnode) {
                 $netnode['terc'] = empty($netnode['location_state_ident']) ? null
                     : $netnode['location_state_ident'] . $netnode['location_district_ident']
                     . $netnode['location_borough_ident'] . $netnode['location_borough_type'];
                 $netnode['simc'] = empty($netnode['location_city_ident']) ? null : $netnode['location_city_ident'];
                 $netnode['ulic'] = empty($netnode['location_street_ident']) ? null : $netnode['location_street_ident'];
+                $netnode['filecontainers'] = isset($filecontainers[$netnode['id']]) ? $filecontainers[$netnode['id']] : array();
             }
             unset($netnode);
         }
@@ -276,7 +305,7 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
             );
         } else {
             if (!$netnodedata['address_id'] || $netnodedata['address_id']
-                && $this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($netnodedata['address_id'])) ) {
+                && $this->db->GetOne('SELECT 1 FROM customer_addresses WHERE address_id = ?', array($netnodedata['address_id']))) {
                 $address_id = $location_manager->InsertAddress($netnodedata);
 
                 $this->db->Execute(
@@ -316,6 +345,10 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
 				LEFT JOIN location_districts ld ON ld.id = lb.districtid
 				LEFT JOIN location_states ls ON ls.id = ld.stateid
 			WHERE n.id=?", array($id));
+
+        if (!empty($result['location_city'])) {
+            $result['teryt'] = 1;
+        }
 
         // if location is empty and owner is set then heirdom address from owner
         if (!$result['location'] && $result['ownerid']) {

@@ -113,9 +113,13 @@ $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 // Check for configuration vars and set default values
 $CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
 $CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir']);
+$CONFIG['directories']['plugin_dir'] = (!isset($CONFIG['directories']['plugin_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'plugins' : $CONFIG['directories']['plugin_dir']);
+$CONFIG['directories']['plugins_dir'] = $CONFIG['directories']['plugin_dir'];
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
+define('PLUGIN_DIR', $CONFIG['directories']['plugin_dir']);
+define('PLUGINS_DIR', $CONFIG['directories']['plugin_dir']);
 
 // Load autoloader
 $composer_autoload_path = SYS_DIR . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
@@ -182,6 +186,19 @@ if (($queueid = $DB->GetOne(
     die("Undefined queue!" . PHP_EOL);
 }
 
+// Load plugin files and register hook callbacks
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
+
+$plugins = $plugin_manager->getAllPluginInfo(LMSPluginManager::OLD_STYLE);
+if (!empty($plugins)) {
+    foreach ($plugins as $plugin_name => $plugin) {
+        if ($plugin['enabled']) {
+            require(LIB_DIR . DIRECTORY_SEPARATOR . 'plugins' . DIRECTORY_SEPARATOR . $plugin_name . '.php');
+        }
+    }
+}
+
 if (($fh = fopen($message_file, "r")) != null) {
     $sms = fread($fh, 4000);
     fclose($fh);
@@ -245,6 +262,7 @@ if (($fh = fopen($message_file, "r")) != null) {
     $tid = $LMS->TicketAdd(array(
         'queue' => $queueid,
         'requestor' => $requestor,
+        'requestor_phone' => empty($phone) ? null : $phone,
         'subject' => trans('SMS from $a', (empty($phone) ? trans("unknown") : $formatted_phone)),
         'customerid' => !empty($customer['cid']) ? $customer['cid'] : 0,
         'body' => $message,

@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2018 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -639,6 +639,7 @@ switch ($action) {
 if (isset($netdev)) {
     $netdev['id'] = $id;
 
+    $netdev['name'] = trim($netdev['name']);
     if ($netdev['name'] == '') {
         $error['name'] = trans('Device name is required!');
     } elseif (strlen($netdev['name']) > 60) {
@@ -677,6 +678,13 @@ if (isset($netdev)) {
         }
     }
 
+    if (empty($netdev['ownerid']) && !ConfigHelper::checkPrivilege('full_access')
+        && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($netdev['location_city_name']) && ($netdev['location_country_id'] == 2 || empty($netdev['location_country_id']))
+        && (!isset($netdev['teryt']) || empty($netdev['location_city']))) {
+        $error['netdev[teryt]'] = trans('TERRIT address is required!');
+    }
+
     $hook_data = $LMS->executeHook(
         'netdevedit_validation_before_submit',
         array(
@@ -695,6 +703,9 @@ if (isset($netdev)) {
 
             if (!isset($netdev['shortname'])) {
                 $netdev['shortname'] = '';
+            }
+            if (!isset($netdev['login'])) {
+                $netdev['login'] = '';
             }
             if (!isset($netdev['secret'])) {
                 $netdev['secret'] = '';
@@ -747,10 +758,6 @@ if (isset($netdev)) {
         $netdev['address_id'] = $netdev['customer_address_id'];
     }
 } else {
-    $attachmenttype = 'netdevid';
-    $attachmentresourceid = $id;
-    include(MODULES_DIR . DIRECTORY_SEPARATOR . 'attachments.php');
-
     $netdev = $LMS->GetNetDev($id);
 
     if (preg_match('/^[0-9]+$/', $netdev['producerid'])
@@ -758,6 +765,27 @@ if (isset($netdev)) {
         $netdev['producer'] = $netdev['producerid'];
         $netdev['model'] = $netdev['modelid'];
     }
+
+    $attachmenttype = 'netdevid';
+    $attachmentresourceid = $id;
+    $SMARTY->assign('attachmenttype', $attachmenttype);
+    $SMARTY->assign('attachmentresourceid', $attachmentresourceid);
+
+    $filecontainers = array(
+        'netdevid' => array(
+            'id' => $id,
+            'prefix' => trans('Device attachments'),
+            'containers' => $LMS->GetFileContainers('netdevid', $id),
+        ),
+        'netdevmodelid' => array(
+            'id' => $netdev['modelid'],
+            'prefix' => trans('Model attachments'),
+            'containers' => $LMS->GetFileContainers('netdevmodelid', $netdev['model']),
+        ),
+    );
+    $SMARTY->assign('filecontainers', $filecontainers);
+
+    include(MODULES_DIR . DIRECTORY_SEPARATOR . 'attachments.php');
 
     if ($netdev['purchasetime']) {
         $netdev['purchasedate'] = date('Y/m/d', $netdev['purchasetime']);
@@ -769,6 +797,17 @@ if (isset($netdev)) {
 }
 
 $netdev['id'] = $id;
+
+if (!empty($netdev['ownerid'])) {
+    $assignments = $LMS->GetCustomerAssignments($netdev['ownerid'], true, false);
+    $assignments = $LMS->GetNetDevCustomerAssignments($id, $assignments);
+    $SMARTY->assign(array(
+        'assignments' => $assignments,
+        'customerinfo' => array(
+            'id' => $netdev['ownerid'],
+        )
+    ));
+}
 
 $netdevips       = $LMS->GetNetDevIPs($id);
 if ($netdev['ports'] > $netdev['takenports']) {
@@ -842,6 +881,12 @@ switch ($edit) {
     case 'data':
         if (ConfigHelper::checkConfig('phpui.ewx_support')) {
             $SMARTY->assign('channels', $DB->GetAll('SELECT id, name FROM ewx_channels ORDER BY name'));
+        }
+
+        if (!empty($netdev['ownerid'])) {
+            $addresses = $LMS->getCustomerAddresses($netdev['ownerid']);
+            $LMS->determineDefaultCustomerAddress($addresses);
+            $SMARTY->assign('addresses', $addresses);
         }
 
         $SMARTY->assign('netdevedit_sortable_order', $SESSION->get_persistent_setting('netdevedit-sortable-order'));

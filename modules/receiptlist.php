@@ -153,7 +153,12 @@ unset($receiptlist['order']);
 unset($receiptlist['direction']);
 
 $listdata['total'] = $total;
-$listdata['cashstate'] = $DB->GetOne('SELECT SUM(value) FROM receiptcontents WHERE regid=?', array($regid));
+$listdata['cashstate'] = $DB->GetOne(
+    'SELECT SUM(value * d.currencyvalue) FROM receiptcontents c
+    JOIN documents d ON d.id = c.docid
+    WHERE regid = ?',
+    array($regid)
+);
 if ($from > 0) {
     $listdata['startbalance'] = $DB->GetOne(
         'SELECT SUM(value) FROM receiptcontents
@@ -179,9 +184,9 @@ $layout['pagetitle'] = trans('Cash Registry: $a', $DB->GetOne('SELECT name FROM 
 
 $SESSION->save('backto', 'm=receiptlist&regid='.$regid);
 
-if ($receipt = $SESSION->get('receiptprint')) {
+if ($receipt = $SESSION->get('receiptprint', true)) {
     $SMARTY->assign('receipt', $receipt);
-    $SESSION->remove('receiptprint');
+    $SESSION->remove('receiptprint', true);
 }
 
 $SMARTY->assign('error', $error);

@@ -4,6 +4,10 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TRIGGER IF EXISTS cash_customerbalances_delete_trigger;
+DROP TRIGGER IF EXISTS cash_customerbalances_update_trigger;
+DROP TRIGGER IF EXISTS cash_customerbalances_insert_trigger;
+
 DROP VIEW IF EXISTS vnetworks;
 DROP VIEW IF EXISTS customermailsview;
 DROP VIEW IF EXISTS teryt_ulic;
@@ -139,6 +143,7 @@ DROP TABLE IF EXISTS customer_addresses;
 DROP TABLE IF EXISTS zipcodes;
 DROP TABLE IF EXISTS states;
 DROP TABLE IF EXISTS numberplans;
+DROP TABLE IF EXISTS customerconsents;
 DROP TABLE IF EXISTS customers;
 DROP TABLE IF EXISTS divisions;
 DROP TABLE IF EXISTS addresses;
@@ -150,6 +155,8 @@ DROP TABLE IF EXISTS location_boroughs;
 DROP TABLE IF EXISTS location_districts;
 DROP TABLE IF EXISTS location_states;
 DROP TABLE IF EXISTS countries;
+DROP TABLE IF EXISTS twofactorauthcodehistory;
+DROP TABLE IF EXISTS twofactorauthtrusteddevices;
 DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -171,6 +178,7 @@ CREATE TABLE users (
   rights text           NOT NULL DEFAULT '',
   hosts varchar(255)    NOT NULL DEFAULT '',
   passwd varchar(255)   NOT NULL DEFAULT '',
+  passwdforcechange smallint NOT NULL DEFAULT 0,
   ntype smallint        DEFAULT NULL,
   lastlogindate int(11) NOT NULL DEFAULT '0',
   lastloginip varchar(16) NOT NULL DEFAULT '',
@@ -184,6 +192,8 @@ CREATE TABLE users (
   accessto int(11) NOT NULL DEFAULT '0',
   settings mediumtext NOT NULL DEFAULT '',
   persistentsettings mediumtext NOT NULL DEFAULT '',
+  twofactorauth smallint NOT NULL DEFAULT 0,
+  twofactorauthsecretkey varchar(255) DEFAULT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY login (login)
 ) ENGINE=InnoDB;
@@ -194,11 +204,46 @@ CREATE VIEW vusers AS
 
 # --------------------------------------------------------
 #
+# Structure of table twofactorauthcodehistory
+#
+
+CREATE TABLE twofactorauthcodehistory (
+    id int(11) NOT NULL auto_increment,
+    userid int(11) NOT NULL,
+    authcode varchar(10) NOT NULL,
+    uts int(11) NOT NULL,
+    ipaddr int(16) DEFAULT NULL,
+    success smallint NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT twofactorauthcodehistory_userid_fkey
+        FOREIGN KEY (userid) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table twofactorauthtrusteddevices
+#
+
+CREATE TABLE twofactorauthtrusteddevices (
+    id         int(11)      NOT NULL auto_increment,
+    userid     int(11)      NOT NULL,
+    cookiename varchar(64)  NOT NULL,
+    useragent  varchar(256) NOT NULL,
+    ipaddr int(16) DEFAULT NULL,
+    expires    int(11)      NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT twofactorauthtrusteddevices_userid_fkey
+        FOREIGN KEY (userid) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
 # Structure of table countries
 #
 CREATE TABLE countries (
 	id 		int(11) 	NOT NULL auto_increment,
 	name 		varchar(255) 	NOT NULL DEFAULT '',
+	ccode   varchar(5),
 	PRIMARY KEY (id),
 	UNIQUE KEY name (name)
 ) ENGINE=InnoDB;
@@ -345,6 +390,7 @@ CREATE TABLE divisions (
 	rbe			varchar(255)	NOT NULL DEFAULT '',
 	rbename		varchar(255)	NOT NULL DEFAULT '',
 	telecomnumber varchar(255)    NOT NULL DEFAULT '',
+	bank            varchar(100)    DEFAULT NULL,
 	account         varchar(48) 	NOT NULL DEFAULT '',
     email varchar(255)              DEFAULT NULL,
 	inv_header      text    	NOT NULL DEFAULT '',
@@ -389,13 +435,10 @@ CREATE TABLE customers (
   message text 		NOT NULL,
   pin varchar(255)	NOT NULL DEFAULT '0',
   cutoffstop int(11) 	NOT NULL DEFAULT '0',
-  consentdate int(11)   NOT NULL DEFAULT '0',
-  einvoice tinyint(1)   DEFAULT NULL,
-  invoicenotice tinyint(1)   DEFAULT NULL,
-  mailingnotice tinyint(1)   DEFAULT NULL,
   divisionid int(11)   	DEFAULT NULL,
   paytime smallint	NOT NULL DEFAULT '-1',
   paytype smallint  DEFAULT NULL,
+  documentmemo text DEFAULT NULL,
   PRIMARY KEY  (id),
   INDEX name (lastname, name),
   CONSTRAINT customers_creatorid_fkey
@@ -404,6 +447,21 @@ CREATE TABLE customers (
 		FOREIGN KEY (modid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT customers_divisionid_fkey
 		FOREIGN KEY (divisionid) REFERENCES divisions (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
+# Structure of table customerconsents (customerconsents)
+#
+CREATE TABLE customerconsents (
+    customerid int(11) NOT NULL,
+    cdate int(11) DEFAULT 0 NOT NULL,
+    type smallint NOT NULL,
+    CONSTRAINT customerconsents_customerid_fkey
+        FOREIGN KEY (customerid) REFERENCES customers (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    KEY customerconsents_cdate_idx (cdate),
+    KEY customerconsents_type_idx (type),
+    UNIQUE KEY customerconsents_ukey (customerid, type)
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -497,6 +555,7 @@ CREATE TABLE documents (
 	div_countryid int(11) DEFAULT NULL,
 	div_ten varchar(255) NOT NULL DEFAULT '',
 	div_regon varchar(255) NOT NULL DEFAULT '',
+	div_bank varchar(100) DEFAULT NULL,
 	div_account varchar(48) NOT NULL DEFAULT '',
 	div_inv_header text NOT NULL DEFAULT '',
 	div_inv_footer text NOT NULL DEFAULT '',
@@ -514,7 +573,12 @@ CREATE TABLE documents (
 	archived tinyint(1) NOT NULL DEFAULT 0,
 	auserid int(11) DEFAULT NULL,
 	adate int(11) DEFAULT 0 NOT NULL,
-	PRIMARY KEY (id),
+    currency varchar(3),
+    currencyvalue decimal(17,10) DEFAULT 1.0,
+	senddate int(11) NOT NULL DEFAULT '0',
+	memo text DEFAULT NULL,
+    confirmdate int(11) NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
 	INDEX cdate (cdate),
 	INDEX numberplanid (numberplanid),
 	INDEX customerid (customerid),
@@ -570,7 +634,8 @@ CREATE TABLE documentattachments (
 	filename varchar(255) NOT NULL,
 	contenttype varchar(255) NOT NULL,
 	md5sum varchar(32) NOT NULL,
-	main smallint DEFAULT 1 NOT NULL,
+    type smallint DEFAULT 1 NOT NULL,
+    cdate integer NOT NULL DEFAULT 0,
 	PRIMARY KEY (id),
 	INDEX md5sum (md5sum),
 	UNIQUE KEY docid (docid, md5sum),
@@ -647,6 +712,7 @@ CREATE TABLE voipaccounts (
 	flags			smallint      NOT NULL DEFAULT 0,
 	cost_limit		decimal(12,2) NULL DEFAULT NULL,
 	address_id      int(11)       NULL DEFAULT NULL,
+    description text NOT NULL DEFAULT '',
 	PRIMARY KEY (id),
 	CONSTRAINT voipaccounts_address_id_fkey
 		FOREIGN KEY (address_id) REFERENCES addresses (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -836,8 +902,9 @@ CREATE TABLE tariffs (
 	datefrom            int(11) NOT NULL DEFAULT '0',
 	dateto              int(11) NOT NULL DEFAULT '0',
 	authtype tinyint(1) NOT NULL DEFAULT '0',
+    currency varchar(3),
 	PRIMARY KEY  (id),
-	UNIQUE KEY name (name, value, period),
+	UNIQUE KEY tariffs_name_key (name, value, currency, period),
 	INDEX type (type),
 	FOREIGN KEY (numberplanid)        REFERENCES numberplans  (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY (voip_tariff_id)      REFERENCES voip_tariffs (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -900,6 +967,7 @@ CREATE TABLE liabilities (
 	value decimal(9,2)      NOT NULL DEFAULT '0',
     splitpayment smallint NOT NULL DEFAULT 0,
     taxcategory smallint DEFAULT 0 NOT NULL,
+	currency varchar(3),
 	name text               NOT NULL DEFAULT '',
 	taxid int(11)           NOT NULL,
 	prodid varchar(255)     NOT NULL DEFAULT '',
@@ -933,7 +1001,8 @@ CREATE TABLE assignments (
 	docid int(11) DEFAULT NULL,
 	commited tinyint(1) NOT NULL DEFAULT '1',
 	separatedocument tinyint(1) NOT NULL DEFAULT 0,
-	PRIMARY KEY (id),
+	count numeric(9,3) DEFAULT 1 NOT NULL,
+    PRIMARY KEY (id),
 	INDEX tariffid (tariffid),
 	INDEX customerid (customerid),
 	INDEX numberplanid (numberplanid),
@@ -1067,6 +1136,17 @@ CREATE TABLE cashimport (
 
 # --------------------------------------------------------
 #
+# Structure of table customerbalances
+#
+CREATE TABLE customerbalances (
+    customerid int(11) NOT NULL,
+    balance decimal(9,2) NOT NULL,
+    CONSTRAINT customerbalances_customerid_fkey
+        FOREIGN KEY (customerid) REFERENCES customers (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+# --------------------------------------------------------
+#
 # Structure of table  cash
 #
 CREATE TABLE cash (
@@ -1083,6 +1163,8 @@ CREATE TABLE cash (
   importid int(11) DEFAULT NULL,
   sourceid int(11) DEFAULT NULL,
   linktechnology int(11) DEFAULT NULL,
+  currency varchar(3),
+  currencyvalue decimal(17,10) DEFAULT 1.0,
   PRIMARY KEY  (id),
   INDEX customerid (customerid),
   INDEX docid (docid),
@@ -1291,6 +1373,7 @@ CREATE TABLE netdevices (
   shortname 	varchar(32) 	NOT NULL DEFAULT '',
   nastype 	int(11) 	NOT NULL DEFAULT '0',
   clients 	int(11) 	NOT NULL DEFAULT '0',
+  login varchar(60) 	DEFAULT '' NOT NULL,
   secret 	varchar(60) 	NOT NULL DEFAULT '',
   community 	varchar(50) 	NOT NULL DEFAULT '',
   channelid 	int(11) 	DEFAULT NULL,
@@ -1428,6 +1511,7 @@ CREATE TABLE nodelocks (
 	days smallint		DEFAULT 0 NOT NULL,
 	fromsec int(11)		DEFAULT 0 NOT NULL,
 	tosec int(11)		DEFAULT 0 NOT NULL,
+	disabled tinyint(1)     DEFAULT '0' NOT NULL,
 	PRIMARY KEY (id),
 	FOREIGN KEY (nodeid) REFERENCES nodes (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=INNODB;
@@ -1643,9 +1727,10 @@ CREATE TABLE nodesessions (
 	tag varchar(32)		NOT NULL DEFAULT '',
 	terminatecause varchar(32) NOT NULL DEFAULT '',
 	type smallint		NOT NULL DEFAULT '0',
+    nasipaddr int(16) unsigned	DEFAULT NULL,
+    nasport text		DEFAULT NULL,
+    nasid text          DEFAULT NULL,
 	PRIMARY KEY (id),
-	nasipaddr int(16) unsigned	DEFAULT NULL,
-	nasport text		DEFAULT NULL,
 	INDEX customerid (customerid),
 	INDEX nodeid (nodeid),
 	INDEX tag (tag),
@@ -2129,8 +2214,14 @@ CREATE TABLE uiconfig (
     description text NOT NULL DEFAULT '',
     disabled tinyint(1) NOT NULL DEFAULT '0',
     type smallint NOT NULL DEFAULT 0,
+    userid int(11) DEFAULT NULL,
+    configid int(11) DEFAULT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY var (section, var)
+    UNIQUE KEY var (section, var),
+	CONSTRAINT uiconfig_userid_fkey
+		FOREIGN KEY (userid) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT uiconfig_configid_fkey
+		FOREIGN KEY (configid) REFERENCES uiconfig (id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -2323,7 +2414,7 @@ CREATE TABLE dbinfo (
 CREATE TABLE customercontacts (
 	id 		int(11) 	NOT NULL auto_increment,
 	customerid 	int(11) 	NOT NULL,
-	name 		varchar(255) 	NOT NULL DEFAULT '',
+	name 		varchar(10000) 	NOT NULL DEFAULT '',
 	contact		varchar(255) 	NOT NULL DEFAULT '',
 	type        int(11) 	DEFAULT NULL,
 	PRIMARY KEY (id),
@@ -2361,6 +2452,7 @@ CREATE TABLE messages (
 	type 	smallint	DEFAULT '0' NOT NULL,
 	userid 	int(11)		DEFAULT NULL,
 	sender 	varchar(255) 	DEFAULT NULL,
+	contenttype 	varchar(255) 	DEFAULT 'text/plain',
         PRIMARY KEY (id),
 	INDEX cdate (cdate, type),
 	INDEX userid (userid),
@@ -2381,12 +2473,8 @@ CREATE TABLE messageitems (
 	status 		smallint	DEFAULT '0' NOT NULL,
 	error 		text		DEFAULT NULL,
 	lastreaddate 	int(11)		DEFAULT '0' NOT NULL,
-<<<<<<< HEAD
-	externalmsgid	int(6)		DEFAULT '0' NOT NULL,
-=======
 	externalmsgid	int(11)		DEFAULT '0' NOT NULL,
     body 		text		DEFAULT NULL,
->>>>>>> 3d6b726b3... bugfix: fixed db schema structures; thanks go to mrd83 (original PR#1233)
         PRIMARY KEY (id),
 	INDEX messageid (messageid),
 	INDEX customerid (customerid),
@@ -2575,13 +2663,19 @@ CREATE TABLE filecontainers (
 	description text NOT NULL,
 	netdevid int(11) DEFAULT NULL,
 	netnodeid int(11) DEFAULT NULL,
+	messageid int(11) DEFAULT NULL,
+	netdevmodelid int(11) DEFAULT NULL,
 	PRIMARY KEY (id),
 	CONSTRAINT filecontainers_creatorid_fkey
 		FOREIGN KEY (creatorid) REFERENCES users (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	CONSTRAINT filecontainers_netdevid_fkey
 		FOREIGN KEY (netdevid) REFERENCES netdevices (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT filecontainers_netnodeid_fkey
-		FOREIGN KEY (netnodeid) REFERENCES netnodes (id) ON DELETE CASCADE ON UPDATE CASCADE
+		FOREIGN KEY (netnodeid) REFERENCES netnodes (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT filecontainers_messageid_fkey
+		FOREIGN KEY (messageid) REFERENCES messages (id) ON DELETE CASCADE ON UPDATE CASCADE,
+	CONSTRAINT filecontainers_netdevmodelid_fkey
+		FOREIGN KEY (netdevmodelid) REFERENCES netdevicemodels (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 # --------------------------------------------------------
@@ -2733,38 +2827,39 @@ CREATE VIEW vnodetariffs_allsuspended AS
 		AND (dateto = 0 OR dateto > UNIX_TIMESTAMP())
 	GROUP BY customerid;
 
+
 CREATE VIEW vnodetariffs_tariffs AS
-	SELECT n.id AS nodeid,
-		   SUM(t.downrate) AS downrate,
-		   SUM(t.downceil) AS downceil,
-		   SUM(t.down_burst_time) AS down_burst_time,
-		   SUM(t.down_burst_threshold) AS down_burst_threshold,
-		   SUM(t.down_burst_limit) AS down_burst_limit,
-		   SUM(t.uprate) AS uprate,
-		   SUM(t.upceil) AS upceil,
-		   SUM(t.up_burst_time) AS up_burst_time,
-		   SUM(t.up_burst_threshold) AS up_burst_threshold,
-		   SUM(t.up_burst_limit) AS up_burst_limit,
-		   SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
-		   SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
-		   SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
-		   SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
-		   SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
-		   SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
-		   SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n,
-		   SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
-		   SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
-		   SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
-	FROM nodes n
-		JOIN nodeassignments na ON na.nodeid = n.id
-		JOIN assignments a ON a.id = na.assignmentid
-		JOIN tariffs t ON t.id = a.tariffid
-		LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = n.ownerid
-	WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
-		  AND a.datefrom <= UNIX_TIMESTAMP()
-		  AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
-		  AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
-	GROUP BY n.id;
+    SELECT n.id AS nodeid,
+        ROUND(SUM(t.downrate * a.count)) AS downrate,
+        ROUND(SUM(t.downceil * a.count)) AS downceil,
+        SUM(t.down_burst_time) AS down_burst_time,
+        SUM(t.down_burst_threshold) AS down_burst_threshold,
+        SUM(t.down_burst_limit) AS down_burst_limit,
+        ROUND(SUM(t.uprate * a.count)) AS uprate,
+        ROUND(SUM(t.upceil * a.count)) AS upceil,
+        SUM(t.up_burst_time) AS up_burst_time,
+        SUM(t.up_burst_threshold) AS up_burst_threshold,
+        SUM(t.up_burst_limit) AS up_burst_limit,
+        ROUND(SUM(COALESCE(t.downrate_n, t.downrate) * a.count)) AS downrate_n,
+        ROUND(SUM(COALESCE(t.downceil_n, t.downceil) * a.count)) AS downceil_n,
+        SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
+        SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
+        SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
+        ROUND(SUM(COALESCE(t.uprate_n, t.uprate) * a.count)) AS uprate_n,
+        ROUND(SUM(COALESCE(t.upceil_n, t.upceil) * a.count)) AS upceil_n,
+        SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
+        SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
+        SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
+    FROM nodes n
+    JOIN nodeassignments na ON na.nodeid = n.id
+    JOIN assignments a ON a.id = na.assignmentid
+    JOIN tariffs t ON t.id = a.tariffid
+    LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = n.ownerid
+    WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
+        AND a.datefrom <= UNIX_TIMESTAMP()
+        AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
+        AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
+    GROUP BY n.id;
 
 CREATE VIEW vnodetariffs AS
 	SELECT n.*,
@@ -2795,35 +2890,38 @@ CREATE VIEW vnodealltariffs_nodes AS
 		OR (vn.ownerid IS NULL AND nd.id IS NOT NULL);
 
 CREATE VIEW vnodealltariffs_tariffs AS
-	SELECT n.id AS nodeid, SUM(t.downrate) AS downrate, SUM(t.downceil) AS downceil,
-		   SUM(t.down_burst_time) AS down_burst_time,
-		   SUM(t.down_burst_threshold) AS down_burst_threshold,
-		   SUM(t.down_burst_limit) AS down_burst_limit,
-		   SUM(t.uprate) AS uprate, SUM(t.upceil) AS upceil,
-		   SUM(t.up_burst_time) AS up_burst_time,
-		   SUM(t.up_burst_threshold) AS up_burst_threshold,
-		   SUM(t.up_burst_limit) AS up_burst_limit,
-		   SUM(COALESCE(t.downrate_n, t.downrate)) AS downrate_n,
-		   SUM(COALESCE(t.downceil_n, t.downceil)) AS downceil_n,
-		   SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
-		   SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
-		   SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
-		   SUM(COALESCE(t.uprate_n, t.uprate)) AS uprate_n,
-		   SUM(COALESCE(t.upceil_n, t.upceil)) AS upceil_n,
-		   SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
-		   SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
-		   SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
-	FROM assignments a
-		JOIN tariffs t ON t.id = a.tariffid
-		JOIN vnodealltariffs_nodes n ON n.ownerid = a.customerid
-		LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = a.customerid
-	WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
-		  AND a.datefrom <= UNIX_TIMESTAMP()
-		  AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
-		  AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
-		  AND n.id NOT IN (SELECT nodeid FROM nodeassignments)
-		  AND a.id NOT IN (SELECT assignmentid FROM nodeassignments)
-	GROUP BY n.id;
+    SELECT n.id AS nodeid,
+        ROUND(SUM(t.downrate * a.count)) AS downrate,
+        ROUND(SUM(t.downceil * a.count)) AS downceil,
+        SUM(t.down_burst_time) AS down_burst_time,
+        SUM(t.down_burst_threshold) AS down_burst_threshold,
+        SUM(t.down_burst_limit) AS down_burst_limit,
+        ROUND(SUM(t.uprate * a.count)) AS uprate,
+        ROUND(SUM(t.upceil * a.count)) AS upceil,
+        SUM(t.up_burst_time) AS up_burst_time,
+        SUM(t.up_burst_threshold) AS up_burst_threshold,
+        SUM(t.up_burst_limit) AS up_burst_limit,
+        ROUND(SUM(COALESCE(t.downrate_n, t.downrate) * a.count)) AS downrate_n,
+        ROUND(SUM(COALESCE(t.downceil_n, t.downceil) * a.count)) AS downceil_n,
+        SUM(COALESCE(t.down_burst_time_n, t.down_burst_time)) AS down_burst_time_n,
+        SUM(COALESCE(t.down_burst_threshold_n, t.down_burst_threshold)) AS down_burst_threshold_n,
+        SUM(COALESCE(t.down_burst_limit_n, t.down_burst_limit)) AS down_burst_limit_n,
+        ROUND(SUM(COALESCE(t.uprate_n, t.uprate) * a.count)) AS uprate_n,
+        ROUND(SUM(COALESCE(t.upceil_n, t.upceil) * a.count)) AS upceil_n,
+        SUM(COALESCE(t.up_burst_time_n, t.up_burst_time)) AS up_burst_time_n,
+        SUM(COALESCE(t.up_burst_threshold_n, t.up_burst_threshold)) AS up_burst_threshold_n,
+        SUM(COALESCE(t.up_burst_limit_n, t.up_burst_limit)) AS up_burst_limit_n
+    FROM assignments a
+    JOIN tariffs t ON t.id = a.tariffid
+    JOIN vnodealltariffs_nodes n ON n.ownerid = a.customerid
+    LEFT JOIN vnodetariffs_allsuspended s ON s.customerid = a.customerid
+    WHERE s.allsuspended IS NULL AND a.suspended = 0 AND a.commited = 1
+        AND a.datefrom <= UNIX_TIMESTAMP()
+        AND (a.dateto = 0 OR a.dateto >= UNIX_TIMESTAMP())
+        AND (t.downrate > 0 OR t.downceil > 0 OR t.uprate > 0 OR t.upceil > 0)
+        AND n.id NOT IN (SELECT nodeid FROM nodeassignments)
+        AND a.id NOT IN (SELECT assignmentid FROM nodeassignments)
+    GROUP BY n.id;
 
 CREATE VIEW vnodealltariffs AS
 	SELECT n.*,
@@ -2852,10 +2950,10 @@ CREATE VIEW vnodealltariffs AS
 		a.house as location_house, a.flat as location_flat,
 		a.location
 	FROM nodes n
-		JOIN vnodes_mac m ON m.nodeid = n.id
-		LEFT JOIN vaddresses a ON a.id = n.address_id
-		JOIN vnodetariffs_tariffs t1 ON t1.nodeid = n.id
-		LEFT JOIN vnodealltariffs_tariffs t2 ON t2.nodeid = n.id
+    JOIN vnodes_mac m ON m.nodeid = n.id
+    LEFT JOIN vaddresses a ON a.id = n.address_id
+    LEFT JOIN vnodetariffs_tariffs t1 ON t1.nodeid = n.id
+    LEFT JOIN vnodealltariffs_tariffs t2 ON t2.nodeid = n.id
 	WHERE (n.ipaddr <> 0 OR n.ipaddr_pub <> 0)
 		  AND ((t1.nodeid IS NOT NULL AND t2.nodeid IS NULL)
 			   OR (t1.nodeid IS NULL AND t2.nodeid IS NOT NULL)
@@ -2873,8 +2971,22 @@ DROP FUNCTION IF EXISTS lms_current_user;
 CREATE FUNCTION lms_current_user() RETURNS int(11) NO SQL
 RETURN @lms_current_user;
 
+CREATE VIEW customerconsentview AS
+    SELECT c.id AS customerid,
+        SUM(CASE WHEN cc.type = 1 THEN cc.cdate ELSE 0 END)  AS consentdate,
+        SUM(CASE WHEN cc.type = 2 THEN 1 ELSE 0 END) AS invoicenotice,
+        SUM(CASE WHEN cc.type = 3 THEN 1 ELSE 0 END) AS mailingnotice,
+        SUM(CASE WHEN cc.type = 4 THEN 1 ELSE 0 END) AS einvoice
+    FROM customers c
+        LEFT JOIN customerconsents cc ON cc.customerid = c.id
+    GROUP BY c.id;
+
 CREATE VIEW customerview AS
     SELECT c.*,
+        cc.consentdate AS consentdate,
+        cc.invoicenotice AS invoicenotice,
+        cc.mailingnotice AS mailingnotice,
+        cc.einvoice AS einvoice,
         a1.country_id as countryid, a1.zip as zip, a1.city as city,
         a1.street as street, a1.house as building, a1.flat as apartment,
         a2.country_id as post_countryid, a2.zip as post_zip, a2.city as post_city,
@@ -2888,6 +3000,7 @@ CREATE VIEW customerview AS
         LEFT JOIN vaddresses a1 ON ca1.address_id = a1.id
         LEFT JOIN customer_addresses ca2 ON c.id = ca2.customer_id AND ca2.type = 0
         LEFT JOIN vaddresses a2 ON ca2.address_id = a2.id
+        LEFT JOIN customerconsentview cc ON cc.customerid = c.id
     WHERE NOT EXISTS (
         SELECT 1 FROM customerassignments a
         JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
@@ -2896,6 +3009,10 @@ CREATE VIEW customerview AS
 
 CREATE VIEW contractorview AS
     SELECT c.*,
+        cc.consentdate AS consentdate,
+        cc.invoicenotice AS invoicenotice,
+        cc.mailingnotice AS mailingnotice,
+        cc.einvoice AS einvoice,
         a1.country_id as countryid, a1.zip as zip, a1.city as city, a1.street as street,
         a1.house as building, a1.flat as apartment, a2.country_id as post_countryid,
         a2.zip as post_zip, a2.city as post_city, a2.street as post_street,
@@ -2909,10 +3026,15 @@ CREATE VIEW contractorview AS
         LEFT JOIN vaddresses a1 ON ca1.address_id = a1.id
         LEFT JOIN customer_addresses ca2 ON c.id = ca2.customer_id AND ca2.type = 0
         LEFT JOIN vaddresses a2 ON ca2.address_id = a2.id
+        LEFT JOIN customerconsentview cc ON cc.customerid = c.id
     WHERE c.type = 2;
 
 CREATE VIEW customeraddressview AS
     SELECT c.*,
+        cc.consentdate AS consentdate,
+        cc.invoicenotice AS invoicenotice,
+        cc.mailingnotice AS mailingnotice,
+        cc.einvoice AS einvoice,
         a1.country_id as countryid, a1.zip as zip, a1.city as city, a1.street as street,
         a1.house as building, a1.flat as apartment, a2.country_id as post_countryid,
         a2.zip as post_zip, a2.city as post_city, a2.street as post_street,
@@ -2926,6 +3048,7 @@ CREATE VIEW customeraddressview AS
         LEFT JOIN vaddresses a1 ON ca1.address_id = a1.id
         LEFT JOIN customer_addresses ca2 ON c.id = ca2.customer_id AND ca2.type = 0
         LEFT JOIN vaddresses a2 ON ca2.address_id = a2.id
+        LEFT JOIN customerconsentview cc ON cc.customerid = c.id
     WHERE c.type < 2;
 
 CREATE VIEW teryt_terc AS
@@ -2994,6 +3117,61 @@ DROP FUNCTION IF EXISTS int2txt;
 CREATE FUNCTION int2txt(num bigint) RETURNS char(20) DETERMINISTIC
 RETURN CAST(num AS char(20));
 
+DELIMITER $$
+CREATE TRIGGER cash_customerbalances_insert_trigger AFTER INSERT ON cash
+    FOR EACH ROW
+    BEGIN
+        IF NEW.customerid IS NOT NULL THEN
+            IF EXISTS (SELECT 1 FROM customerbalances WHERE customerid = NEW.customerid) THEN
+                UPDATE customerbalances SET balance = (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = NEW.customerid) WHERE customerid = NEW.customerid;
+            ELSE
+                INSERT INTO customerbalances (customerid, balance) VALUES (NEW.customerid, (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = NEW.customerid));
+            END IF;
+        END IF;
+    END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER cash_customerbalances_update_trigger AFTER UPDATE ON cash
+    FOR EACH ROW
+    BEGIN
+        IF OLD.value <> NEW.value OR OLD.currencyvalue <> NEW.currencyvalue THEN
+            IF OLD.customerid IS NOT NULL AND OLD.customerid <> NEW.customerid THEN
+                IF EXISTS (SELECT 1 FROM customerbalances WHERE customerid = OLD.customerid) THEN
+                    UPDATE customerbalances SET balance = (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = OLD.customerid) WHERE customerid = OLD.customerid;
+                ELSE
+                    INSERT INTO customerbalances (customerid, balance) VALUES (OLD.customerid, (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = OLD.customerid));
+                END IF;
+            END IF;
+            IF NEW.customerid IS NOT NULL THEN
+                IF EXISTS (SELECT 1 FROM customerbalances WHERE customerid = NEW.customerid) THEN
+                    UPDATE customerbalances SET balance = (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = NEW.customerid) WHERE customerid = NEW.customerid;
+                ELSE
+                    INSERT INTO customerbalances (customerid, balance) VALUES (NEW.customerid, (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = NEW.customerid));
+                END IF;
+            END IF;
+        END IF;
+    END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER cash_customerbalances_delete_trigger AFTER DELETE ON cash
+    FOR EACH ROW
+    BEGIN
+        IF OLD.customerid IS NOT NULL THEN
+            IF NOT EXISTS (SELECT 1 FROM cash WHERE customerid = OLD.customerid) THEN
+                DELETE FROM customerbalances WHERE customerid = OLD.customerid;
+            ELSE
+                IF EXISTS (SELECT 1 FROM customerbalances WHERE customerid = OLD.customerid) THEN
+                    UPDATE customerbalances SET balance = (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = OLD.customerid) WHERE customerid = OLD.customerid;
+                ELSE
+                    INSERT INTO customerbalances (customerid, balance) VALUES (OLD.customerid, (SELECT SUM(value * currencyvalue) FROM cash WHERE customerid = OLD.customerid));
+                END IF;
+            END IF;
+        END IF;
+    END $$
+DELIMITER ;
+
 INSERT INTO rtcategories (name, description)
 	VALUES ('default', 'default category');
 INSERT INTO up_rights(module, name, description)
@@ -3005,12 +3183,14 @@ INSERT INTO up_rights(module, name, description, setdefault)
 INSERT INTO up_rights(module, name, description)
         VALUES ('info', 'edit_contact', 'Customer can change contact information');
 
-INSERT INTO countries (name) VALUES
-('Lithuania'),
-('Poland'),
-('Romania'),
-('Slovakia'),
-('USA');
+INSERT INTO countries (name, ccode) VALUES
+('Lithuania', 'lt_LT'),
+('Poland', 'pl_PL'),
+('Romania', 'ro_RO'),
+('Slovakia', 'sk_SK'),
+('USA', 'en_US'),
+('Czech', 'cs_CZ'),
+('Guyana', 'en_GY');
 
 INSERT INTO nastypes (name) VALUES
 ('mikrotik_snmp'),
@@ -3161,6 +3341,7 @@ URL: %url
 ('userpanel','invoice_duplicate','0','',0),
 ('userpanel','show_tariffname','1','',0),
 ('userpanel','show_speeds','1','',0),
+('userpanel','show_period','1','',0),
 ('userpanel','queues','1','',0),
 ('userpanel','tickets_from_selected_queues','0','',0),
 ('userpanel','allow_message_add_to_closed_tickets','1','',0),
@@ -3185,6 +3366,22 @@ URL: %url
 ('userpanel', 'change_confirmation_mail_body', '', '', 0),
 ('userpanel', 'change_rejection_mail_subject', '', '', 0),
 ('userpanel', 'change_rejection_mail_body', '', '', 0),
+('userpanel', 'document_notification_mail_dsn_address', '', '', 0),
+('userpanel', 'document_notification_mail_mdn_address', '', '', 0),
+('userpanel', 'document_notification_mail_reply_address', '', '', 0),
+('userpanel', 'document_notification_mail_sender_name', '', '', 0),
+('userpanel', 'document_notification_mail_sender_address', '', '', 0),
+('userpanel', 'signed_document_scan_operator_notification_mail_recipient', '', '', 0),
+('userpanel', 'signed_document_scan_operator_notification_mail_format', 'text', '', 0),
+('userpanel', 'signed_document_scan_operator_notification_mail_subject', '', '', 0),
+('userpanel', 'signed_document_scan_operator_notification_mail_body', '', '', 0),
+('userpanel', 'signed_document_scan_customer_notification_mail_format', 'text', '', 0),
+('userpanel', 'signed_document_scan_customer_notification_mail_subject', '', '', 0),
+('userpanel', 'signed_document_scan_customer_notification_mail_body', '', '', 0),
+('userpanel', 'document_approval_customer_notification_mail_format', 'text', '', 0),
+('userpanel', 'document_approval_customer_notification_mail_subject', '', '', 0),
+('userpanel', 'document_approval_customer_notification_mail_body', '', '', 0),
+('userpanel', 'document_approval_customer_onetime_password_sms_body', '', '', 0),
 ('userpanel', 'google_recaptcha_sitekey', '', '', 0),
 ('userpanel', 'google_recaptcha_secret', '', '', 0),
 ('userpanel', 'allow_reopen_tickets_newer_than', '0', '', 0),
@@ -3194,6 +3391,10 @@ URL: %url
 ('userpanel', 'speed_unit_type', '1000', '', 0),
 ('userpanel', 'speed_unit_aggregation_threshold', '5', '', 0),
 ('userpanel', 'shortcut_icon', '', '', 0),
+('userpanel', 'timeout', '600', '', 0),
+('userpanel', 'hide_archived_documents', 'false', '', 0),
+('userpanel', 'sms_credential_reminders', 'true', '', 0),
+('userpanel', 'mail_credential_reminders', 'true', '', 0),
 ('directories','userpanel_dir','userpanel','',0);
 
 INSERT INTO invprojects (name, type) VALUES ('inherited', 1);
@@ -3525,4 +3726,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2019042414');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020050400');

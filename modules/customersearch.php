@@ -32,7 +32,7 @@ if (isset($_POST['search'])) {
     if (!empty($search['tariffs'])) {
         $search['tariffs'] = implode(",", $search['tariffs']);
     }
-    
+
     if ($search['createdfrom']) {
         list($year, $month, $day) = explode('/', $search['createdfrom']);
         $search['createdfrom'] = mktime(0, 0, 0, $month, $day, $year);
@@ -49,12 +49,20 @@ if (isset($_POST['search'])) {
         list($year, $month, $day) = explode('/', $search['deletedto']);
         $search['deletedto'] = mktime(23, 59, 59, $month, $day, $year);
     }
+    if ($search['balance_date']) {
+        list ($year, $month, $day) = explode('/', $search['balance_date']);
+        $search['balance_date'] = mktime(23, 59, 59, $month, $day, $year);
+    }
 }
 
 if (!isset($search)) {
     $SESSION->restore('customersearch', $search);
 } else {
     $SESSION->save('customersearch', $search);
+}
+
+if (isset($search['balance_date']) && !empty($search['balance_date'])) {
+    $time = intval($search['balance_date']);
 }
 
 if (!isset($_GET['o'])) {
@@ -70,6 +78,13 @@ if (!isset($_POST['s'])) {
     $state = $_POST['s'];
 }
 $SESSION->save('csls', $state);
+
+if (!isset($_POST['sk'])) {
+    $SESSION->restore('cslsk', $statesqlskey);
+} else {
+    $statesqlskey = $_POST['sk'];
+}
+$SESSION->save('cslsk', $statesqlskey);
 
 if (!isset($_POST['n'])) {
     $SESSION->restore('csln', $network);
@@ -113,15 +128,14 @@ if (isset($_GET['search'])) {
     $customerlist = $LMS->GetCustomerList(compact(
         "order",
         "state",
+        "statesqlskey",
         "network",
         "customergroup",
         "search",
         "time",
         "sqlskey",
         "nodegroup",
-        "division",
-        "balance",
-        "balance_relation"
+        "division"
     ));
 
     $listdata['total'] = $customerlist['total'];
@@ -191,5 +205,6 @@ if (isset($_GET['search'])) {
     $SMARTY->assign('tariffs', $LMS->GetTariffs());
     $SMARTY->assign('divisions', $LMS->GetDivisions());
     $SMARTY->assign('k', $sqlskey);
+    $SMARTY->assign('sk', $statesqlskey);
     $SMARTY->display('customer/customersearch.html');
 }

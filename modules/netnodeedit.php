@@ -110,6 +110,13 @@ if (isset($netnodedata)) {
         $error['ownerid'] = trans('Customer doesn\'t exist!');
     }
 
+    if (empty($netnodedata['ownerid']) && !ConfigHelper::checkPrivilege('full_access')
+        && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($netnodedata['location_city_name']) && ($netnodedata['location_country_id'] == 2 || empty($netnodedata['location_country_id']))
+        && (!isset($netnodedata['teryt']) || empty($netnodedata['location_city']))) {
+        $error['netnode[teryt]'] = trans('TERRIT address is required!');
+    }
+
     if (!$error) {
         if ($netnodedata['projectid'] == -1) {
             $netnodedata['projectid'] = $LMS->AddProject($netnodedata);
@@ -154,6 +161,12 @@ if ($subtitle) {
 
 if (!ConfigHelper::checkConfig('phpui.big_networks')) {
     $SMARTY->assign('customers', $LMS->GetCustomerNames());
+}
+
+if (!empty($netnodedata['ownerid'])) {
+    $addresses = $LMS->getCustomerAddresses($netnodedata['ownerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
 }
 
 $SMARTY->assign('error', $error);

@@ -1,4 +1,39 @@
 <!--// $Id$ //-->
+
+<style>
+
+	.promoschema-tariff-selection-header {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: flex-start;
+		width: 100%;
+	}
+
+	.promoschema-tariff-selection-header label {
+		padding-right: 0.5em;
+	}
+
+	.promoschema-tariff-selection-header-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+	}
+
+	.promoschema-tariff-selection-header-row select{
+		width: 100%;
+		flex-grow: 1;
+	}
+
+	.promoschema-tariff-selection-header-cell {
+		display: flex;
+	}
+
+</style>
+
+{$speed_unit_type = ConfigHelper::getConfig('phpui.speed_unit_type', 1000)}
+{$speed_unit_aggregation_threshold = ConfigHelper::getConfig('phpui.speed_unit_aggregation_threshold', 5)}
+
 <TABLE class="lmsbox">
 	<THEAD>
 	{if empty($schema.tariffs)}
@@ -118,8 +153,7 @@
 					</TD>
 					{/foreach}
 					<TD class="nobr">
-						<A class="tariff-view button-del" href="?m=promotionschemaedit&action=tariffdel&id={$schema.id}&aid={$tariff.id}"
-								OnClick="return confirmLink(this, '{trans("Are you sure, you want to delete this assignment?")}');"
+						<A class="tariff-view button-del" href="#" data-href="?m=promotionschemaedit&action=tariffdel&id={$schema.id}&aid={$tariff.id}"
 								{if $error && $formdata.aid == $tariff.id} style="display: none;"{/if}>
 							<IMG src="img/delete.gif" alt="{trans("Delete assignment")}" title="{trans("Delete assignment")}">
 						</A>
@@ -149,13 +183,44 @@
 				<TFOOT>
 				<TR>
 					<TD colspan="2" class="ftop valign-top">
-						<SELECT name="form[tariffid]" {tip text="Select subscription" trigger="tariffid"}>
-							{foreach from=$tariffs item=t}
-							<OPTION value="{$t.id}" {if $t.id == $formdata.tariffid}selected{/if}>
-							{$t.name|truncate:40:"...":true} ({$t.value|money_format}{if $t.upceil || $t.downceil}, {$t.downceil}/{$t.upceil} kbit/s{/if})
-							</OPTION>
-							{/foreach}
-						</SELECT>
+						<div class="promoschema-tariff-selection-header">
+							<div class="promoschema-tariff-selection-header-row">
+								<div class="promoschema-tariff-selection-header-cell">
+									<SELECT name="form[tariffid]" id="tariff-select"
+											{tip text="Select subscription" trigger="tariffid"}>
+										{foreach $tariffs as $tariff}
+										<OPTION value="{$tariff.id}" {if $tariff.id == $formdata.tariffid}selected{/if}
+											data-tarifftags="{$tariff.tags}" data-valid="{$tariff.valid}"
+											{if !$tariff.valid} class="blend"{if !$formdata.alltariffs} style="display: none;"{/if}{/if}
+											>
+										{$tariff.name|truncate:40:"...":true} ({moneyf($tariff.value, $tariff.currency)}{if $tariff.upceil || $tariff.downceil}, {convert_to_units($tariff.downceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/{convert_to_units($tariff.upceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}{/if})
+										</OPTION>
+										{/foreach}
+									</SELECT>
+								</div>
+							</div>
+							<div class="promoschema-tariff-selection-header-row">
+								<div class="promoschema-tariff-selection-header-cell">
+									<label>
+										<input type="checkbox" name="form[alltariffs]" value="1"
+												{tip text="Check if all tariffs should be displayed" trigger="alltariffs"}
+												{if isset($formdata.alltariffs)} checked{/if}>
+										{trans("show all tariffs")}
+									</label>
+								</div>
+								{if !empty($tags)}
+									<div class="promoschema-tariff-selection-header-cell">
+										<label for="promoschema-tariff-selection-tags">{trans("Tags:")}</label>
+										<SELECT id="promoschema-tariff-selection-tags" name="form[tags][]" class="lms-ui-multiselect"
+												{tip text="Select tariff tags"} multiple onchange="javascript:updateTariffs();"{if empty($tags)} style="display: none;"{/if}>
+											{foreach $tags as $tag}
+												<OPTION value="{$tag.id}"{if isset($formdata.tags) && in_array($tag.id, $formdata.tags)} selected{/if}>{$tag.name}</OPTION>
+											{/foreach}
+										</SELECT>
+									</div>
+								{/if}
+							</div>
+						</div>
 					</TD>
 					<TD class="ftop text-right valign-top nobr">
 						<INPUT type="checkbox" name="form[optional]" value="1" {tip text="Check if tariff should be optional"}
@@ -223,7 +288,65 @@
 		document.tariffs.submit();
 	}
 
+	function updateTariffs() {
+		var valid_checked = $('[name="form[alltariffs]"]').is(':checked');
+		var tariff_select = $('#tariff-select');
+
+		var tags = [];
+		$('[name="form[tags][]"]:checked').each(function() {
+			tags.push(parseInt($(this).val()));
+		});
+
+		$('option', tariff_select).each(function() {
+			var option = $(this);
+
+			if (option.val() <= 0) {
+				return;
+			}
+
+			if (tags.length) {
+				option.css('display', 'none');
+
+				var tarifftags = option.attr('data-tarifftags');
+				if (typeof(tarifftags) === 'undefined' || !tarifftags.length) {
+					return;
+				}
+
+				tarifftags = JSON.parse('[' +  tarifftags + ']');
+
+				$.each(tarifftags, function(key, value) {
+					if (tags.indexOf(value) > -1) {
+						if (option.attr('data-valid') == '0') {
+							option.css('display', valid_checked ? '' : 'none');
+						} else {
+							option.css('display', '');
+						}
+					}
+				});
+			} else {
+				if (option.attr('data-valid') == '0') {
+					option.css('display', valid_checked ? '' : 'none');
+				} else {
+					option.css('display', '');
+				}
+			}
+		});
+
+		if ($('option:selected', tariff_select).css('display') == 'none') {
+			$('option', tariff_select).each(function() {
+				if ($(this).css('display') != 'none') {
+					tariff_select.val($(this).val());
+					return false;
+				}
+			});
+		}
+	}
+
 	$(function () {
+		$('[name="form[alltariffs]"]').click(function() {
+			updateTariffs();
+		});
+
 		$('#schematariffs').sortable({
 			items: 'tbody > tr.schematariff',
 			handle: 'img.drag-icon',
@@ -244,12 +367,12 @@
 					success: function (data, textStatus, qXHR) {
 						if (data.result === undefined || data.result != 'OK') {
 							$('#userpanel-modules').sortable('cancel');
-							alert('{trans("LMS: operation failed!")}');
+							alertDialog($t("LMS: operation failed!"));
 						}
 					},
 					error: function (jqXHR, textStatus, errorThrown) {
 						$('#schematariffs').sortable('cancel');
-						alert('{trans("AJAX: Invalid result - status:")}' + textStatus + '!');
+						alertDialog($t("AJAX: Invalid result - status: $a", textStatus));
 					}
 				});
 			}
@@ -263,7 +386,7 @@
 			var row = $(this).closest('tr');
 
 			if ($('.tariff-edit:visible').length) {
-				alert($t('Unable to edit two rows at once!'));
+				alertDialog($t("Unable to edit two rows at once!"), this);
 				return false;
 			}
 
@@ -302,10 +425,20 @@
 		});
 
 		init_multiselects('select.lms-ui-multiselect-deferred:visible');
+
+		updateTariffs();
 	});
 
 	if (getCookie('promotionschemadata') == '1') {
 		$('#promotionschemadata').show();
 	}
+
+	$('.button-del').click(function() {
+		confirmDialog($t("Are you sure, you want to delete this assignment?"), this).done(function() {
+			$('form[name="tariffs"]').attr('action', $(this).attr('data-href'));
+			document.tariffs.submit();
+		});
+		return false;
+	});
 
 </SCRIPT>

@@ -33,20 +33,32 @@
 								<TD style="width: 1%;"><IMG src="img/customer.gif" alt=""></TD>
 								<TD style="width: 1%;" class="bold nobr">{trans("Status:")}</TD>
 								<TD style="width: 98%;">
-									<SELECT size="1" name="filter" {tip text="Select customer's group"}>
-										<OPTION value="0">- {trans("all<!customers>")} -</OPTION>
+									<SELECT size="1" name="filter[]" {tip class="lms-ui-multiselect" text="Select customer's group"}
+											data-default-value="- {trans("all<!customers>")} -" multiple>
 										{foreach $_CSTATUSES as $statusidx => $status}
 										<OPTION value="{$statusidx}"{if $statusidx == $smarty.const.CSTATUS_CONNECTED} selected{/if}>{$status.plurallabel}</OPTION>
 										{/foreach}
+										<OPTION VALUE="50">{trans("deleted<!plural>")}</OPTION>
+										<OPTION VALUE="72">{trans("existing<!plural>")}</OPTION>
 										<OPTION value="51">{trans("with disconnected nodes")}</OPTION>
+										<OPTION value="63">{trans("with connected nodes")}</OPTION>
 										<OPTION value="52">{trans("in debt")}</OPTION>
 										<OPTION value="57">{trans("in debt above 100%")}</OPTION>
 										<OPTION value="58">{trans("in debt above 200%")}</OPTION>
 										<OPTION value="59">{trans("without contracts")}</OPTION>
 										<OPTION value="60">{trans("with expired contracts")}</OPTION>
 										<OPTION value="61">{trans("with expiring contracts")}</OPTION>
-										<OPTION value="-1">{trans("without nodes")}</OPTION>
+										<OPTION value="73">{trans("with unarchived documents")}</OPTION>
+										<OPTION value="-1" data-exclusive>{trans("without nodes")}</OPTION>
 									</SELECT>
+									<label>
+										<INPUT class="radio" type="radio" value="AND" name="sk"{if $sk!='OR'} checked{/if}>
+										{trans("and")}
+									</label>
+									<label>
+										<INPUT class="radio" type="radio" value="OR" name="sk"{if $sk=='OR'} checked{/if}>
+										{trans("or")}
+									</label>
 								</TD>
 							</TR>
 							<TR>
@@ -198,12 +210,26 @@
 									{trans("To")}&nbsp;<INPUT type="text" name="docto" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
 								</TD>
 							</TR>
-                                                        <TR>
-                                                                <TD style="width: 1%;"><INPUT type="checkbox" name="sendingregister" value="1" id="sendingregister"}{tip text="Check if would like to print cutomerlist as sending register"}></TD>
-                                                                <TD style="width: 99%;" class="nobr" colspan="2">
-                                                                        <span class="bold nobr">{trans ("Sending register format")}</span>
-                                                                </TD>
-                                                        </TR>
+							<TR>
+								<TD>
+									<INPUT type="checkbox" name="sendingregister" value="1" id="sendingregister" {tip text="Check if would like to print cutomerlist as sending register"}>
+								</TD>
+								<TD class="bold nobr" colspan="2">
+									<label for="sendingregister">
+										{trans("sending register format")}
+									</label>
+								</TD>
+							</TR>
+							<TR>
+								<TD>
+									<INPUT type="checkbox" name="customernodes" value="1" id="customernodes">
+								</TD>
+								<TD class="bold nobr" colspan="2">
+									<label for="customernodes">
+										{trans("include customer node info")}
+									</label>
+								</TD>
+							</TR>
 						</TABLE>
 					</TD>
 				</TR>
@@ -740,7 +766,7 @@
 
 	function export_to_jpk(type) {
 		if ($('form[name="printinvoices"] select[name="division"]').val() == '0') {
-			alert('{trans("Division not selected!")}');
+			alertDialog($t("Division not selected!"), $(".export_to_jpk"));
 			return;
 		}
 
@@ -906,8 +932,8 @@
 					<OPTION value="csv">{trans("CSV")}</OPTION>
 				</SELECT>
 			</label>
-			<a href="javascript:export_to_jpk('fa');">{trans("Export to JPK-FA format")} <img src="img/docum.gif" alt=""></a>
-			<a href="javascript:export_to_jpk('vat');">{trans("Export to JPK-VAT format")} <img src="img/docum.gif" alt=""></a>
+			<a class="export_to_jpk" href="javascript:export_to_jpk('fa');">{trans("Export to JPK-FA format")} <img src="img/docum.gif" alt=""></a>
+			<a class="export_to_jpk" href="javascript:export_to_jpk('vat');">{trans("Export to JPK-VAT format")} <img src="img/docum.gif" alt=""></a>
 			<a href="javascript:print_forms();">{trans("Print form of cash transfer")} <img src="img/print.gif" alt=""></a>
 			<A href="javascript:print();">{trans("Print")} <IMG src="img/print.gif" alt="" hspace="2"></A>
 		</TD>

@@ -28,33 +28,31 @@ require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
 
 function module_main()
 {
-    global $LMS,$SMARTY,$SESSION;
+    global $SESSION;
+
+    $LMS = LMS::getInstance();
+    $SMARTY = LMSSmarty::getInstance();
 
     if (!empty($_GET['consent'])) {
-        $LMS->DB->Execute(
-            'UPDATE customers SET consentdate = ?NOW? WHERE id = ?',
-            array($SESSION->id)
-        );
+        if ($LMS->DB->GetOne(
+            'SELECT customerid FROM customerconsents WHERE customerid = ? AND type = ?',
+            array($SESSION->id, CCONSENT_DATE)
+        )) {
+            $LMS->DB->Execute(
+                'UPDATE customerconsents SET cdate = ?NOW? WHERE customer = ? AND type = ?',
+                array($SESSION->id, CCONSENT_DATE)
+            );
+        } else {
+            $LMS->DB->Execute(
+                'INSERT INTO customerconsents (customerid, type, cdate) VALUES (?, ?, ?NOW?)',
+                array($SESSION->id, CCONSENT_DATE)
+            );
+        }
     }
 
     $userinfo = $LMS->GetCustomer($SESSION->id);
     $usernodes = $LMS->GetCustomerNodes($SESSION->id);
     //$balancelist = $LMS->GetCustomerBalanceList($SESSION->id);
-    $documents = $LMS->DB->GetAll('SELECT d.id, d.number, d.type, c.title, c.fromdate, c.todate, 
-		c.description, n.template, d.closed, d.cdate
-		FROM documentcontents c
-		JOIN documents d ON (c.docid = d.id)
-		LEFT JOIN numberplans n ON (d.numberplanid = n.id)
-		WHERE d.customerid = ?'
-            . (ConfigHelper::checkConfig('userpanel.show_confirmed_documents_only') ? ' AND d.closed = 1': '') . '
-		ORDER BY cdate', array($SESSION->id));
-
-    if (!empty($documents)) {
-        foreach ($documents as &$doc) {
-            $doc['attachments'] = $LMS->DB->GetAllBykey('SELECT * FROM documentattachments WHERE docid = ?
-				ORDER BY main DESC, filename', 'id', array($doc['id']));
-        }
-    }
 
     $fields_changed = $LMS->DB->GetAllByKey(
         'SELECT id, fieldname, fieldvalue FROM up_info_changes WHERE customerid = ?',
@@ -62,10 +60,32 @@ function module_main()
         array($SESSION->id)
     );
 
+    $unit_multipliers = array(
+        'K' => 1024,
+        'M' => 1024 * 1024,
+        'G' => 1024 * 1024 * 1024,
+        'T' => 1024 * 1024 * 1024 * 1024,
+    );
+    foreach (array('post_max_size', 'upload_max_filesize') as $var) {
+        preg_match('/^(?<number>[0-9]+)(?<unit>[kKmMgGtT]?)$/', ini_get($var), $m);
+        $unit_multiplier = isset($m['unit']) ? $unit_multipliers[strtoupper($m['unit'])] : 1;
+        if ($var == 'post_max_size') {
+            $unit_multiplier *= 1/1.33;
+        }
+        if (empty($m['number'])) {
+            $val['bytes'] = 0;
+            $val['text'] = trans('(unlimited)');
+        } else {
+            $val['bytes'] = round($m['number'] * $unit_multiplier);
+            $res = setunits($val['bytes']);
+            $val['text'] = round($res[0]) . ' ' . $res[1];
+        }
+        $SMARTY->assign($var, $val);
+    }
+
     $SMARTY->assign('userinfo', $userinfo);
     $SMARTY->assign('usernodes', $usernodes);
     //$SMARTY->assign('balancelist',$balancelist);
-    $SMARTY->assign('documents', $documents);
     $SMARTY->assign('fields_changed', $fields_changed);
     $SMARTY->display('module:info.html');
 }
@@ -81,24 +101,9 @@ function module_updateuserform()
 
     $userinfo = $LMS->GetCustomer($SESSION->id);
     $usernodes = $LMS->GetCustomerNodes($SESSION->id);
-    $documents = $LMS->DB->GetAll('SELECT d.id, d.number, d.type, c.title, c.fromdate, c.todate, 
-		c.description, n.template, d.closed, d.cdate
-		FROM documentcontents c
-		JOIN documents d ON (c.docid = d.id)
-		LEFT JOIN numberplans n ON (d.numberplanid = n.id)
-		WHERE d.customerid = ?
-		ORDER BY cdate', array($SESSION->id));
-
-    if (!empty($documents)) {
-        foreach ($documents as &$doc) {
-            $doc['attachments'] = $LMS->DB->GetAllBykey('SELECT * FROM documentattachments WHERE docid = ?
-				ORDER BY main DESC, filename', 'id', array($doc['id']));
-        }
-    }
 
     $SMARTY->assign('userinfo', $userinfo);
     $SMARTY->assign('usernodes', $usernodes);
-    $SMARTY->assign('documents', $documents);
     $SMARTY->display('module:updateuser.html');
 }
 
@@ -141,7 +146,7 @@ function module_updateusersave()
                                 array($id, $v, CONTACT_LANDLINE)
                             );
                         }
-                
+
                         $userinfo[$type][$i][$checked_property] = $v;
                     } elseif (isset($right['edit_contact_ack']) && ($v || isset($userinfo[$type][$i]))) {
                         if (!isset($userinfo[$type][$i]) || $userinfo[$type][$i][$checked_property] != $v) {
@@ -589,9 +594,7 @@ if (defined('USERPANEL_SETUPMODE')) {
         global $SMARTY, $LMS;
 
         $SMARTY->assign('hide_nodesbox', ConfigHelper::getConfig('userpanel.hide_nodesbox'));
-        $SMARTY->assign('hide_documentbox', ConfigHelper::getConfig('userpanel.hide_documentbox'));
         $SMARTY->assign('consent_text', ConfigHelper::getConfig('userpanel.data_consent_text'));
-        $SMARTY->assign('show_confirmed_documents_only', ConfigHelper::checkConfig('userpanel.show_confirmed_documents_only'));
         $SMARTY->assign('pin_changes', ConfigHelper::checkConfig('userpanel.pin_changes'));
         $SMARTY->assign('change_notification_mail_sender', ConfigHelper::getConfig('userpanel.change_notification_mail_sender'));
         $SMARTY->assign('change_notification_mail_recipient', ConfigHelper::getConfig('userpanel.change_notification_mail_recipient'));
@@ -615,15 +618,7 @@ if (defined('USERPANEL_SETUPMODE')) {
         );
         $DB->Execute(
             'UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
-            array(isset($_POST['hide_documentbox']) ? 1 : 0, 'userpanel', 'hide_documentbox')
-        );
-        $DB->Execute(
-            'UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
             array($_POST['consent_text'], 'userpanel', 'data_consent_text')
-        );
-        $DB->Execute(
-            'UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',
-            array(isset($_POST['show_confirmed_documents_only']) ? 'true' : 'false', 'userpanel', 'show_confirmed_documents_only')
         );
         $DB->Execute(
             'UPDATE uiconfig SET value = ? WHERE section = ? AND var = ?',

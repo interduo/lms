@@ -24,10 +24,8 @@
  *  $Id$
  */
 
-/*use setasign\Fpdi\Tcpdf\Fpdi;
-use setasign\Fpdi\PdfParser\StreamReader;*/
-
-include(LIB_DIR . DIRECTORY_SEPARATOR . 'FPDI' . DIRECTORY_SEPARATOR . 'VarStream.php');
+use setasign\Fpdi\Tcpdf\Fpdi;
+use setasign\Fpdi\PdfParser\StreamReader;
 
 function try_generate_archive_notes($ids)
 {
@@ -53,8 +51,7 @@ function try_generate_archive_notes($ids)
         header('Pragma: public');
 
         if ($note_type == 'pdf') {
-            $pdf = new FPDI();
-//          $pdf = new Fpdi();
+            $pdf = new Fpdi();
             $pdf->setPrintHeader(false);
             $pdf->setPrintFooter(false);
         }
@@ -78,6 +75,7 @@ function try_generate_archive_notes($ids)
                     format_bankaccount(bankaccount($note['customerid'], $note['account'])),
                     $note['division_header']
                 );
+                refresh_ui_language($note['lang']);
                 $document->Draw($note);
 
                 $file['data'] = $document->WriteToString();
@@ -87,8 +85,7 @@ function try_generate_archive_notes($ids)
             }
 
             if ($note_type == 'pdf') {
-                $pageCount = $pdf->setSourceFile(VarStream::createReference($file['data']));
-                //$pageCount = $pdf->setSourceFile(StreamReader::createByString($file['data']));
+                $pageCount = $pdf->setSourceFile(StreamReader::createByString($file['data']));
                 for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
                     // import a page
                     $templateId = $pdf->importPage($pageNo);
@@ -96,12 +93,7 @@ function try_generate_archive_notes($ids)
                     $size = $pdf->getTemplateSize($templateId);
 
                     // create a page (landscape or portrait depending on the imported page size)
-                    if ($size['w'] > $size['h']) {
-                        $pdf->AddPage('L', array($size['w'], $size['h']));
-                    } else {
-                        $pdf->AddPage('P', array($size['w'], $size['h']));
-                    }
-                    //$pdf->AddPage($size['orientation'], $size);
+                    $pdf->AddPage($size['orientation'], $size);
 
                     // use the imported page
                     $pdf->useTemplate($templateId);
@@ -195,11 +187,32 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
             format_bankaccount(bankaccount($note['customerid'], $note['account'])),
             $note['division_header']
         );
+
+        if (!empty($note['division_footer'])) {
+            $tmp = $note['division_footer'];
+
+            $accounts = array(bankaccount($note['customerid'], $note['account']));
+            if (ConfigHelper::checkConfig('invoices.show_all_accounts')) {
+                $accounts = array_merge($accounts, $note['bankaccounts']);
+            }
+            foreach ($accounts as &$account) {
+                $account = format_bankaccount($account);
+            }
+            $tmp = str_replace('%bankaccount', implode("\n", $accounts), $tmp);
+            $note['bankaccounts'] = implode("\n", $accounts);
+            $tmp = mb_ereg_replace('\r?\n', '<br>', $tmp);
+            $note['division_footer'] = $tmp;
+        }
+
+
+        refresh_ui_language($note['lang']);
         $document->Draw($note);
+
         if (!isset($note['last'])) {
             $document->NewPage();
         }
     }
+    reset_ui_language();
 } elseif (isset($_GET['fetchallnotes'])) {
     $layout['pagetitle'] = trans('Debit Notes');
 
@@ -247,8 +260,27 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
             format_bankaccount(bankaccount($note['customerid'], $note['account'])),
             $note['division_header']
         );
+
+        if (!empty($note['division_footer'])) {
+            $tmp = $note['division_footer'];
+
+            $accounts = array(bankaccount($note['customerid'], $note['account']));
+            if (ConfigHelper::checkConfig('invoices.show_all_accounts')) {
+                $accounts = array_merge($accounts, $note['bankaccounts']);
+            }
+            foreach ($accounts as &$account) {
+                $account = format_bankaccount($account);
+            }
+            $tmp = str_replace('%bankaccount', implode("\n", $accounts), $tmp);
+            $note['bankaccounts'] = implode("\n", $accounts);
+            $tmp = mb_ereg_replace('\r?\n', '<br>', $tmp);
+            $note['division_footer'] = $tmp;
+        }
+
+        refresh_ui_language($note['lang']);
         $document->Draw($note);
     }
+    reset_ui_language();
 } elseif ($note = $LMS->GetNoteContent($_GET['id'])) {
     $ids = array($_GET['id']);
 
@@ -277,7 +309,26 @@ if (isset($_GET['print']) && $_GET['print'] == 'cached') {
         format_bankaccount(bankaccount($note['customerid'], $note['account'])),
         $note['division_header']
     );
+
+    if (!empty($note['division_footer'])) {
+        $tmp = $note['division_footer'];
+
+        $accounts = array(bankaccount($note['customerid'], $note['account']));
+        if (ConfigHelper::checkConfig('invoices.show_all_accounts')) {
+            $accounts = array_merge($accounts, $note['bankaccounts']);
+        }
+        foreach ($accounts as &$account) {
+            $account = format_bankaccount($account);
+        }
+        $tmp = str_replace('%bankaccount', implode("\n", $accounts), $tmp);
+        $note['bankaccounts'] = implode("\n", $accounts);
+        $tmp = mb_ereg_replace('\r?\n', '<br>', $tmp);
+        $note['division_footer'] = $tmp;
+    }
+
+    refresh_ui_language($note['lang']);
     $document->Draw($note);
+    reset_ui_language();
 } else {
     $SESSION->redirect('?m=notelist');
 }

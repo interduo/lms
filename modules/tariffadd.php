@@ -29,7 +29,7 @@ if (isset($_POST['tariff'])) {
     $limit = isset($_POST['limit']) ? $_POST['limit'] : array();
 
     foreach ($tariff as $key => $value) {
-        if ($key != 'authtype') {
+        if ($key != 'authtype' && $key != 'tags') {
             $tariff[$key] = trim($value);
         }
     }
@@ -248,6 +248,10 @@ if (isset($_POST['tariff'])) {
         }
     }
 
+    if (!isset($CURRENCIES[$tariff['currency']])) {
+        $error['currency'] = trans('Invalid currency selection!');
+    }
+
     if (ConfigHelper::checkConfig('phpui.tax_category_required')
         && empty($tariff['taxcategory'])) {
         $error['taxcategory'] = trans('Tax category selection is required!');
@@ -256,6 +260,11 @@ if (isset($_POST['tariff'])) {
     if (!$error) {
         $SESSION->redirect('?m=tariffinfo&id='.$LMS->TariffAdd($tariff));
     }
+
+    if (!is_array($tariff['tags'])) {
+        $tariff['tags'] = array();
+    }
+    $tariff['tags'] = array_flip($tariff['tags']);
 
     $SMARTY->assign('error', $error);
 } elseif (isset($_GET['id'])) {
@@ -273,12 +282,14 @@ if (isset($_POST['tariff'])) {
     if (!empty($default_assignment_period)) {
         $tariff['period'] = $default_assignment_period;
     }
+    $tariff['currency'] = LMS::$default_currency;
 }
 
 $layout['pagetitle'] = trans('New Subscription');
 
 $SMARTY->assign('taxeslist', $LMS->GetTaxes());
 $SMARTY->assign('tariff', $tariff);
+$SMARTY->assign('tarifftags', $LMS->TarifftagGetAll());
 $SMARTY->assign('voip_tariffs', $LMS->getVoipTariffs());
 $SMARTY->assign('voip_tariffrules', $LMS->getVoipTariffRuleGroups());
 $SMARTY->assign('numberplanlist', $LMS->GetNumberPlans(array(

@@ -32,6 +32,10 @@ interface LMSUserManagerInterface
 {
     public function setUserPassword($id, $passwd);
 
+    public function forcePasswordChange($id);
+
+    public function SetUserAuthentication($id, $twofactorauth, $twofactorauthsecretkey);
+
     public function getUserName($id = null);
 
     public function getUserNames();
@@ -55,6 +59,8 @@ interface LMSUserManagerInterface
     public function userUpdate($user);
 
     public function getUserRights($id);
-    
+
     public function PasswdExistsInHistory($id, $passwd);
+
+    public function checkPassword($password);
 }

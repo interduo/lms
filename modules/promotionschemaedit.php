@@ -168,7 +168,10 @@ if ($action == 'tariff' && !empty($_POST['form'])) {
             }
         }
 
-        $SESSION->redirect('?m=promotionschemainfo&id=' . $schemaid);
+        $data['tags'] = $_POST['form']['tags'];
+        $data['alltariffs'] = $_POST['form']['alltariffs'];
+        $SESSION->save('psdform', $data);
+        $SESSION->redirect('?m=promotionschemainfo&id=' . $_GET['id']);
     }
 
     $data = $_POST['form'];
@@ -176,7 +179,7 @@ if ($action == 'tariff' && !empty($_POST['form'])) {
 
     $SMARTY->assign('formdata', $data);
     $SMARTY->assign('error', $error);
-    include MODULES_DIR . '/promotionschemainfo.php';
+    include(MODULES_DIR . DIRECTORY_SEPARATOR . 'promotionschemainfo.php');
     die;
 } else if ($action == 'tariffdel') {
     $aid = intval($_GET['aid']);
@@ -196,7 +199,10 @@ if ($action == 'tariff' && !empty($_POST['form'])) {
 
     $DB->Execute('DELETE FROM promotionassignments WHERE id = ?', array($aid));
 
-    $SESSION->redirect('?m=promotionschemainfo&id='.intval($_GET['id']));
+    $data['tags'] = $_POST['form']['tags'];
+    $data['alltariffs'] = $_POST['form']['alltariffs'];
+    $SESSION->save('psdform', $data);
+    $SESSION->redirect('?m=promotionschemainfo&id=' . $_GET['id']);
 } else if ($action == 'tariff-reorder') {
     header('Content-Type: application/json');
 
@@ -330,7 +336,7 @@ if (isset($_POST['schema'])) {
     $schema['promotionname'] = $LMS->GetPromotionNameBySchemaID($schema['id']);
 }
 
-$schema['selection'] = array(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,30,36,42,48,60);
+$schema['selection'] = array(1,3,6,9,12,18,24,30,36,42,48,60);
 
 $layout['pagetitle'] = trans('Schema Edit: $a', $oldschema['name']);
 

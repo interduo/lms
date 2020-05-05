@@ -83,6 +83,47 @@ $CSTATUSES = array(
     ),
 );
 
+// customer consents
+define('CCONSENT_DATE', 1);
+define('CCONSENT_INVOICENOTICE', 2);
+define('CCONSENT_MAILINGNOTICE', 3);
+define('CCONSENT_EINVOICE', 4);
+define('CCONSENT_USERPANEL_SMS', 5);
+define('CCONSENT_USERPANEL_SCAN', 6);
+
+$CCONSENTS = array(
+    CCONSENT_DATE => array(
+        'label' => trans('personal data processing'),
+        'name' => 'data_processing',
+        'type' => 'date',
+    ),
+    CCONSENT_EINVOICE => array(
+        'label' => trans('cancellation of a traditional invoice (agreement on an electronic invoice)'),
+        'name' => 'electronic_invoice',
+        'type' => 'boolean',
+    ),
+    CCONSENT_INVOICENOTICE => array(
+        'label' => trans('invoice delivery via e-mail'),
+        'name' => 'invoice_notice',
+        'type' => 'boolean',
+    ),
+    CCONSENT_MAILINGNOTICE => array(
+        'label' => trans('message delivery via e-mail or sms'),
+        'name' => 'mailing_notice',
+        'type' => 'boolean',
+    ),
+    CCONSENT_USERPANEL_SMS => array(
+        'label' => trans('document form approval in customer panel using SMS authorization'),
+        'name' => 'userpanel_document_sms_approval',
+        'type' => 'boolean',
+    ),
+    CCONSENT_USERPANEL_SCAN => array(
+        'label' => trans('document form approval in customer panel using scans'),
+        'name' => 'userpanel_document_scan_approval',
+        'type' => 'boolean',
+    ),
+);
+
 // Config types
 define('CONFIG_TYPE_AUTO', 0);
 define('CONFIG_TYPE_BOOLEAN', 1);
@@ -112,7 +153,7 @@ $CONFIG_TYPES = array(
     CONFIG_TYPE_DATE_FORMAT => trans('date format'),
 );
 
-$CATEGORY_DEFAULT_STYLE = 'border: 1px black solid; color: black; background: #FFFFFF; padding: 2px; height: 40px;';
+$CATEGORY_DEFAULT_STYLE = 'border: 1px black solid; color: black; background: #FFFFFF; padding: 1px; text-decoration: none;';
 
 // Helpdesk ticket status
 define('RT_NEW', 0);
@@ -317,6 +358,7 @@ define('RT_TYPE_STOP', 7);
 define('RT_TYPE_REMOVE', 8);
 define('RT_TYPE_OTHER', 9);
 define('RT_TYPE_CONF', 10);
+define('RT_TYPE_PAYMENT', 11);
 
 
 $RT_TYPES = array(
@@ -370,6 +412,11 @@ $RT_TYPES = array(
         'class' => 'lms-ui-rt-ticket-type-remove',
         'name' => 'RT_TYPE_REMOVE'
     ),
+    RT_TYPE_PAYMENT => array(
+        'label' => trans('Payment'),
+        'class' => 'lms-ui-rt-ticket-type-payment',
+        'name' => 'RT_TYPE_PAYMENT'
+    ),
 );
 
 // Messages status and type
@@ -394,6 +441,7 @@ define('TMPL_WWW', 4);
 define('TMPL_USERPANEL', 5);
 define('TMPL_USERPANEL_URGENT', 6);
 define('TMPL_HELPDESK', 7);
+define('TMPL_CNOTE_REASON', 8);
 
 $MESSAGETEMPLATES = array(
     TMPL_WARNING => array(
@@ -423,6 +471,10 @@ $MESSAGETEMPLATES = array(
     TMPL_HELPDESK => array(
         'class' => 'lms-ui-icon-helpdesk',
         'label' => trans('<!message>helpdesk'),
+    ),
+    TMPL_CNOTE_REASON => array(
+        'class' => 'lms-ui-icon-finances',
+        'label' => trans('<!message>credit note reason'),
     ),
 );
 
@@ -500,6 +552,9 @@ define('DOC_PROTOCOL', -3);
 define('DOC_ORDER', -4);
 define('DOC_SHEET', -5);
 define('DOC_BREACH', -6);
+define('DOC_PAYMENTBOOK', -7);
+define('DOC_PAYMENTSUMMONS', -8);
+define('DOC_PAYMENTPRESUMMONS', -9);
 define('DOC_OTHER', -128);
 define('DOC_BILLING', -10);
 define('DOC_PRICELIST', -11);
@@ -524,15 +579,25 @@ $DOCTYPES = array(
     DOC_ORDER       =>  trans('order'),
     DOC_SHEET       =>  trans('customer sheet'), // karta klienta
     DOC_BREACH      =>  trans('contract termination'),
-    -7  =>      trans('payments book'), // ksiazeczka oplat
-    -8  =>      trans('payment summons'), // wezwanie do zapłaty
-    -9  =>      trans('payment pre-summons'), // przedsądowe wezw. do zapłaty
+    DOC_PAYMENTBOOK  => trans('payments book'), // ksiazeczka oplat
+    DOC_PAYMENTSUMMONS  => trans('payment summons'), // wezwanie do zapłaty
+    DOC_PAYMENTPRESUMMONS  => trans('payment pre-summons'), // przedsądowe wezw. do zapłaty
     DOC_PRICELIST       =>  trans('price-list'), // cennik
     DOC_PROMOTION       =>  trans('promotion'), // promocja
     DOC_WARRANTY       =>  trans('warranty'), // gwarancja
     DOC_REGULATIONS       =>  trans('regulations'), // regulamin
     DOC_CONF_FILE   =>  trans('configuration file'),
     DOC_OTHER       =>  trans('other')
+);
+
+define('DOC_ENTITY_ORIGINAL', 1);
+define('DOC_ENTITY_COPY', 2);
+define('DOC_ENTITY_DUPLICATE', 4);
+
+$DOCENTITIES = array(
+    DOC_ENTITY_ORIGINAL => trans('original'),
+    DOC_ENTITY_COPY => trans('copy'),
+    DOC_ENTITY_DUPLICATE => trans('duplicate'),
 );
 
 define('DOCRIGHT_VIEW', 1);
@@ -600,6 +665,7 @@ define('SERVICE_HOSTING', 2);
 define('SERVICE_SERVICE', 3);
 define('SERVICE_PHONE', 4);
 define('SERVICE_TV', 5);
+define('SERVICE_TRANSMISSION', 6);
 
 // VoIP call types
 define('CALL_INCOMING', 1);
@@ -631,6 +697,7 @@ $SERVICETYPES = array(
     SERVICE_SERVICE => ConfigHelper::getConfig('tarifftypes.service', trans('service')),
     SERVICE_PHONE => ConfigHelper::getConfig('tarifftypes.phone', trans('phone')),
     SERVICE_TV => ConfigHelper::getConfig('tarifftypes.tv', trans('tv')),
+    SERVICE_TRANSMISSION => ConfigHelper::getConfig('tarifftypes.transmission', trans('transmission')),
 );
 
 $PAYTYPES = array(
@@ -812,27 +879,27 @@ $NETELEMENTSTATUSES = array(
 );
 
 $NETELEMENTTYPES = array(
-    0   => 'budynek biurowy',
-    2   => 'budynek mieszkalny',
-    1   => 'budynek przemysłowy',
-    11  => 'budynek usługowy',
-    12  => 'budynek użyteczności publicznej',
-    3   => 'obiekt sakralny',
-    13  => 'obiekt sieci elektroenergetycznej',
-    5   => 'wieża',
-    4   => 'maszt',
-    10  => 'komin',
-    6   => 'kontener',
-    7   => 'szafa uliczna',
-    14  => 'słup',
-    8   => 'skrzynka',
-    9   => 'studnia kablowa',
+    0   => trans('<!netelemtype>office building'),
+    2   => trans('<!netelemtype>residential building'),
+    1   => trans('<!netelemtype>industrial building'),
+    11  => trans('<!netelemtype>service building'),
+    12  => trans('<!netelemtype>public building'),
+    3   => trans('<!netelemtype>religious building'),
+    13  => trans('<!netelemtype>power grid object'),
+    5   => trans('<!netelemtype>tower'),
+    4   => trans('<!netelemtype>mast'),
+    10  => trans('<!netelemtype>chimney'),
+    6   => trans('<!netelemtype>container'),
+    7   => trans('<!netelemtype>street cabinet'),
+    14  => trans('<!netelemtype>pole'),
+    8   => trans('<!netelemtype>box'),
+    9   => trans('<!netelemtype>cable well'),
 );
 
 $NETELEMENTOWNERSHIPS = array(
-    0   => 'Węzeł własny',
-    1   => 'Węzeł współdzielony z innym podmiotem',
-    2   => 'Węzeł obcy',
+    0   => trans('Own node'),
+    1   => trans('Node shared with another entity'),
+    2   => trans('Foreign node'),
 );
 
 $USERPANEL_AUTH_TYPES = array(
@@ -936,6 +1003,48 @@ define('EXISTINGASSIGNMENT_SUSPEND', 1);
 define('EXISTINGASSIGNMENT_CUT', 2);
 define('EXISTINGASSIGNMENT_DELETE', 3);
 
+$CURRENCIES = array(
+    'AUD' => 'AUD',
+    'BGN' => 'BGN',
+    'BRL' => 'BRL',
+    'CAD' => 'CAD',
+    'CHF' => 'CHF',
+    'CLP' => 'CLP',
+    'CNY' => 'CNY',
+    'CZK' => 'CZK',
+    'DKK' => 'DKK',
+    'EUR' => 'EUR',
+    'GBP' => 'GBP',
+    'GYD' => 'GYD',
+    'HKD' => 'HKO',
+    'HRK' => 'HRK',
+    'HUF' => 'HUF',
+    'IDR' => 'IDR',
+    'ILS' => 'ILS',
+    'INR' => 'INR',
+    'ISK' => 'ISK',
+    'JPY' => 'JPY',
+    'KRW' => 'KRW',
+    'LTL' => 'LTL',
+    'LVL' => 'LVL',
+    'MXN' => 'MXN',
+    'MYR' => 'MYR',
+    'NOK' => 'NOK',
+    'NZD' => 'NZD',
+    'PHP' => 'PHP',
+    'PLN' => 'PLN',
+    'RON' => 'RON',
+    'RUB' => 'RUB',
+    'SEK' => 'SEK',
+    'SGD' => 'SGD',
+    'THB' => 'THB',
+    'TRY' => 'TRY',
+    'UAH' => 'UAH',
+    'USD' => 'USD',
+    'XDR' => 'XOR',
+    'ZAR' => 'ZAR',
+);
+
 $EXISTINGASSIGNMENTS = array(
     EXISTINGASSIGNMENT_KEEP => trans('<!existingassignment>keep'),
     EXISTINGASSIGNMENT_SUSPEND => trans('<!existingassignment>suspend'),
@@ -1002,9 +1111,11 @@ if (isset($SMARTY)) {
     $SMARTY->assign('_NETWORK_INTERFACE_TYPES', $NETWORK_INTERFACE_TYPES);
     $SMARTY->assign('_CTYPES', $CTYPES);
     $SMARTY->assign('_CSTATUSES', $CSTATUSES);
+    $SMARTY->assign('_CCONSENTS', $CCONSENTS);
     $SMARTY->assign('_MESSAGETEMPLATES', $MESSAGETEMPLATES);
     $SMARTY->assign('_ACCOUNTTYPES', $ACCOUNTTYPES);
     $SMARTY->assign('_DOCTYPES', $DOCTYPES);
+    $SMARTY->assign('_DOCENTITIES', $DOCENTITIES);
     $SMARTY->assign('_DOCRIGHTS', $DOCRIGHTS);
     $SMARTY->assign('_PERIODS', $PERIODS);
     $SMARTY->assign('_GUARANTEEPERIODS', $GUARANTEEPERIODS);
@@ -1035,6 +1146,7 @@ if (isset($SMARTY)) {
     $SMARTY->assign('_SESSIONTYPES', $SESSIONTYPES);
     $SMARTY->assign('_CATEGORY_DEFAULT_STYLE', $CATEGORY_DEFAULT_STYLE);
     $SMARTY->assign('_EXISTINGASSIGNMENTS', $EXISTINGASSIGNMENTS);
+    $SMARTY->assign('_CURRENCIES', $CURRENCIES);
     $SMARTY->assign('_TAX_CATEGORIES', $TAX_CATEGORIES);
 }
 

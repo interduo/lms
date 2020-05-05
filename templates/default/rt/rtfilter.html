@@ -1,7 +1,7 @@
 {block name="rtfilter"}
 
 <TR>
-    <TD colspan="10">
+    <TD colspan="10" class="ticket-list-filter">
         <div class="lms-ui-filter-container">
         <div class="lms-ui-filter-definition">
         <FORM method="GET" action="?m=rtqueueview" name="filter" form="filter-form">
@@ -65,15 +65,18 @@
             </SELECT>
             </label>
             <label class="nobr">
-                <input type="hidden" name="owner" value="-1">
-                {trans("Owner:")}
-                <SELECT size="1" name="owner[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("- all -")}">
-                    <OPTION value="0" data-exclusive{if !is_array($filter.owner) && $filter.owner == 0} selected{/if}>- {trans("no owner")} -</OPTION>
+            {trans("Owner:")}
+                <input type="hidden" name="owner" value="all">
+                <SELECT size="1" name="owner[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("No filter")}">
+                    <option value="all" data-exclusive{if !is_array($filter.owner) && $filter.owner == "all"} selected{/if}>{trans("No filter")}</option>
+                    <option value="-1" data-exclusive{if !is_array($filter.owner) && $filter.owner == -1} selected{/if}>{trans("no owner")}</option>
+                    <option value="-2" data-exclusive{if !is_array($filter.owner) && $filter.owner == -2} selected{/if}>{trans("with owner")}</option>
+                    <option value="-3" data-exclusive{if !is_array($filter.owner) && $filter.owner == -3} selected{/if}>{trans("no owner or logged user")}</option>
                     {foreach $users as $user}
                         {if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
                             || (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
                             || (is_array($filter.owner) && in_array($user.id, $filter.owner))}
-                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.owner) && in_array($user.id, $filter.owner)}} selected{/if}>{$user.rname|truncate:40:"...":true}</OPTION>
+                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.owner) && in_array($user.id, $filter.owner)}} selected{/if}>{$user.rname|truncate:40:"...":true} ({$user.login})</OPTION>
                         {/if}
                     {/foreach}
                 </SELECT>
@@ -82,11 +85,14 @@
                 {trans("Verifier:")}
                 <input type="hidden" name="vids" value="all">
                 <SELECT size="1" name="vids[]" OnChange="document.filter.submit();" multiple class="lms-ui-multiselect" data-default-value="{trans("No filter")}" >
+                    <option value="all" data-exclusive{if !is_array($filter.verifierids) && $filter.verifierids == "all"} selected{/if}>{trans("No filter")}</option>
+                    <option value="-1" data-exclusive{if !is_array($filter.verifierids) && $filter.verifierids == -1} selected{/if}>{trans("Unassigned")}</option>
+                    <option value="-2" data-exclusive{if !is_array($filter.verifierids) && $filter.verifierids == -2} selected{/if}>{trans("Assigned")}</option>
                     {foreach $users as $user}
                         {if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
                             || (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
                             || (is_array($filter.verifierids) && in_array($user.id, $filter.verifierids))}
-                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.verifierids) && in_array($user.id, $filter.verifierids)} SELECTED{/if}>{$user.rname|truncate:40:"...":true}</OPTION>
+                            <OPTION{if !$user.access} disabled{/if} value="{$user.id}"{if is_array($filter.verifierids) && in_array($user.id, $filter.verifierids)} SELECTED{/if}>{$user.rname|truncate:40:"...":true} ({$user.login})</OPTION>
                         {/if}
                     {/foreach}
                 </SELECT>
@@ -105,8 +111,10 @@
             {trans("<!rt>Deadline:")}
             <SELECT size="1" name="d" OnChange="document.filter.submit();">
                 <OPTION value=""{if $filter.deadline == ""} SELECTED{/if}>{trans("all")}</OPTION>
-                <OPTION value="1"{if $filter.deadline == "1"} SELECTED{/if}>{trans("<!rt>With deadline")}</OPTION>
                 <OPTION value="-1"{if $filter.deadline == "-1"} SELECTED{/if}>{trans("<!rt>Without deadline")}</OPTION>
+                <OPTION value="1"{if $filter.deadline == "1"} SELECTED{/if}>{trans("<!rt>With deadline")}</OPTION>
+                <OPTION value="-4"{if $filter.deadline == "-4"} SELECTED{/if}>{trans("<!rt>Not expired")}</OPTION>
+                <OPTION value="-3"{if $filter.deadline == "-3"} SELECTED{/if}>{trans("<!rt>less than 7 days to deadline")}</OPTION>
                 <OPTION value="-2"{if $filter.deadline == "-2"} SELECTED{/if}>{trans("<!rt>Expired")}</OPTION>
             </SELECT>
             </label>
@@ -116,6 +124,13 @@
                     <option value="-1"{if $filter.unread == -1} selected{/if}>{trans("- all -")}</option>
                     <option value="0"{if $filter.unread == 0} selected{/if}>{trans("no")}</option>
                     <option value="1"{if $filter.unread == 1} selected{/if}>{trans("yes")}</option>
+                </SELECT>
+            </label>
+            <label class="nobr">
+                {trans("Parent ticket:")}
+                <SELECT size="1" name="parent" onChange="document.filter.submit()">
+                    <option value=""{if $filter.parent == ""} selected{/if}>{trans("all")}</option>
+                    <option value="1"{if $filter.parent == 1} selected{/if}>{trans("show only parent tickets")}</option>
                 </SELECT>
             </label>
             <label class="nobr">
@@ -131,6 +146,7 @@
                 <select name="nnids[]" size="1" multiple data-default-value="{trans("No filter")}" class="lms-ui-multiselect" {tip text="Select network node (optional)"} onchange="document.filter.submit();">
                     <option value="all" data-exclusive{if is_array($filter.netnodeids) && in_array(null, $filter.netnodeids)} selected{/if}>{trans("No filter")}</option>
                     <option value="-1" data-exclusive{if is_array($filter.netnodeids) && in_array(-1, $filter.netnodeids)} selected{/if}>{trans("Unassigned")}</option>
+                    <option value="-2" data-exclusive{if is_array($filter.netnodeids) && in_array(-2, $filter.netnodeids)} selected{/if}>{trans("Assigned")}</option>
                     {foreach $netnodelist as $idx => $netnode}
                     <option value="{$netnode.id}" {if is_array($filter.netnodeids) && in_array($netnode.id, $filter.netnodeids)} selected{/if}>{$netnode.name}</OPTION>
                     {/foreach}

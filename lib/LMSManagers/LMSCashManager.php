@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,8 +27,6 @@
 /**
  * LMSCashManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
- * @author Tomasz Chiliński <tomasz.chilinski@chilan.com>
  */
 class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 {
@@ -51,7 +49,7 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
      * @param array $file Import file information
      * @return array Invalid import file rows
      */
-    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true)
+    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true, $filemtime = null)
     {
         global $LMS;
 
@@ -262,7 +260,7 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
                     if (!$sourcefileid) {
                         $args = array(
                             'name' => $filename,
-                            'idate' => time(),
+                            'idate' => isset($filemtime) ? $filemtime : time(),
                             SYSLOG::RES_USER => Auth::GetCurrentUser(),
                         );
                         $this->db->Execute('INSERT INTO sourcefiles (name, idate, userid)
@@ -461,6 +459,7 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
                     );
                     $this->syslog->AddMessage(SYSLOG::RES_CASHIMPORT, SYSLOG::OPER_UPDATE, $args);
                 }
+                $balance['currency'] = LMS::$currency;
                 $finance_manager->AddBalance($balance);
 
                 $this->db->CommitTrans();

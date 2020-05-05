@@ -5,9 +5,11 @@
 
 <style>
 
+/*
 	#message-body {
 		line-height: 0.7em;
 	}
+ */
 
 </style>
 
@@ -23,11 +25,23 @@
 <B>{trans("Subject:")}</B> {$message.subject}<BR>
 <B>{trans("Message:")}</B><BR>
 <TABLE CELLPADDING="5" width="100%">
-        <TR>
-        	<TD CLASS="fall superlight"><PRE>{$message.body}</PRE></TD>
+	<TR>
+		<TD class="fall superlight">
+			<PRE id="message-body">{if $message.contenttype == 'text/plain'}{nl2br(htmlspecialchars($message.body), false)}{else}{$message.body}{/if}</PRE>
+		</TD>
 	</TR>
 </TABLE>
-{if $recipcount}
+<BR>
+{button id="showmessage" onclick="location.href = '?m=messageinfo&id={$message.id}';" label="Info" icon="info"}
+{button id="msglist" onclick="location.href = '?m=messagelist';" label="Messages List" icon="list"}
+{if isset($backto)}
+	{textformat assign="onclick" wrap=5000}
+		location.href = '{$backto}';
+	{/textformat}
+	{button id="backto" onclick=$onclick label="Back" icon="back"}
+{/if}
+<BR>
+	{if $recipcount}
 <BR><B>{trans("Sending messages to:")}</B><BR>
 {/if}
 {/block}

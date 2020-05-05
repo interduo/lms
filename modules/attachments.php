@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2019 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -35,8 +35,18 @@ if (!preg_match('/^[a-z0-9_]+$/', $attachmenttype)) {
 
 switch ($attachmenttype) {
     case 'netdevid':
+    case 'netdevmodelid':
     case 'netnodeid':
         if (!ConfigHelper::checkPrivilege('network_management')) {
+            if (isset($_GET['type'])) {
+                access_denied();
+            } else {
+                return;
+            }
+        }
+        break;
+    case 'messageid':
+        if (!ConfigHelper::checkPrivilege('messaging')) {
             if (isset($_GET['type'])) {
                 access_denied();
             } else {
@@ -79,14 +89,22 @@ if (isset($_GET['attachmentaction'])) {
                         header('Content-Transfer-Encoding: binary');
                         header('Content-Length: ' . filesize($file['filepath']) . ' bytes');
                     } else {
-                        header('Content-Disposition: attachment; filename="' . $file['filename'] . '"');
+                        if (isset($_GET['thumbnail']) && ($width = intval($_GET['thumbnail'])) > 0
+                            && class_exists('Imagick') && strpos($file['contenttype'], 'image/') === 0) {
+                            $imagick = new \Imagick($file['filepath']);
+                            $imagick->scaleImage($width, 0);
+                            echo $imagick->getImageBlob();
+                            die;
+                        } else {
+                            header('Content-Disposition: attachment; filename="' . $file['filename'] . '"');
+                        }
                     }
                 } else {
                     header('Content-Disposition: attachment; filename="' . $file['filename'] . '"');
                 }
                 header('Pragma: public');
             }
-            readfile($file['filepath']);
+            echo @file_get_contents($file['filepath']);
             die;
             break;
 
@@ -95,7 +113,11 @@ if (isset($_GET['attachmentaction'])) {
             die;
             break;
     }
-    $SESSION->redirect('?' . $SESSION->get('backto'));
+    if (isset($_GET['restore']) && !empty($_GET['restore'])) {
+        $SESSION->redirect('?' . $SESSION->get('backto').'&restore=1&resourceid=' . $_GET['resourceid']);
+    } else {
+        $SESSION->redirect('?' . $SESSION->get('backto'));
+    }
 }
 
 if (isset($_GET['resourceid'])) {
@@ -106,13 +128,18 @@ if (!preg_match('/^[0-9]+$/', $attachmentresourceid)) {
 }
 
 if (isset($_POST['upload'])) {
-    $result = handle_file_uploads('files', $error);
+    $uploaded_attachmenttype = $_POST['upload']['attachmenttype'];
+    $files = 'files-' . $uploaded_attachmenttype;
+    $result = handle_file_uploads($files, $error);
     extract($result);
     $SMARTY->assign('fileupload', $fileupload);
 
     $upload = $_POST['upload'];
 
+    header('Content-Type: application/json');
+
     if (!$error) {
+        $files = $result[$files];
         if (!empty($files)) {
             foreach ($files as &$file) {
                 $file['name'] = $tmppath . DIRECTORY_SEPARATOR . $file['name'];
@@ -121,7 +148,7 @@ if (isset($_POST['upload'])) {
             $LMS->AddFileContainer(array(
                 'description' => $upload['description'],
                 'files' => $files,
-                'type' => $attachmenttype,
+                'type' => $uploaded_attachmenttype,
                 'resourceid' => $attachmentresourceid,
             ));
         }
@@ -131,14 +158,14 @@ if (isset($_POST['upload'])) {
             rrmdir($tmppath);
         }
 
-        $SESSION->redirect('?' . $SESSION->get('backto'));
+        if (isset($upload['restore']) && !empty($upload['restore'])) {
+            die(json_encode(array('url' => '?' . $SESSION->get('backto').'&restore=1&resourceid=' . $attachmentresourceid)));
+        } else {
+            die(json_encode(array('url' => '?' . $SESSION->get('backto'))));
+        }
     }
 
-    $SMARTY->assign('upload', $upload);
+    die('{}');
 }
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
-
-$SMARTY->assign('attachmenttype', $attachmenttype);
-$SMARTY->assign('attachmentresourceid', $attachmentresourceid);
-$SMARTY->assign('filecontainers', $LMS->GetFileContainers($attachmenttype, $attachmentresourceid));

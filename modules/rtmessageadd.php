@@ -35,6 +35,8 @@ if (empty($categories)) {
     $categories = array();
 }
 
+$contacts = array();
+
 if (isset($_POST['message'])) {
     $message = $_POST['message'];
 
@@ -120,6 +122,8 @@ if (isset($_POST['message'])) {
     $error = $hook_data['error'];
 
     if (!$error) {
+        $message['categories'] = is_array($message['categories']) ? array_flip($message['categories']) : array();
+
         $user = $LMS->GetUserInfo(Auth::GetCurrentUser());
 
         $attachments = null;
@@ -135,6 +139,8 @@ if (isset($_POST['message'])) {
             }
             unset($file);
         }
+
+        $smtp_options = $LMS->GetRTSmtpOptions();
 
         foreach ($tickets as $ticketid) {
             $queue = $LMS->GetQueueByTicketId($ticketid);
@@ -198,7 +204,7 @@ if (isset($_POST['message'])) {
 
                     $body = $message['body'];
 
-                    $LMS->SendMail($recipients, $headers, $body, $attachments, null, $LMS->GetRTSmtpOptions());
+                    $LMS->SendMail($recipients, $headers, $body, $attachments, null, $smtp_options);
                 } else {
                     if ($message['customerid'] || $message['userid']) {
                         $message['mailfrom'] = '';
@@ -267,7 +273,7 @@ if (isset($_POST['message'])) {
                         . '?m=rtticketview&id=' . $ticketid . (isset($msgid) ? '#rtmessage-' . $msgid : '');
                 }
 
-                $LMS->SendMail($recipients, $headers, $body, $attachments, null, $LMS->GetRTSmtpOptions());
+                $LMS->SendMail($recipients, $headers, $body, $attachments, null, $smtp_options);
             }
 
             $hook_data = $LMS->executeHook(
@@ -284,14 +290,18 @@ if (isset($_POST['message'])) {
                 $message['state'] = RT_RESOLVED;
             }
 
-            if (!$DB->GetOne('SELECT owner FROM rttickets WHERE id = ?', array($ticketid))) {
-                $message['owner'] = Auth::GetCurrentUser();
-            }
+            $owner = $DB->GetOne('SELECT owner FROM rttickets WHERE id = ?', array($ticketid));
 
             if ($group_reply) {
-                $props = array(
-                    'owner' => empty($message['owner']) ? null : $message['owner'],
-                );
+                $props = array();
+                if ($message['owner'] == -100) {
+                    if (!$owner) {
+                        $message['owner'] = Auth::GetCurrentUser();
+                        $props['owner'] = empty($message['owner']) ? null : $message['owner'];
+                    }
+                } else {
+                    $props['owner'] = empty($message['owner']) ? null : $message['owner'];
+                }
                 if ($message['cause'] != -1) {
                     $props['cause'] = $message['cause'];
                 }
@@ -301,6 +311,9 @@ if (isset($_POST['message'])) {
                 if ($message['priority'] != -100) {
                     $props['priority'] = $message['priority'];
                 }
+                if ($message['queueid'] != -100) {
+                    $props['queueid'] = $message['queueid'];
+                }
                 if ($message['verifierid'] != -1) {
                     $props['verifierid'] = empty($message['verifierid']) ? null : $message['verifierid'];
                 }
@@ -308,6 +321,9 @@ if (isset($_POST['message'])) {
                     $props['deadline'] = empty($message['deadline']) ? null : $deadline;
                 }
             } else {
+                if (!$owner) {
+                    $message['owner'] = Auth::GetCurrentUser();
+                }
                 $props = array(
                     'queueid' => $message['queueid'],
                     'owner' => empty($message['owner']) ? null : $message['owner'],
@@ -331,12 +347,24 @@ if (isset($_POST['message'])) {
 
             // customer notification via sms when we reply to ticket message created from customer sms
             if (isset($message['smsnotify']) && !empty($service)) {
+                $phones = array();
                 if ($group_reply) {
-                    $message['phonefrom'] = $LMS->GetTicketPhoneFrom($ticketid);
+                    $phone = $LMS->GetTicketRequestorPhone($ticketid);
+                    if (!empty($phone)) {
+                        $phones[] = $phone;
+                    }
+                } else {
+                    if (isset($message['contacts'])) {
+                        foreach ($message['contacts'] as $phone) {
+                            $phones[] = $phone;
+                        }
+                    }
                 }
-                if (!empty($message['phonefrom'])) {
+                if (!empty($phones)) {
                     $sms_body = preg_replace('/\r?\n/', ' ', $message['body']);
-                    $LMS->SendSMS($message['phonefrom'], $sms_body);
+                    foreach ($phones as $phone) {
+                        $LMS->SendSMS($phone, $sms_body);
+                    }
                 }
             }
 
@@ -408,7 +436,7 @@ if (isset($_POST['message'])) {
                         );
                         foreach ($emails as $email) {
                             $custmail_headers['To'] = '<' . $email . '>';
-                            $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $LMS->GetRTSmtpOptions());
+                            $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $smtp_options);
                         }
                     }
                 } elseif (ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
@@ -461,6 +489,10 @@ if (isset($_POST['message'])) {
             $SESSION->redirect('?' . $backto);
         }
     }
+
+    if (!empty($message['categories'])) {
+        $message['categories'] = array_flip($message['categories']);
+    }
 } else {
     if ($_GET['ticketid']) {
         if (is_array($_GET['ticketid'])) {
@@ -471,6 +503,8 @@ if (isset($_POST['message'])) {
             $message['customernotify'] = 1;
             $message['state'] = -1;
             $message['cause'] = -1;
+            $message['queueid'] = -100;
+            $message['owner'] = -100;
             $message['priority'] = -100;
             $message['deadline'] = 0;
             $message['verifierid'] = -1;
@@ -560,12 +594,10 @@ if (isset($_POST['message'])) {
 
 $SMARTY->assign('error', $error);
 
-$ncategories = array();
-foreach ($categories as $category) {
+foreach ($categories as &$category) {
     $category['checked'] = isset($message['categories'][$category['id']]);
-    $ncategories[] = $category;
 }
-$categories = $ncategories;
+unset($category);
 
 $hook_data = $LMS->executeHook(
     'rtmessageadd_before_display',
@@ -588,14 +620,58 @@ if (!is_array($message['ticketid'])) {
             $message['state'] = RT_OPEN;
         }
     }
+
+    // collect phone numbers from ticket, message to which you reply and customer mobile phone contacts
+    if (!empty($ticket['requestor_phone'])) {
+        $contacts[] = array(
+            'contact' => $ticket['requestor_phone'],
+            'name' => trans('from ticket'),
+            'checked' => 1,
+        );
+    }
+    if (isset($message['phonefrom']) && !empty($message['phonefrom'])) {
+        $contacts[] = array(
+            'contact' => $message['phonefrom'],
+            'name' => trans('from message'),
+            'checked' => empty($contacts) ? 1 : 0,
+        );
+    }
+    if (!empty($message['customerid'])) {
+        $customercontacts = $LMS->GetCustomerContacts($message['customerid'], CONTACT_MOBILE);
+        if (empty($customercontacts)) {
+            $customercontacts = array();
+        }
+        foreach ($customercontacts as &$customercontact) {
+            if (($customercontact['type'] & (CONTACT_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_NOTIFICATIONS) {
+                $customercontact['checked'] = 0;
+                $contacts[] = $customercontact;
+            }
+        }
+        unset($customercontact);
+    }
+
+    if (isset($_POST['message'])) {
+        if (!isset($message['contacts'])) {
+            $message['contacts'] = array();
+        }
+        foreach ($contacts as $contactidx => &$contact) {
+            $contact['checked'] = isset($message['contacts'][$contactidx]) ? 1 : 0;
+        }
+        unset($contact);
+    } elseif (!empty($contacts) && ConfigHelper::checkConfig('phpui.helpdesk_customer_notify')) {
+        $message['smsnotify'] = true;
+    }
+
     $SMARTY->assign('queuelist', $LMS->LimitQueuesToUserpanelEnabled($LMS->GetQueueList(array('stats' => false)), $message['queueid']));
     $SMARTY->assign('messagetemplates', $LMS->GetMessageTemplatesByQueueAndType($queue['id'], RTMESSAGE_REGULAR));
 } else {
+    $SMARTY->assign('queuelist', $LMS->GetQueueList(array('stats' => false)));
     $SMARTY->assign('messagetemplates', $LMS->GetMessageTemplatesByQueueAndType($LMS->GetMyQueues(), RTMESSAGE_REGULAR));
 }
 $SMARTY->assign('citing', isset($_GET['citing']) || ConfigHelper::checkConfig('phpui.helpdesk_reply_body'));
 $SMARTY->assign('userlist', $LMS->GetUserNames());
 $SMARTY->assign('categories', $categories);
+$SMARTY->assign('contacts', $contacts);
 $SMARTY->assign('message', $message);
 
 $SMARTY->display('rt/rtmessageadd.html');

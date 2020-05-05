@@ -8,6 +8,10 @@
 }
 </style>
 <H1>{$layout.pagetitle}</H1>
+
+{$speed_unit_type = ConfigHelper::getConfig('phpui.speed_unit_type', 1000)}
+{$speed_unit_aggregation_threshold = ConfigHelper::getConfig('phpui.speed_unit_aggregation_threshold', 5)}
+
 <TABLE class="lmsbox lms-ui-background-cycle">
     <COLGROUP>
 		<COl style="width: 93%;">
@@ -115,7 +119,7 @@
     </THEAD>
     <TBODY>
 	{foreach $tarifflist as $tariff}
-	<TR class="highlight{if $tariff.disabled == 1 && !$listdata.state} blend{/if}" data-target-url="?m=tariffinfo&id={$tariff.id}">
+	<TR class="highlight{if $tariff.disabled == 1 && !$listdata.state} blend{/if}" data-target-url="?m=tariffinfo&id={$tariff.id}" data-name="{$tariff.name}">
 		<TD>
 			<IMG SRC="img/money.gif" ALT="">&nbsp;<a href="?m=tariffinfo&amp;id={$tariff.id}"><B>{$tariff.name}</B></a>
 			{if $tariff.datefrom || $tariff.dateto}
@@ -140,19 +144,19 @@
 			({$tariff.id|string_format:"%04d"})
 		</TD>
 		<TD class="text-right nobr">
-			{if $tariff.downrate}{convert_to_units($tariff.downrate * 1000)}/s{else}-{/if}
-			{if $tariff.downrate_n}({convert_to_units($tariff.downrate_n * 1000)}/s){/if}<BR>
-			{if $tariff.uprate}{convert_to_units($tariff.uprate * 1000)}/s{else}-{/if}
-			{if $tariff.uprate_n}({convert_to_units($tariff.uprate_n * 1000)}/s){/if}
+			{if $tariff.downrate}{convert_to_units($tariff.downrate * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}-{/if}
+			{if $tariff.downrate_n}({convert_to_units($tariff.downrate_n * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s){/if}<BR>
+			{if $tariff.uprate}{convert_to_units($tariff.uprate * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}-{/if}
+			{if $tariff.uprate_n}({convert_to_units($tariff.uprate_n * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s){/if}
 		</TD>
 		<TD class="text-right nobr">
-			{if $tariff.downceil}{convert_to_units($tariff.downceil * 1000)}/s{else}-{/if}
-			{if $tariff.downceil_n}({convert_to_units($tariff.downceil_n * 1000)}/s){/if}<BR>
-			{if $tariff.upceil}{convert_to_units($tariff.upceil * 1000)}/s{else}-{/if}
-			{if $tariff.upceil_n}({convert_to_units($tariff.upceil_n * 1000)}/s){/if}
+			{if $tariff.downceil}{convert_to_units($tariff.downceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}-{/if}
+			{if $tariff.downceil_n}({convert_to_units($tariff.downceil_n * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s){/if}<BR>
+			{if $tariff.upceil}{convert_to_units($tariff.upceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{else}-{/if}
+			{if $tariff.upceil_n}({convert_to_units($tariff.upceil_n * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s){/if}
 		</TD>
 		<TD class="text-right nobr">
-			<B>{$tariff.value|money_format}</B><BR>
+			<B>{moneyf($tariff.value, $tariff.currency)}</B><BR>
 			{$tariff.tax}
 		</TD>
 		<TD class="text-right nobr">
@@ -162,7 +166,7 @@
 		</TD>
 		<TD class="text-right">
 			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
-			{$tariff.income|money_format}
+			{moneyf($tariff.income, $tariff.currency)}
 			{/if}
 		</TD>
 		<TD class="lms-ui-buttons text-right nobr">
@@ -173,7 +177,11 @@
 						<img src="img/noaccess.gif" alt="{t}Enable{/t}" title="{t}Enable{/t}" />
 					{/if}
 				</a>
-				{if $tariff.customers}<A HREF="javascript:alert('{trans("Subscription with assigned customers cannot be deleted!")}');">{else}<A HREF="?m=tariffdel&amp;id={$tariff.id}" onClick="return confirmLink(this,'{trans("Are you sure, you want to delete that tariff?")}');">{/if}<IMG SRC="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
+				{if $tariff.customers}
+					<A class="delete-tariff-alert" href="#">
+				{else}
+					<A class="delete-tariff" HREF="?m=tariffdel&id={$tariff.id}">
+				{/if}<IMG SRC="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
 				<A HREF="?m=tariffedit&amp;id={$tariff.id}"><IMG SRC="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 				<A HREF="?m=tariffadd&amp;id={$tariff.id}"><IMG SRC="img/clone.gif" alt="{trans("Clone")}" title="{trans("Clone")}"></A>
 				<A HREF="?m=tariffinfo&amp;id={$tariff.id}"><IMG SRC="img/info.gif" alt="{trans("Info")}" title="{trans("Info")}"></A>
@@ -197,11 +205,28 @@
 		</TD>
 		<TD class="text-right nobr">
 			{if ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_summaries')}
-			<B>{$listdata.totalincome|money_format}</B>
+				{foreach $listdata.totalincome as $currency => $totalincome}
+					{if !$totalincome@first}<br>{/if}
+					<B>{moneyf($totalincome, $currency)}</B>
+				{/foreach}
 			{/if}
 		</TD>
 		<TD>&nbsp;</TD>
 	</TR>
     </TFOOT>
 </TABLE>
+	<script>
+		$('.delete-tariff').click(function() {
+			var name = $(this).closest('tr').attr('data-name');
+			console.log('name=', name);
+			confirmDialog($t("Are you sure, you want to delete tariff '$a'?", name), this).done(function() {
+				location.href = $(this).attr('href');
+			});
+			return false;
+		});
+		$('.delete-tariff-alert').click(function() {
+			alertDialog($t("Subscription with assigned customers cannot be deleted!"), this);
+			return;
+		});
+	</script>
 {/block}

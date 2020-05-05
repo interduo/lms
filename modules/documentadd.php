@@ -35,6 +35,7 @@ if (isset($_POST['document'])) {
 
     $oldfromdate = $document['fromdate'];
     $oldtodate = $document['todate'];
+    $oldconfirmdate = $document['confirmdate'];
 
     $document['customerid'] = isset($_POST['customerid']) ? intval($_POST['customerid']) : intval($_POST['customer']);
 
@@ -101,6 +102,17 @@ if (isset($_POST['document'])) {
 
     if ($document['fromdate'] > $document['todate'] && $document['todate'] != 0) {
         $error['todate'] = trans('Start date can\'t be greater than end date!');
+    }
+
+    if ($document['confirmdate'] && !isset($document['closed'])) {
+        $date = explode('/', $document['confirmdate']);
+        if (checkdate($date[1], $date[2], $date[0])) {
+            $document['confirmdate'] = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
+        } else {
+            $error['confirmdate'] = trans('Incorrect date format! Enter date in YYYY/MM/DD format!');
+        }
+    } else {
+        $document['confirmdate'] = 0;
     }
 
     // validate tariff selection list when promotions are active only
@@ -182,11 +194,12 @@ if (isset($_POST['document'])) {
                 fclose($fh);
 
                 $files[] = array(
-                    'md5sum' => md5_file($file),
-                    'type' => $engine['content_type'],
-                    'name' => $engine['output'],
                     'tmpname' => $file,
-                    'main' => true,
+                    'filename' => $engine['output'],
+                    'name' => $engine['output'],
+                    'type' => $engine['content_type'],
+                    'md5sum' => md5_file($file),
+                    'attachmenttype' => 1,
                 );
             } else if (empty($error)) {
                 $error['templ'] = trans('Problem during file generation!');
@@ -201,8 +214,9 @@ if (isset($_POST['document'])) {
     if (!empty($attachments)) {
         foreach ($attachments as $attachment) {
             $attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
+            $attachment['filename'] = $attachment['name'];
             $attachment['md5sum'] = md5_file($attachment['tmpname']);
-            $attachment['main'] = false;
+            $attachment['attachmenttype'] = 0;
             $files[] = $attachment;
         }
     }
@@ -213,11 +227,12 @@ if (isset($_POST['document'])) {
                 $filename = $template_dir . DIRECTORY_SEPARATOR . $filename;
             }
             $files[] = array(
-            'tmpname' => null,
-            'name' => $filename,
-            'type' => mime_content_type($filename),
-            'md5sum' => md5_file($filename),
-            'main' => false,
+                'tmpname' => null,
+                'filename' => basename($filename),
+                'name' => $filename,
+                'type' => mime_content_type($filename),
+                'md5sum' => md5_file($filename),
+                'attachmenttype' => 0,
             );
         }
     }
@@ -260,18 +275,19 @@ if (isset($_POST['document'])) {
         }
 
         $DB->Execute(
-            'INSERT INTO documents (type, number, numberplanid, cdate, sdate, cuserid,
+            'INSERT INTO documents (type, number, numberplanid, cdate, sdate, cuserid, confirmdate,
 			customerid, userid, name, address, zip, city, ten, ssn, divisionid, 
 			div_name, div_shortname, div_address, div_city, div_zip, div_countryid, div_ten, div_regon,
 			div_account, div_inv_header, div_inv_footer, div_inv_author, div_inv_cplace, closed, fullnumber,
 			reference, template, commitflags)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             array($document['type'],
                 $document['number'],
                 empty($document['numberplanid']) ? null : $document['numberplanid'],
                 $time,
                 isset($document['closed']) ? $time : 0,
                 isset($document['closed']) ? Auth::GetCurrentUser() : null,
+                isset($document['closed']) ? 0 : $document['confirmdate'] + 86399,
                 $document['customerid'],
                 Auth::GetCurrentUser(),
                 trim($customer['lastname'] . ' ' . $customer['name']),
@@ -312,15 +328,7 @@ if (isset($_POST['document'])) {
                 $document['description']
         ));
 
-        foreach ($files as $file) {
-            $DB->Execute('INSERT INTO documentattachments (docid, filename, contenttype, md5sum, main)
-				VALUES (?, ?, ?, ?, ?)', array($docid,
-                    basename($file['name']),
-                    $file['type'],
-                    $file['md5sum'],
-                    $file['main'] ? 1 : 0,
-            ));
-        }
+        $LMS->AddDocumentAttachments($docid, $files);
 
         // template post-action
         if (!empty($engine['post-action']) && file_exists($doc_dir . DIRECTORY_SEPARATOR . 'templates'
@@ -355,6 +363,7 @@ if (isset($_POST['document'])) {
 
                 if (is_array($selected_assignment['sassignmentid'][$schemaid])) {
                     $modifiedvalues = $selected_assignment['values'][$schemaid];
+                    $counts = $selected_assignment['counts'][$schemaid];
                     $copy_a = $selected_assignment;
                     $snodes = $selected_assignment['snodes'][$schemaid];
                     $sphones = $selected_assignment['sphones'][$schemaid];
@@ -366,6 +375,7 @@ if (isset($_POST['document'])) {
 
                         $copy_a['promotionassignmentid'] = $v;
                         $copy_a['modifiedvalues'] = isset($modifiedvalues[$label][$v]) ? $modifiedvalues[$label][$v] : array();
+                        $copy_a['count'] = $counts[$label];
                         $copy_a['nodes'] = $snodes[$label];
                         $copy_a['phones'] = $sphones[$label];
                         $tariffid = $LMS->AddAssignment($copy_a);
@@ -392,6 +402,7 @@ if (isset($_POST['document'])) {
     } else {
         $document['fromdate'] = $oldfromdate;
         $document['todate'] = $oldtodate;
+        $document['confirmdate'] = $oldconfirmdate;
         if (isset($autonumber)) {
             $document['number'] = '';
         }
@@ -424,11 +435,17 @@ if (isset($_POST['document'])) {
     if (!empty($default_assignment_at)) {
         $document['assignment']['at'] = $default_assignment_at;
     }
+
+    $document['assignment']['check_all_terminals'] =
+        ConfigHelper::checkConfig('phpui.promotion_schema_all_terminal_check');
 }
 
 $SMARTY->setDefaultResourceType('extendsall');
 
-$rights = $DB->GetCol('SELECT doctype FROM docrights WHERE userid = ? AND (rights & 2) = 2', array(Auth::GetCurrentUser()));
+$rights = $DB->GetCol(
+    'SELECT doctype FROM docrights WHERE userid = ? AND (rights & ?) > 0',
+    array(Auth::GetCurrentUser(), DOCRIGHT_CREATE)
+);
 
 if (!$rights) {
     $SMARTY->display('noaccess.html');
@@ -473,8 +490,6 @@ $SMARTY->assign('promotions', $promotions);
 $SMARTY->assign('tariffs', $LMS->GetTariffs());
 $SMARTY->assign('numberplanlist', $numberplans);
 // --- promotion support
-
-$tariffs = $LMS->GetTariffs();
 
 $SMARTY->assign('error', $error);
 $SMARTY->assign('docrights', $rights);

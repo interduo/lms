@@ -94,6 +94,12 @@
 			{/if}
 		</TD>
 	</TR>
+	<tr>
+		<td class="bold">{trans("Currency:")}</td>
+		<td>
+			{currency_selection selected=$note.currency elementname="note[currency]"}
+		</td>
+	</tr>
 	<TR>
 		<TD WIDTH="100%" ALIGN="right" COLSPAN="2">
 			<A HREF="javascript: saveheader();">{trans("Submit")} <IMG SRC="img/save.gif" ALT=""></A>
@@ -120,7 +126,7 @@
 </TABLE>
 </P>
 {/if}
-<P>	
+<P>
 <TABLE class="lmsbox lms-ui-background-cycle">
     <THEAD>
 	<TR>
@@ -149,11 +155,11 @@
 			{$item.description}
 		</TD>
 		<TD WIDTH="1%" NOWRAP ALIGN="RIGHT">
-			{$item.value|string_format:"%.2f"}
+			{$item.value|string_format:"%01.2f"}
 		</TD>
 		<TD WIDTH="1%" NOWRAP>
 			<A HREF="?m=noteedit&action=deletepos&posuid={$item.posuid}"><IMG SRC="img/delete.gif" {tip text="Remove this item from list"}></A>
-		</TD>			
+		</TD>
 	</TR>
 	{foreachelse}
 	<TR>
@@ -195,13 +201,13 @@
 	</TR>
 	<TR class="lms-ui-button-panel">
 		<TD COLSPAN="4" ALIGN="RIGHT">
-			<A HREF="?m=notelist">{trans("Cancel")} <IMG src="img/cancel.gif"></A> 
+			<A HREF="?m=notelist">{trans("Cancel")} <IMG src="img/cancel.gif"></A>
 			{if !$customer}
-			<A HREF="javascript:alert('{trans("Customer not selected!")}');">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
-			<A HREF="javascript:alert('{trans("Customer not selected!")}');">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
+				<A class="customer-alert" href="#">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
+				<A class="customer-alert" href="#">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
 			{elseif !$contents}
-			<A HREF="javascript:alert('{trans("Document has no items!")}');">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
-			<A HREF="javascript:alert('{trans("Document has no items!")}');">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
+				<A class="document-alert" href="#">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
+				<A class="document-alert" href="#">{trans("Save & Print")} <IMG src="img/printd.gif" alt=""></A>
 			{else}
 			<A HREF="?m=noteedit&action=save">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
 			<A HREF="javascript:printnote()">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
@@ -211,11 +217,19 @@
 	</FORM>
     </TFOOT>
 </TABLE>
-<SCRIPT type="text/javascript">
-<!--
+<SCRIPT>
 $(function() {
 	$('form[name="setcustomer"] [name="note[number]"]').focus();
 });
-//-->
+
+$('.customer-alert').click(function() {
+	alertDialog($t("Customer not selected!"), this);
+	return;
+});
+$('.document-alert').click(function() {
+	alertDialog($t("Document has no items!"), this);
+	return;
+});
+
 </SCRIPT>
 {/block}

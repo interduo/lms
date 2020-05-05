@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -45,21 +45,22 @@ if (isset($_GET['id'])) {
     if (!$record) {
         $SESSION->redirect('?'.$SESSION->get('backto'));
     }
-    
+
     $record['value'] = $DB->GetOne('SELECT SUM(value) FROM receiptcontents 
 			    WHERE docid = ?', array($record['id']));
 
     if (strpos($record['template'], '%I') !== false) {
         $receipt['out_extended'] = true;
     }
-    
+
     if (strpos($DB->GetOne('SELECT template FROM numberplans 
 			    WHERE id IN (SELECT in_numberplanid FROM cashregs WHERE id = ?)', array($regid)), '%I') !== false) {
         $receipt['in_extended'] = true;
     }
-    
-        $receipt['id'] = $id;
-        $receipt['regid'] = $regid;
+
+    $receipt['id'] = $id;
+    $receipt['regid'] = $regid;
+    $receipt['currency'] = $record['currency'];
 }
 
 $titlenumber = docnumber(array(
@@ -75,13 +76,13 @@ if (isset($_POST['receipt'])) {
     $in_extended = isset($receipt['in_extended']) ? $receipt['in_extended'] : null;
 
     $receipt = $_POST['receipt'];
-    
+
     $receipt['out_extended'] = $out_extended;
     $receipt['in_extended'] = $in_extended;
     $receipt['regid'] = $regid;
-    
+
     $value = f_round($receipt['value']);
-    
+
     if ($receipt['type'] == 'return') {
         $receipt['cdate'] = $_POST['receiptr']['cdate'];
     }
@@ -164,9 +165,14 @@ if (isset($_POST['receipt'])) {
     }
 
     if (!$error) {
+        $receipt['currencyvalue'] = $LMS->getCurrencyValue($receipt['currency'], $cdate);
+        if (!isset($receipt['currencyvalue'])) {
+            die('Fatal error: couldn\'t get quote for ' . $receipt['currency'] . ' currency!<br>');
+        }
+
         $DB->BeginTrans();
         $DB->LockTables(array('documents', 'numberplans'));
-        
+
         if ($receipt['type'] == 'return') {
             if (!$receipt['number']) {
                 $in_number = $LMS->GetNewDocumentNumber(array(
@@ -199,19 +205,22 @@ if (isset($_POST['receipt'])) {
 
         // add cash-in receipt
         $DB->Execute(
-            'INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?)',
-            array(  DOC_RECEIPT,
-                        $in_number,
-                        $in_extnumber,
-                        $in_plan,
-                        $cdate,
-                        Auth::GetCurrentUser(),
-                        $record['name'],
-                        $fullnumber,
-                        )
+            'INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)',
+            array(
+                DOC_RECEIPT,
+                $in_number,
+                $in_extnumber,
+                $in_plan,
+                $cdate,
+                Auth::GetCurrentUser(),
+                $record['name'],
+                $fullnumber,
+                isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
+            )
         );
-                        
+
         $rid = $DB->GetLastInsertId('documents');
 
         if ($receipt['type'] == 'settle') {
@@ -231,24 +240,27 @@ if (isset($_POST['receipt'])) {
             ));
 
             $DB->Execute(
-                'INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?)',
-                array(  DOC_RECEIPT,
-                        $receipt['out_number'],
-                        isset($receipt['out_extnumber']) ? $receipt['out_extnumber'] : '',
-                        $record['numberplanid'],
-                        $cdate,
-                        Auth::GetCurrentUser(),
-                        $receipt['name'],
-                        $fullnumber,
-                        )
+                'INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed, fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)',
+                array(
+                    DOC_RECEIPT,
+                    $receipt['out_number'],
+                    isset($receipt['out_extnumber']) ? $receipt['out_extnumber'] : '',
+                    $record['numberplanid'],
+                    $cdate,
+                    Auth::GetCurrentUser(),
+                    $receipt['name'],
+                    $fullnumber,
+                    isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                    isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
+                )
             );
-                        
+
             $rid2 = $DB->GetLastInsertId('documents');
         }
-        
+
         $DB->UnLockTables();
-            
+
         $DB->Execute(
             'INSERT INTO receiptcontents (docid, itemid, value, description, regid)
 					VALUES(?, 1, ?, ?, ?)',
@@ -260,14 +272,17 @@ if (isset($_POST['receipt'])) {
         );
 
         $DB->Execute(
-            'INSERT INTO cash (time, type, docid, itemid, value, comment, userid)
-					VALUES(?, 1, ?, 1, ?, ?, ?)',
-            array($cdate,
-                        $rid,
-                        str_replace(',', '.', $record['value'] * -1),
-                        trans('Advance return').' - '.$titlenumber,
-                        Auth::GetCurrentUser()
-                    )
+            'INSERT INTO cash (time, type, docid, itemid, value, currency, currencyvalue, comment, userid)
+					VALUES(?, 1, ?, 1, ?, ?, ?, ?, ?)',
+            array(
+                $cdate,
+                $rid,
+                str_replace(',', '.', $record['value'] * -1),
+                isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
+                trans('Advance return') . ' - ' . $titlenumber,
+                Auth::GetCurrentUser()
+            )
         );
 
         if ($receipt['type'] == 'settle') {
@@ -282,14 +297,17 @@ if (isset($_POST['receipt'])) {
             );
 
             $DB->Execute(
-                'INSERT INTO cash (time, type, docid, itemid, value, comment, userid)
-					VALUES(?, 1, ?, 1, ?, ?, ?)',
-                array($cdate,
-                        $rid,
-                        str_replace(',', '.', $value * -1),
-                        $receipt['description'],
-                        Auth::GetCurrentUser()
-                    )
+                'INSERT INTO cash (time, type, docid, itemid, value, currency, currencyvalue, comment, userid)
+					VALUES(?, 1, ?, 1, ?, ?, ?, ?, ?)',
+                array(
+                    $cdate,
+                    $rid,
+                    str_replace(',', '.', $value * -1),
+                    isset($receipt['currency']) ? $receipt['currency'] : LMS::$currency,
+                    isset($receipt['currencyvalue']) ? $receipt['currencyvalue'] : 1.0,
+                    $receipt['description'],
+                    Auth::GetCurrentUser()
+                )
             );
         }
 
@@ -299,8 +317,9 @@ if (isset($_POST['receipt'])) {
         $DB->CommitTrans();
 
         if (isset($_GET['print'])) {
-            $SESSION->save('receiptprint', array('receipt' => $rid, 'receipt2' => $rid2,
-                                'which' => (isset($_GET['which']) ? $_GET['which'] : '')));
+            $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
+            $SESSION->save('receiptprint', array('receipt' => $rid, 'receipt2' => $rid2, 'which' => $which), true);
         }
 
         $SESSION->redirect('?m=receiptlist&regid='.$regid.'#'.$rid);

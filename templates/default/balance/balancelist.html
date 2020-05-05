@@ -3,38 +3,41 @@
 {block name=module_content}
 <!--// $Id$ //-->
 <H1>{$layout.pagetitle}</H1>
-<SCRIPT type="text/javascript">
-	<!--
-	function DeleteMarked()
-	{
-		if ($('tr[data-published="1"] :checked').length) {
-			{if ConfigHelper::checkPrivilege('published_document_modification')}
-			if (!confirm('{trans("Some documents have been published already! Are you sure you want to delete them despite this?")}')) {
-				return;
+<SCRIPT>
+
+	$(function() {
+		$('#deletemarked').click(function() {
+			if ($('tr[data-published="1"] :checked').length) {
+				{if ConfigHelper::checkPrivilege('published_document_modification')}
+					confirmDialog($t("Some documents have been published already! Are you sure you want to delete them despite this?"), this).done(function() {
+						document.page.action="?m=balancedel";
+						document.page.target="";
+						document.page.submit();
+					});
+					return false;
+				{else}
+					alertDialog($t("Some documents have been published already!"), this);
+					return;
+				{/if}
 			}
-			{else}
-			alert('{trans("Some documents have been published already!")}');
-			return;
-			{/if}
-		}
 
-		if(!confirm('{trans("Are you sure, you want to delete selected operation(s) and/or document item(s)?")}'))
-			return;
-
-		document.page.action="?m=balancedel";
-		document.page.target="";
-		document.page.submit();
-	}
+			confirmDialog($t("Are you sure, you want to delete selected operation(s) and/or document item(s)?"), this).done(function() {
+				document.page.action="?m=balancedel";
+				document.page.target="";
+				document.page.submit();
+			});
+			return false;
+		});
+	});
 
 	function printr()
 	{
 		var add = "";
-		if(document.page.original.checked && document.page.copy.checked)
-			add = "";
-		else if(document.page.original.checked && !document.page.copy.checked)
-			add = "&which=original";
-		else if(!document.page.original.checked && document.page.copy.checked)
-			add = "&which=copy";
+		var which = 0;
+		$('form[name="page"] [name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+		add += "&which=" + which;
 
 		document.page.action = "?m=receipt&print=cached&cash=1" + add;
 		document.page.target = "_blank";
@@ -44,12 +47,11 @@
 	function printi()
 	{
 		var add = "";
-		if(document.page.original.checked)
-			add = "&original=1";
-		if(document.page.copy.checked)
-			add += "&copy=1";
-		if(document.page.duplicate.checked)
-			add += "&duplicate=1";
+		var which = 0;
+		$('form[name="page"] [name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+		add += "&which=" + which;
 
 		document.page.action="?m=invoice&print=cached&cash=1" + add;
 		document.page.target="_blank";
@@ -77,7 +79,6 @@
 		document.page.submit();
 	}
 	{/if}
-	//-->
 </SCRIPT>
 <FORM METHOD="POST" NAME="page">
 <INPUT type="submit" class="hiddenbtn">
@@ -132,6 +133,7 @@
                                 <OPTION value=""{if $listdata.cat == ""} SELECTED{/if}>{trans("- select category -")}</OPTION>
                                 <OPTION value="comment"{if $listdata.cat == "comment"} SELECTED{/if}>{trans("comment")}</OPTION>
                                 <OPTION value="cdate"{if $listdata.cat == "cdate"} SELECTED{/if}>{trans("date (YYYY/MM/DD)")}</OPTION>
+                                <OPTION value="month"{if $listdata.cat == "month"} SELECTED{/if}>{trans("month (YYYY/MM)")}</OPTION>
                                 <OPTION value="number"{if $listdata.cat == "number"} SELECTED{/if}>{trans("document number")}</OPTION>
                                 <OPTION value="value"{if $listdata.cat == "value"} SELECTED{/if}>{trans("value")}</OPTION>
                                 <OPTION value="name"{if $listdata.cat == "name"} SELECTED{/if}>{trans("customer name")}</OPTION>
@@ -174,19 +176,19 @@
 			{if $balance.userid}{$balance.user|truncate:16:"...":true}{else}-{/if}
 		</TD>
 		<TD class="text-right nobr">
-			{if $balance.covenant}{($balance.value*-1)|money_format}{else}-{/if}
+			{if $balance.covenant}{moneyf($balance.value*-1, $balance.currency)}{else}-{/if}
 		</TD>
 		<TD class="text-right nobr">
-                        {if !$balance.covenant && $balance.value > 0}{$balance.value|money_format}{else}-{/if}
+                        {if !$balance.covenant && $balance.value > 0}{moneyf($balance.value, $balance.currency)}{else}-{/if}
 		</TD>
 		<TD class="text-right nobr">
-			{if !$balance.covenant && $balance.value < 0}{($balance.value*-1)|money_format}{else}-{/if}
+			{if !$balance.covenant && $balance.value < 0}{moneyf($balance.value*-1, $balance.currency)}{else}-{/if}
 		</TD>
 		<TD class="text-center">
 			&raquo;
 		</TD>
 		<TD class="text-right nobr">
-                        {if $balance.covenant}-{else}{$balance.after|money_format}{/if}
+                        {if $balance.covenant}-{else}{moneyf($balance.after)}{/if}
 		</TD>
 		<TD class="text-right nobr">
 			{if $balance.customerid}<A HREF="?m=customerinfo&id={$balance.customerid}">{$balance.customername|truncate:20:"...":true}</A>{else} - {/if}
@@ -229,12 +231,27 @@
     <TFOOT>
 	<TR>
 		<TD COLSPAN="8" class="nobr">
-			<A HREF="javascript:DeleteMarked();">{trans("Delete")} <IMG SRC="img/delete.gif" ALT="{trans("Delete")}" HSPACE="2"></A>&nbsp;
+			<A id="deletemarked" HREF="#">{trans("Delete")} <IMG SRC="img/delete.gif" ALT="{trans("Delete")}" HSPACE="2"></A>&nbsp;
 			<A HREF="javascript:printi();">{trans("Print invoices")} <IMG SRC="img/print.gif" ALT="" HSPACE="2"></A>&nbsp;
 			<A HREF="javascript:printr();">{trans("Print cash receipts")} <IMG SRC="img/printr.gif" ALT="" HSPACE="2"></A>&nbsp;
-			<INPUT type="checkbox" name="original" id="original"{if preg_match('/original/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}><label for="original">{trans("original")}</label>
-			<INPUT type="checkbox" name="copy" id="copy"{if preg_match('/copy/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}><label for="copy">{trans("copy")}</label>
-			<INPUT type="checkbox" name="duplicate" id="duplicate"{if preg_match('/duplicate/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}><label for="duplicate">{trans("duplicate")}</label>
+			<label>
+				<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_ORIGINAL}]"
+						value="{$smarty.const.DOC_ENTITY_ORIGINAL}"
+						{if preg_match('/original/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}>
+				{$_DOCENTITIES[$smarty.const.DOC_ENTITY_ORIGINAL]}
+			</label>
+			<label>
+				<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_COPY}]"
+					   value="{$smarty.const.DOC_ENTITY_COPY}"
+						{if preg_match('/copy/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}>
+				{$_DOCENTITIES[$smarty.const.DOC_ENTITY_COPY]}
+			</label>
+			<label>
+				<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_DUPLICATE}]"
+					   value="{$smarty.const.DOC_ENTITY_DUPLICATE}"
+						{if preg_match('/duplicate/i', ConfigHelper::getConfig('invoices.default_printpage'))} checked{/if}>
+				{$_DOCENTITIES[$smarty.const.DOC_ENTITY_DUPLICATE]}
+			</label>
 		</TD>
 		<TD colspan="2" class="text-right nobr">
 			<label>

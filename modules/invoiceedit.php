@@ -68,10 +68,10 @@ if (isset($_GET['id']) && ($action == 'edit' || $action == 'init')) {
 
     $invoice['proforma'] = isset($_GET['proforma']) ? $action : 0;
 
-    $SESSION->remove('invoicecontents');
-    $SESSION->remove('invoice');
-    $SESSION->remove('invoicecustomer');
-    $SESSION->remove('invoiceediterror');
+    $SESSION->remove('invoicecontents', true);
+    $SESSION->remove('invoice', true);
+    $SESSION->remove('invoicecustomer', true);
+    $SESSION->remove('invoiceediterror', true);
 
     $invoicecontents = array();
     foreach ($invoice['content'] as $item) {
@@ -110,16 +110,16 @@ if (isset($_GET['id']) && ($action == 'edit' || $action == 'init')) {
     $invoicecontents = $hook_data['contents'];
     $invoice = $hook_data['invoice'];
 
-    $SESSION->save('invoicecontents', $invoicecontents);
-    $SESSION->save('invoice', $invoice);
-    $SESSION->save('invoicecustomer', $invoice['customerid']);
-    $SESSION->save('invoiceid', $invoice['id']);
+    $SESSION->save('invoicecontents', $invoicecontents, true);
+    $SESSION->save('invoice', $invoice, true);
+    $SESSION->save('invoicecustomer', $invoice['customerid'], true);
+    $SESSION->save('invoiceid', $invoice['id'], true);
 }
 
-$SESSION->restore('invoicecontents', $contents);
-$SESSION->restore('invoice', $invoice);
-$SESSION->restore('invoicecustomer', $customerid);
-$SESSION->restore('invoiceediterror', $error);
+$SESSION->restore('invoicecontents', $contents, true);
+$SESSION->restore('invoice', $invoice, true);
+$SESSION->restore('invoicecustomer', $customerid, true);
+$SESSION->restore('invoiceediterror', $error, true);
 $itemdata = r_trim($_POST);
 
 $ntempl = docnumber(array(
@@ -304,6 +304,7 @@ switch ($action) {
         $zip = $invoice['zip'];
         $city = $invoice['city'];
         $countryid = $invoice['countryid'];
+        $recipient_address = $invoice['recipient_address'];
 
         unset($invoice);
         unset($error);
@@ -330,6 +331,7 @@ switch ($action) {
         $invoice['zip'] = $zip;
         $invoice['city'] = $city;
         $invoice['countryid'] = $countryid;
+        $invoice['recipient_address'] = $recipient_address;
 
         $currtime = time();
 
@@ -445,7 +447,7 @@ switch ($action) {
 
         $contents = changeContents($contents, $_POST['invoice-contents']);
 
-        $SESSION->restore('invoiceid', $invoice['id']);
+        $SESSION->restore('invoiceid', $invoice['id'], true);
         $invoice['type'] = $invoice['doctype'];
 
         if (!ConfigHelper::checkPrivilege('invoice_consent_date')) {
@@ -454,6 +456,10 @@ switch ($action) {
 
         if (!ConfigHelper::checkPrivilege('invoice_sale_date')) {
             $invoice['sdate'] = $invoice['cdate'];
+        }
+
+        if (!isset($CURRENCIES[$invoice['currency']])) {
+            $error['currency'] = trans('Invalid currency selection!');
         }
 
         $hook_data = array(
@@ -502,6 +508,11 @@ switch ($action) {
         $paytime = round(($deadline - $cdate) / 86400);
         $iid   = $invoice['id'];
 
+        $invoice['currencyvalue'] = $LMS->getCurrencyValue($invoice['currency'], $sdate);
+        if (!isset($invoice['currencyvalue'])) {
+            die('Fatal error: couldn\'t get quote for ' . $invoice['currency'] . ' currency!<br>');
+        }
+
         $DB->BeginTrans();
         $tables = array('documents', 'cash', 'invoicecontents', 'numberplans', 'divisions', 'vdivisions',
             'customerview', 'customercontacts', 'netdevices', 'nodes',
@@ -518,9 +529,7 @@ switch ($action) {
             $customer = $LMS->GetCustomer($invoice['customerid'], true);
         }
 
-        $division = $DB->GetRow('SELECT name, shortname, address, city, zip, countryid, ten, regon,
-			account, inv_header, inv_footer, inv_author, inv_cplace 
-			FROM vdivisions WHERE id = ?', array($use_current_customer_data ? $customer['divisionid'] : $invoice['divisionid']));
+        $division = $LMS->GetDivision($use_current_customer_data ? $customer['divisionid'] : $invoice['divisionid']);
 
         if (!$invoice['number']) {
             $invoice['number'] = $LMS->GetNewDocumentNumber(array(
@@ -590,12 +599,16 @@ switch ($action) {
             'div_' . SYSLOG::getResourceKey(SYSLOG::RES_COUNTRY) => ($division['countryid'] ? $division['countryid'] : null),
             'div_ten'=> ($division['ten'] ? $division['ten'] : ''),
             'div_regon' => ($division['regon'] ? $division['regon'] : ''),
+            'div_bank' => $division['bank'] ?: null,
             'div_account' => ($division['account'] ? $division['account'] : ''),
             'div_inv_header' => ($division['inv_header'] ? $division['inv_header'] : ''),
             'div_inv_footer' => ($division['inv_footer'] ? $division['inv_footer'] : ''),
             'div_inv_author' => ($division['inv_author'] ? $division['inv_author'] : ''),
             'div_inv_cplace' => ($division['inv_cplace'] ? $division['inv_cplace'] : ''),
             'comment' => ($invoice['comment'] ? $invoice['comment'] : null),
+            'currency' => $invoice['currency'],
+            'currencyvalue' => $invoice['currencyvalue'],
+            'memo' => $use_current_customer_data ? (empty($customer['documentmemo']) ? null : $customer['documentmemo']) : $invoice['memo'],
         );
 
         $args['type'] = $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE;
@@ -616,8 +629,9 @@ switch ($action) {
         $DB->Execute('UPDATE documents SET cdate = ?, sdate = ?, paytime = ?, paytype = ?, splitpayment = ?, customerid = ?,
 				name = ?, address = ?, ten = ?, ssn = ?, zip = ?, city = ?, countryid = ?, divisionid = ?,
 				div_name = ?, div_shortname = ?, div_address = ?, div_city = ?, div_zip = ?, div_countryid = ?,
-				div_ten = ?, div_regon = ?, div_account = ?, div_inv_header = ?, div_inv_footer = ?,
-				div_inv_author = ?, div_inv_cplace = ?, comment = ?, type = ?, number = ?, fullnumber = ?, numberplanid = ?
+				div_ten = ?, div_regon = ?, div_bank = ?, div_account = ?, div_inv_header = ?, div_inv_footer = ?,
+				div_inv_author = ?, div_inv_cplace = ?, comment = ?, currency = ?, currencyvalue = ?, memo = ?,
+				type = ?, number = ?, fullnumber = ?, numberplanid = ?
 				WHERE id = ?', array_values($args));
         if ($SYSLOG) {
             $SYSLOG->AddMessage(
@@ -684,6 +698,8 @@ switch ($action) {
                     $LMS->AddBalance(array(
                         'time' => $cdate,
                         'value' => $item['valuebrutto']*$item['count']*-1,
+                        'currency' => $invoice['currency'],
+                        'currencyvalue' => $invoice['currencyvalue'],
                         'taxid' => $item['taxid'],
                         'customerid' => $invoice['customerid'],
                         'comment' => $item['name'],
@@ -720,21 +736,22 @@ switch ($action) {
         $DB->CommitTrans();
 
         if (isset($_GET['print'])) {
+            $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
             $SESSION->save('invoiceprint', array(
                 'invoice' => $invoice['id'],
-                'original' => !empty($_GET['original']) ? 1 : 0,
-                'copy' => !empty($_GET['copy']) ? 1 : 0,
-                'duplicate' => !empty($_GET['duplicate']) ? 1 : 0));
+                'which' => $which
+            ), true);
         }
 
         $SESSION->redirect('?m=invoicelist' . (isset($invoice['proforma']) && $invoice['proforma'] === 'edit' ? '&proforma=1' : ''));
         break;
 }
 
-$SESSION->save('invoice', $invoice);
-$SESSION->save('invoicecontents', $contents);
-$SESSION->save('invoicecustomer', $customerid);
-$SESSION->save('invoiceediterror', $error);
+$SESSION->save('invoice', $invoice, true);
+$SESSION->save('invoicecontents', $contents, true);
+$SESSION->save('invoicecustomer', $customerid, true);
+$SESSION->save('invoiceediterror', $error, true);
 
 if ($action && !$error) {
     // redirect needed because we don't want to destroy contents of invoice in order of page refresh
@@ -773,6 +790,18 @@ $hook_data = $LMS->ExecuteHook('invoiceedit_before_display', $hook_data);
 $customer = $hook_data['customer'];
 $contents = $hook_data['contents'];
 $invoice = $hook_data['invoice'];
+
+if (isset($customer)) {
+    $addresses = $LMS->getCustomerAddresses($customer['id']);
+    if (isset($invoice['recipient_address'])) {
+        $addresses = array_replace(
+            array($invoice['recipient_address']['address_id'] => $invoice['recipient_address']),
+            $addresses
+        );
+        $invoice['recipient_address'] = base64_encode(json_encode($invoice['recipient_address']));
+    }
+    $SMARTY->assign('addresses', $addresses);
+}
 
 $SMARTY->assign('customer', $customer);
 $SMARTY->assign('contents', $contents);

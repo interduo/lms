@@ -94,6 +94,13 @@ if (isset($netnodedata)) {
         $error['lastinspectiontime'] = trans('Date from the future not allowed!');
     }
 
+    if (empty($netnodedata['ownerid']) && !ConfigHelper::checkPrivilege('full_access')
+        && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($netnodedata['location_city_name']) && ($netnodedata['location_country_id'] == 2 || empty($netnodedata['location_country_id']))
+        && (!isset($netnodedata['teryt']) || empty($netnodedata['location_city']))) {
+        $error['netnode[teryt]'] = trans('TERRIT address is required!');
+    }
+
     if (!$error) {
         if ($netnodedata['projectid'] == -1) {
             $netnodedata['projectid'] = $LMS->AddProject($netnodedata);
@@ -136,6 +143,12 @@ if (isset($netnodedata)) {
 }
 
 $layout['pagetitle'] = trans('New Net Device Node');
+
+if (!empty($netnodedata['ownerid'])) {
+    $addresses = $LMS->getCustomerAddresses($netnodedata['ownerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
+}
 
 $SMARTY->assign('netnode', $netnodedata);
 $SMARTY->assign('divisions', $LMS->GetDivisions());

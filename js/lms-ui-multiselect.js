@@ -42,7 +42,7 @@ function multiselect(options) {
 		if (button) {
 			new_element.append(button);
 		} else {
-			new_element.html('<img src="' + icon + '">' + (label ? '&nbsp' + label : ''));
+			new_element.html(icon.match("img\/", icon) ? '<img src="' + icon + '">' + (label ? '&nbsp' + label : '') : '<i class="' + icon + '"/>');
 		}
 	} else {
 		$('<span/>')
@@ -52,6 +52,7 @@ function multiselect(options) {
 
 	new_element.data('multiselect-object', this)
 		.attr('style', old_element.attr('style'));
+
 	// save onchange event handler
 	var onchange = old_element.prop('onchange');
 	if (typeof(onchange) == 'function') {
@@ -123,13 +124,14 @@ function multiselect(options) {
 	}
 
 	function updateCheckAll() {
-		var checkboxes = all_enabled_items.filter(':not(.exclusive)').find(':checkbox');
+		var checkboxes = all_enabled_items.filter(':not(.exclusive)').filter('.visible').find(':checkbox');
 		ul.parent().find('.checkall').prop('checked', checkboxes.filter(':checked').length == checkboxes.length);
 	}
 
 	$('option', old_element).each(function(i) {
 		var exclusive = $(this).attr('data-exclusive');
 		var class_name = (exclusive == '' ? 'exclusive' : '');
+		class_name += ' visible';
 		var li = $('<li/>').addClass(class_name).appendTo(ul);
 
 		// add elements
@@ -189,6 +191,12 @@ function multiselect(options) {
 				value: box.val(),
 				checked: box.is(':checked')
 			});
+
+			var checkboxes = all_enabled_items.filter(':not(.exclusive)').filter('.visible').find(':checkbox');
+			wrapper.trigger('checkall', {
+				allChecked: checkboxes.filter(':checked').length == checkboxes.length
+			});
+
 			e.stopPropagation();
 		}).mouseenter(function() {
 			$(this).addClass('active').find('input').focus().end().siblings('li').not(this).removeClass('active');
@@ -207,12 +215,17 @@ function multiselect(options) {
 		all_enabled_checkboxes.filter('.exclusive').prop('checked', false);
 		all_enabled_checkboxes.filter(':not(.exclusive)').each(function() {
 			var li = $(this).closest('li');
-			if (checked) {
-				li.addClass('selected');
+			if (li.is('.visible')) {
+				if (checked) {
+					li.addClass('selected');
+				} else {
+					li.removeClass('selected');
+				}
+				$(this).prop('checked', checked);
 			} else {
 				li.removeClass('selected');
+				$(this).prop('checked', false);
 			}
-			$(this).prop('checked', checked);
 		});
 		new_selected = multiselect.generateSelectedString();
 	}
@@ -233,7 +246,13 @@ function multiselect(options) {
 				var checkbox = $('.checkall', this);
 				checkbox.prop('checked', !checkbox.prop('checked'))
 			}
+
 			checkAllElements();
+
+			wrapper.trigger('checkall', {
+				allChecked: $('.checkall', this).prop('checked')
+			});
+
 			e.stopPropagation();
 		});
 	}
@@ -322,19 +341,22 @@ function multiselect(options) {
 	// hide combobox after click out of the window
 	$(document).click(function(e) {
 		var elem = e.target;
-		while (elem && (elem.nodeName != 'DIV' || elem.className.match(/^lms-ui-multiselect(-tiny)?-wrapper/) === null))
+		while (elem && (elem.nodeName != 'DIV' || elem.className.match(/^lms-ui-multiselect(-tiny)?-wrapper/) === null)) {
 			elem = elem.parentNode;
+		}
 
-		if (!$(div).is(':visible') || (elem && elem.id == old_element.attr('id')))
+		if (!$(div).is(':visible') || (elem && elem.id == old_element.attr('id'))) {
 			return 0;
+		}
 
-		var parent = $(e.target).parent().html().indexOf(old_element.attr('name'));
+		var parent = $(e.target).parent().is(document) ? -1 : $(e.target).parent().html().indexOf(old_element.attr('name'));
 
 		if ($(e.target).html().indexOf("<head>") > -1 || parent == -1 ||
 			(parent > -1 && e.target.nodeName != 'INPUT' && e.target.nodeName != 'LI' && e.target.nodeName != 'SPAN')) {
 			$(div).hide();
-			if (new_selected != old_selected)
+			if (new_selected != old_selected) {
 				wrapper.triggerHandler('change');
+			}
 			old_selected = new_selected;
 		}
 	});
@@ -405,13 +427,21 @@ function multiselect(options) {
 	}
 
 	this.showOption = function(index) {
-		$(all_items.get(index)).show();
+		$(all_items.get(index)).show().addClass('visible');
 	}
 
 	this.hideOption = function(index) {
-		$(all_items.get(index)).removeClass('selected').hide()
+		$(all_items.get(index)).removeClass('selected').hide().removeClass('visible')
 			.find('input:checkbox').prop('checked', false);
 		updateCheckAll();
+	}
+
+	this.toggleCheckAll = function(checkall) {
+		if (typeof(checkall) === 'undefined') {
+			checkall = true;
+		}
+		checkall_div.find('.checkall').prop('checked', checkall);
+		checkAllElements();
 	}
 
 	this.refreshSelection = function() {

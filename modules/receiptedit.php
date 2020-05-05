@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2019 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -43,7 +43,7 @@ if (isset($_GET['id'])) {
 
     $i = 1;
     $sum = 0;
-    
+
     if ($items = $DB->GetAll('SELECT itemid, value, description FROM receiptcontents WHERE docid = ?', array($receipt['id']))) {
         foreach ($items as $item) {
             $item['posuid'] = $i++;
@@ -57,7 +57,7 @@ if (isset($_GET['id'])) {
 
     $receipt['regid'] = $regid;
     $receipt['type'] = $sum > 0 ? 'in' : 'out';
-    
+
     if ($receipt['customerid']) {
         $receipt['o_type'] = 'customer';
     } elseif ($receipt['closed']) {
@@ -67,7 +67,7 @@ if (isset($_GET['id'])) {
         $receipt['o_type'] = 'advance';
         $receipt['adv_name'] = $receipt['name'];
     }
-    
+
     if ($receipt['customerid']) {
         $customer = $LMS->GetCustomer($receipt['customerid'], true);
         $customer['groups'] = $LMS->CustomergroupGetForCustomer($receipt['customerid']);
@@ -87,7 +87,7 @@ if (isset($_GET['id'])) {
                 }
             }
         }
-        
+
         // jesli klient posiada zablokowane komputery poinformujmy
         // o tym kasjera, moze po wplacie trzeba bedzie zmienic ich status
         if (ConfigHelper::checkConfig('receipts.show_nodes_warning')) {
@@ -125,19 +125,19 @@ if (isset($_GET['id'])) {
             }
         }
     }
-        
+
     if ($receipt['numberplanid'] && !$receipt['extnumber']) {
         if (strpos($receipt['template'], '%I')!==false) {
             $receipt['extended'] = true;
         }
     }
-    
+
     $receipt['selected'] = true;
-    
-    $SESSION->save('receipt', $receipt);
-    $SESSION->save('receiptcontents', $contents);
-    $SESSION->save('receiptcustomer', isset($customer) ? $customer : null);
-    $SESSION->save('receiptediterror', $error);
+
+    $SESSION->save('receipt', $receipt, true);
+    $SESSION->save('receiptcontents', $contents, true);
+    $SESSION->save('receiptcustomer', isset($customer) ? $customer : null, true);
+    $SESSION->save('receiptediterror', $error, true);
 }
 
 // receipt positions adding with double click protection
@@ -150,16 +150,16 @@ function additem(&$content, $item)
             break;
         }
     }
-    
+
     if ($i == $x) {
             $content[] = $item;
     }
 }
 
-$SESSION->restore('receiptcontents', $contents);
-$SESSION->restore('receiptcustomer', $customer);
-$SESSION->restore('receipt', $receipt);
-$SESSION->restore('receiptediterror', $error);
+$SESSION->restore('receiptcontents', $contents, true);
+$SESSION->restore('receiptcustomer', $customer, true);
+$SESSION->restore('receipt', $receipt, true);
+$SESSION->restore('receiptediterror', $error, true);
 
 $receipt['titlenumber'] = docnumber(array(
     'number' => $receipt['number'],
@@ -184,7 +184,7 @@ switch ($action) {
         // workaround for PHP 4.3.10 bug
         $itemdata['value'] = str_replace(',', '.', $itemdata['value']);
         $itemdata['posuid'] = (string) getmicrotime();
-    
+
         if ($itemdata['value'] && $itemdata['description']) {
             additem($contents, $itemdata);
         }
@@ -206,32 +206,32 @@ switch ($action) {
         $oldtemplate = $receipt['template'];
         $id = $receipt['id'];
         $oldclosed = $receipt['closed'];
-        
+
         unset($receipt);
         unset($customer);
         $error = null;
-        
+
         if ($receipt = $_POST['receipt']) {
             foreach ($receipt as $key => $val) {
                 $receipt[$key] = $val;
             }
         }
-        
+
         $receipt['customerid'] = $_POST['customerid'];
         $receipt['template'] = $oldtemplate;
         $receipt['id'] = $id;
         $receipt['closed'] = $oldclosed;
-        
+
         if ($receipt['regid'] != $oldreg) {
             if ($receipt['type'] == 'in') {
                 $receipt['numberplanid'] = $DB->GetOne('SELECT in_numberplanid FROM cashregs WHERE id=?', array($receipt['regid']));
             } else {
                 $receipt['numberplanid'] = $DB->GetOne('SELECT out_numberplanid FROM cashregs WHERE id=?', array($receipt['regid']));
             }
-            
+
             $receipt['number'] = 0;
         }
-        
+
         if ($receipt['cdate']) {
             list($year, $month, $day) = explode('/', $receipt['cdate']);
             if (checkdate($month, $day, $year)) {
@@ -242,7 +242,7 @@ switch ($action) {
                 break;
             }
         }
-        
+
         $newday = date('Ymd', $receipt['cdate']);
         $oldday = date('Ymd', $oldcdate);
         if ($newday != $oldday) {
@@ -256,7 +256,7 @@ switch ($action) {
         } else { // przywracamy pierwotna godzine utworzenia dokumentu
             $receipt['cdate'] = $oldcdate;
         }
-            
+
         if (!$receipt['number']) {
             $receipt['number'] = $LMS->GetNewDocumentNumber(array(
                 'doctype' => DOC_RECEIPT,
@@ -288,7 +288,7 @@ switch ($action) {
 
         if ($receipt['o_type']=='other') {
                 $receipt['customerid'] = 0;
-            
+
             switch ($receipt['o_type']) {
                 case 'advance':
                     if (trim($receipt['adv_name']) == '') {
@@ -301,7 +301,7 @@ switch ($action) {
                     }
                     break;
             }
-            
+
             if (trim($receipt['o_name']) == '') {
                                 $error['o_name'] = trans('Target is required!');
             }
@@ -311,13 +311,13 @@ switch ($action) {
             }
             break;
         }
-        
+
         $cid = !empty($_GET['customerid']) ? $_GET['customerid'] : $_POST['customerid'];
-        
+
         if (!$cid) {
             $cid = $oldcid;
         }
-        
+
         if (!isset($error)) {
             if ($LMS->CustomerExists(($cid))) {
                 $customer = $LMS->GetCustomer($cid, true);
@@ -338,7 +338,7 @@ switch ($action) {
                         }
                     }
                 }
-                
+
                 // jesli klient posiada zablokowane komputery poinformujmy
                 // o tym kasjera, moze po wplacie trzeba bedzie zmienic ich status
                 if (ConfigHelper::checkConfig('receipts.show_nodes_warning')) {
@@ -376,13 +376,18 @@ switch ($action) {
                         }
                     }
                 }
-                
+
                 $receipt['selected'] = true;
             }
         }
 
         break;
     case 'save':
+        $receipt['currencyvalue'] = $LMS->getCurrencyValue($receipt['currency'], $receipt['cdate']);
+        if (!isset($receipt['currencyvalue'])) {
+            die('Fatal error: couldn\'t get quote for ' . $receipt['currency'] . ' currency!<br>');
+        }
+
         if ($contents && $customer) {
             $DB->BeginTrans();
             $DB->LockTables('documents');
@@ -399,7 +404,8 @@ switch ($action) {
 
             $fullnumber = docnumber(array(
                 'number' => $receipt['number'],
-                'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
+                'template' => empty($receipt['numberplanid'])
+                    ? null : $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
                 'cdate' => $receipt['cdate'],
                 'customerid' => $customer['id'],
             ));
@@ -409,7 +415,7 @@ switch ($action) {
                 'type' => DOC_RECEIPT,
                 'number' => $receipt['number'],
                 'extnumber' => $receipt['extnumber'] ? $receipt['extnumber'] : '',
-                SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
+                SYSLOG::RES_NUMPLAN => empty($receipt['numberplanid']) ? null : $receipt['numberplanid'],
                 'cdate' => $receipt['cdate'],
                 SYSLOG::RES_CUST => $customer['id'],
                 SYSLOG::RES_USER => Auth::GetCurrentUser(),
@@ -419,10 +425,12 @@ switch ($action) {
                 'city' => $customer['city'],
                 'closed' => $receipt['closed'],
                 'fullnumber' => $fullnumber,
+                'currency' => $receipt['currency'],
+                'currencyvalue' => $receipt['currencyvalue'],
             );
             $DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, customerid, userid, name, address, zip, city, closed,
-					fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
             $DB->UnLockTables();
 
             $rid = $DB->GetLastInsertId('documents');
@@ -488,12 +496,14 @@ switch ($action) {
                     SYSLOG::RES_DOC => $rid,
                     'itemid' => $iid,
                     'value' => $value,
+                    'currency' => $receipt['currency'],
+                    'currencyvalue' => $receipt['currencyvalue'],
                     'comment' => $item['description'],
                     SYSLOG::RES_USER => Auth::GetCurrentUser(),
                     SYSLOG::RES_CUST => $customer['id']
                 );
-                $DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, comment, userid, customerid)
-						VALUES(?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+                $DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, currency, currencyvalue, comment, userid, customerid)
+						VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
                 if ($SYSLOG) {
                     $args[SYSLOG::RES_CASH] = $DB->GetLastInsertID('cash');
                     unset($args[SYSLOG::RES_USER]);
@@ -515,7 +525,8 @@ switch ($action) {
 
             $fullnumber = docnumber(array(
                 'number' => $receipt['number'],
-                'template' => $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
+                'template' => empty($receipt['nnumberplanid'])
+                    ? null : $DB->GetOne('SELECT template FROM numberplans WHERE id = ?', array($receipt['numberplanid'])),
                 'cdate' => $receipt['cdate'],
             ));
 
@@ -523,16 +534,18 @@ switch ($action) {
                 'type' => DOC_RECEIPT,
                 'number' => $receipt['number'],
                 'extnumber' => $receipt['extnumber'] ? $receipt['extnumber'] : '',
-                SYSLOG::RES_NUMPLAN => $receipt['numberplanid'],
+                SYSLOG::RES_NUMPLAN => empty($receipt['numberplanid']) ? null : $receipt['numberplanid'],
                 'cdate' => $receipt['cdate'],
                 SYSLOG::RES_USER => Auth::GetCurrentUser(),
                 'name' => $receipt['o_type'] == 'advance' ? $receipt['adv_name'] : $receipt['other_name'],
                 'closed' => $receipt['closed'],
                 'fullnumber' => $fullnumber,
+                'currency' => $receipt['currency'],
+                'currencyvalue' => $receipt['currencyvalue'],
             );
             $DB->Execute('INSERT INTO documents (type, number, extnumber, numberplanid, cdate, userid, name, closed,
-					fullnumber)
-					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
+					fullnumber, currency, currencyvalue)
+					VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
             $DB->UnLockTables();
 
             $rid = $DB->GetLastInsertId('documents');
@@ -600,11 +613,13 @@ switch ($action) {
                     SYSLOG::RES_DOC => $rid,
                     'itemid' => $iid,
                     'value' => $value,
+                    'currency' => $receipt['currency'],
+                    'currencyvalue' => $receipt['currencyvalue'],
                     'comment' => $item['description'],
                     SYSLOG::RES_USER => Auth::GetCurrentUser(),
                 );
-                $DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, comment, userid)
-						VALUES(?, ?, ?, ?, ?, ?, ?)', array_values($args));
+                $DB->Execute('INSERT INTO cash (type, time, docid, itemid, value, currency, currencyvalue, comment, userid)
+						VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args));
                 if ($SYSLOG) {
                     $args[SYSLOG::RES_CASH] = $DB->GetLastInsertID('cash');
                     unset($args[SYSLOG::RES_USER]);
@@ -617,24 +632,25 @@ switch ($action) {
             break;
         }
 
-        $SESSION->remove('receiptcontents');
-        $SESSION->remove('receiptcustomer');
-        $SESSION->remove('receipt');
-        $SESSION->remove('receiptediterror');
-        
+        $SESSION->remove('receiptcontents', true);
+        $SESSION->remove('receiptcustomer', true);
+        $SESSION->remove('receipt', true);
+        $SESSION->remove('receiptediterror', true);
+
         if (isset($_GET['print'])) {
-            $SESSION->save('receiptprint', array('receipt' => $rid,
-                        'which' => (isset($_GET['which']) ? $_GET['which'] : '')));
+            $which = isset($_GET['which']) ? $_GET['which'] : 0;
+
+            $SESSION->save('receiptprint', array('receipt' => $rid, 'which' => $which), true);
         }
 
         $SESSION->redirect('?m=receiptlist&regid='.$receipt['regid'].'#'.$rid);
         break;
 }
 
-$SESSION->save('receipt', $receipt);
-$SESSION->save('receiptcontents', $contents);
-$SESSION->save('receiptcustomer', $customer);
-$SESSION->save('receiptediterror', $error);
+$SESSION->save('receipt', $receipt, true);
+$SESSION->save('receiptcontents', $contents, true);
+$SESSION->save('receiptcustomer', $customer, true);
+$SESSION->save('receiptediterror', $error, true);
 
 if ($action != '') {
     $SESSION->redirect('?m=receiptedit');

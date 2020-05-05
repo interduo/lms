@@ -51,7 +51,7 @@ include(MODULES_DIR . DIRECTORY_SEPARATOR . 'document.inc.php');
 
 $document = $DB->GetRow(
     'SELECT documents.id AS id, closed,
-		archived, adate, auserid,
+		archived, confirmdate, adate, auserid,
 		type, number, numberplans.template,
 		cdate, sdate, cuserid, numberplanid, title, fromdate, todate, description, divisionid, documents.customerid,
 		r.rights AS docrights
@@ -68,7 +68,7 @@ if (empty($document)) {
 }
 
 $document['attachments'] = $DB->GetAllByKey('SELECT *, 0 AS deleted FROM documentattachments
-	WHERE docid = ? AND main = 0', 'id', array($_GET['id']));
+	WHERE docid = ? ORDER BY type DESC', 'id', array($_GET['id']));
 
 if (isset($_POST['document'])) {
     $documentedit = $_POST['document'];
@@ -76,6 +76,7 @@ if (isset($_POST['document'])) {
 
     $oldfdate = $documentedit['fromdate'];
     $oldtdate = $documentedit['todate'];
+    $oldconfirmdate = $documentedit['confirmdate'];
 
     if (!$documentedit['title']) {
         $error['title'] = trans('Document title is required!');
@@ -140,6 +141,18 @@ if (isset($_POST['document'])) {
         $error['closed'] = trans('Cannot undo document confirmation while it is archived!');
     }
 
+    if ($documentedit['confirmdate'] && !$documentedit['closed']) {
+        $date = explode('/', $documentedit['confirmdate']);
+        if (checkdate($date[1], $date[2], $date[0])) {
+            $documentedit['confirmdate'] = mktime(0, 0, 0, $date[1], $date[2], $date[0]);
+        } else {
+            $error['confirmdate'] = trans('Incorrect date format! Enter date in YYYY/MM/DD format!');
+            $documentedit['confirmdate'] = 0;
+        }
+    } else {
+        $documentedit['confirmdate'] = 0;
+    }
+
     $result = handle_file_uploads('attachments', $error);
     extract($result);
     $SMARTY->assign('fileupload', $fileupload);
@@ -148,40 +161,16 @@ if (isset($_POST['document'])) {
     if (!$error && !empty($attachments)) {
         foreach ($attachments as $attachment) {
             $attachment['tmpname'] = $tmppath . DIRECTORY_SEPARATOR . $attachment['name'];
+            $attachment['filename'] = $attachment['name'];
             $attachment['md5sum'] = md5_file($attachment['tmpname']);
             $files[] = $attachment;
         }
     }
 
     if (!$error) {
-        foreach ($files as &$file) {
-            $file['path'] = DOC_DIR . DIRECTORY_SEPARATOR . substr($file['md5sum'], 0, 2);
-            $file['newfile'] = $file['path'] . DIRECTORY_SEPARATOR . $file['md5sum'];
-
-            // If we have a file with specified md5sum, we assume
-            // it's here because of some error. We can replace it with
-            // the new document file
-            // why? document attachment can be shared between different documents.
-            // we should rather use the other message digest in such case!
-            if ($DB->GetOne('SELECT docid FROM documentattachments WHERE md5sum = ?', array($file['md5sum']))
-                && (filesize($file['newfile']) != filesize($file['tmpname'])
-                    || hash_file('sha256', $file['newfile']) != hash_file('sha256', $file['tmpname']))) {
-                $error['files'] = trans('Specified file exists in database!');
-                break;
-            }
-        }
-        unset($file);
-        if (!$error) {
-            foreach ($files as $file) {
-                @mkdir($file['path'], 0700);
-                if (!file_exists($file['newfile']) && !@rename($file['tmpname'], $file['newfile'])) {
-                    $error['files'] = trans('Can\'t save file in "$a" directory!', $file['path']);
-                    break;
-                }
-            }
-            if (!empty($tmppath)) {
-                rrmdir($tmppath);
-            }
+        $error = $LMS->AddDocumentFileAttachments($files);
+        if (empty($error) && !empty($tmppath)) {
+            rrmdir($tmppath);
         }
     }
 
@@ -196,13 +185,14 @@ if (isset($_POST['document'])) {
         ));
 
         $DB->Execute(
-            'UPDATE documents SET type=?, closed=?, sdate=?, cuserid=?,
-			archived = ?, adate = ?, auserid = ?, number=?, numberplanid=?, fullnumber=?
+            'UPDATE documents SET type=?, closed=?, sdate=?, cuserid=?, confirmdate = ?,
+			        archived = ?, adate = ?, auserid = ?, number=?, numberplanid=?, fullnumber=?
 				WHERE id=?',
             array(  $documentedit['type'],
-                    $documentedit['closed'],
+                    $documentedit['closed'] ? ($document['confirmdate'] == -1 && $document['closed'] != 2 ? 2 : 1) : 0,
                     $documentedit['closed'] ? ($document['closed'] ? $document['sdate'] : time()) : 0,
                     $documentedit['closed'] ? ($document['closed'] ? $document['cuserid'] : $userid) : null,
+                    !$document['closed'] && $documentedit['closed'] && $document['confirmdate'] == -1 ? 0 : ($documentedit['closed'] || !$documentedit['confirmdate'] ? 0 : $documentedit['confirmdate'] + 86399),
                     $documentedit['archived'],
                     $documentedit['archived'] ? ($document['archived'] ? $document['adate'] : time()) : 0,
                     $documentedit['archived'] ? ($document['archived'] ? $document['auserid'] : $userid) : null,
@@ -226,7 +216,7 @@ if (isset($_POST['document'])) {
 
         if (isset($documentedit['attachments']) && is_array($documentedit['attachments'])) {
             foreach ($documentedit['attachments'] as $attachmentid => $attachment) {
-                if ($attachment['deleted']) {
+                if ($attachment['deleted'] && $document['attachments'][$attachmentid]['type'] < 1) {
                     $md5sum = $document['attachments'][$attachmentid]['md5sum'];
                     if ($DB->GetOne('SELECT COUNT(*) FROM documentattachments WHERE md5sum = ?', array($md5sum)) <= 1) {
                         @unlink(DOC_DIR . DIRECTORY_SEPARATOR . substr($md5sum, 0, 2) . DIRECTORY_SEPARATOR . $md5sum);
@@ -236,20 +226,7 @@ if (isset($_POST['document'])) {
             }
         }
 
-        foreach ($files as $file) {
-            if (!$DB->GetOne(
-                'SELECT id FROM documentattachments WHERE docid = ? AND md5sum = ?',
-                array($documentedit['id'], $file['md5sum'])
-            )) {
-                $DB->Execute('INSERT INTO documentattachments (docid, filename, contenttype, md5sum, main)
-					VALUES (?, ?, ?, ?, ?)', array($documentedit['id'],
-                    $file['name'],
-                    $file['type'],
-                    $file['md5sum'],
-                    0,
-                ));
-            }
-        }
+        $LMS->AddDocumentAttachments($documentedit['id'], $files);
 
         $DB->CommitTrans();
 
@@ -263,17 +240,22 @@ if (isset($_POST['document'])) {
         $document['numberplanid'] = $documentedit['numberplanid'];
         $document['fromdate'] = $oldfdate;
         $document['todate'] = $oldtdate;
+        $document['confirmdate'] = $documentedit['confirmdate'];
+        $document['confirmdatestring'] = $oldconfirmdate;
         foreach ($document['attachments'] as $attachmentid => &$attachment) {
             $attachment['deleted'] = $documentedit['attachments'][$attachmentid]['deleted'];
         }
         unset($attachment);
     }
 } else {
-    if ($document['fromdate']>0) {
+    if ($document['fromdate'] > 0) {
         $document['fromdate'] = date('Y/m/d', $document['fromdate']);
     }
-    if ($document['todate']>0) {
+    if ($document['todate'] > 0) {
         $document['todate'] = date('Y/m/d', $document['todate']);
+    }
+    if ($document['confirmdate'] > 0) {
+        $document['confirmdatestring'] = date('Y/m/d', $document['confirmdate']);
     }
 }
 

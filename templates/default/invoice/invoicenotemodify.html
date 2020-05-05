@@ -5,13 +5,23 @@
 <H1>{$layout.pagetitle}</H1>
 <script>
 
-	function printinvoice() {
-		var add = "";
-		if (document.save.original.checked)
-			add += "&original=1";
-		if (document.save.copy.checked)
-			add += "&copy=1";
-		document.save.action = "?m={$layout.module}&action=save&print=1" + add;
+	function saveInvoice() {
+		var which = 0;
+		$('form[name="save"] [name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+
+		document.save.action += "&which=" + which;
+		document.save.submit();
+	}
+
+	function printInvoice() {
+		var which = 0;
+		$('form[name="save"] [name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+
+		document.save.action = "?m={$layout.module}&action=save&print=1&which=" + which;
 		document.save.submit();
 	}
 
@@ -36,6 +46,11 @@
 	$(function() {
 		$('form[name="setheader"] [name="cnote[number]"]').focus();
 
+		$('.note-alert').click(function() {
+			alertDialog($t("There are errors in credit note main information!"), this);
+			return;
+		});
+
 		$('#cdate').change(function() {
 			isSplitPaymentSuggested();
 		});
@@ -43,6 +58,14 @@
 
 	$(document).on('change', '[name="cnote[numberplanid]"]', function() {
 		$('[name="cnote[number]"]').val('');
+	});
+
+	$('body').on('change', '.template-selector', function() {
+		var selected = $('option:selected', this);
+		if (parseInt(selected.val()) == 0) {
+			return;
+		}
+		$('[name="cnote[reason]"]').val(Base64.decode(selected.attr('data-message')));
 	});
 
 </script>
@@ -155,6 +178,20 @@
 			<input type="checkbox" id="use_current_customer_data" name="cnote[use_current_customer_data]" value="1"
 					{if $cnote.use_current_customer_data} checked{/if} {tip text="Check it if you want to use current customer data"}>
 		</TD>
+	</TR>
+	<tr>
+		<td class="bold">{trans("Currency:")}</td>
+		<td>
+			{currency_selection selected=$cnote.currency elementname="cnote[currency]" locked=true}
+		</td>
+	</tr>
+	<TR{if empty($messagetemplates)} style="display: none;"{/if}>
+		<td class="bold nobr">
+			{trans("Reason template:")}
+		</td>
+		<td class="nobr">
+			{include file="invoice/invoicenotereasontemplates.html" templates=$messagetemplates}
+		</td>
 	</TR>
 	<TR>
 		<TD class="bold nobr">
@@ -373,11 +410,21 @@
 	<TR class="lms-ui-button-panel">
 		<TD COLSPAN="10" class="text-right">
 			{$default_printpage = ConfigHelper::getConfig('invoices.default_printpage')}
-			<INPUT type="checkbox" name="original" id="original"{if preg_match('/original/i', $default_printpage)} checked{/if}><label for="original">{trans("original")}</label>
-			<INPUT type="checkbox" name="copy" id="copy"{if preg_match('/copy/i', $default_printpage)} checked{/if}><label for="copy">{trans("copy")}</label>&nbsp;
+			<label>
+				<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_ORIGINAL}]"
+						value="{$smarty.const.DOC_ENTITY_ORIGINAL}"
+						{if preg_match('/original/i', $default_printpage)} checked{/if}>
+				{$_DOCENTITIES[$smarty.const.DOC_ENTITY_ORIGINAL]}
+			</label>
+			<label>
+				<INPUT type="checkbox" name="which[{$smarty.const.DOC_ENTITY_COPY}]"
+						value="{$smarty.const.DOC_ENTITY_COPY}"
+						{if preg_match('/copy/i', $default_printpage)} checked{/if}>
+				{$_DOCENTITIES[$smarty.const.DOC_ENTITY_COPY]}
+			</label>&nbsp;
 			<A HREF="?m=invoicelist">{trans("Cancel")} <IMG SRC="img/cancel.gif" alt=""></A>
-			<A HREF="javascript:document.save.submit()">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
-			<A HREF="javascript:printinvoice()">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
+			<A HREF="javascript:saveInvoice()">{trans("Save")} <IMG src="img/save.gif" alt=""></A>
+			<A HREF="javascript:printInvoice()">{trans("Save & Print")} <IMG src="img/print.gif" alt=""></A>
 		</TD>
 	</TR>
 	</TBODY>

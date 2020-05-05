@@ -8,6 +8,11 @@
 <FORM name="addbalance" method="POST" id="addbalance-form" action="?m=balanceadd&id={$balancelist.customerid}">
 </FORM>
 
+<FORM method="post" name="printcustomerbalance" id="printcustomerbalance" action="?m=print&type=customerbalance"
+	target="_blank">
+	<input type="hidden" name="customer" value="{$balancelist.customerid}">
+</FORM>
+
 {tab_container id="customerbalancebox"}
 
 	{if $limit}
@@ -27,6 +32,14 @@
 				<input type="checkbox" name="aggregate_documents" value="1"
 						{if $aggregate_documents} checked{/if}>
 			</label>
+
+			{trans("From")}&nbsp;<INPUT type="text" name="from" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
+				{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means 1970/01/01) or click to choose it from calendar"}
+				form="printcustomerbalance">&nbsp;
+			{trans("To")}&nbsp;<INPUT type="text" name="to" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
+				{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}
+				form="printcustomerbalance">
+			<a href="javascript:document.printcustomerbalance.submit();">{trans("Customer Balance Sheet")}</a>
 		{/tab_header_cell}
 		{tab_header_cell}
 			<A id="newtransferformanchor" rel="external" href="?m=customertransferform&id={$balancelist.customerid}&type={LMSHtmlTransferForm::VALUE_ASSIGNMENTS}">{trans("Transfer form:")}</A>
@@ -95,14 +108,15 @@
 					{continue}
 					{/if}
 				{/if}
-				<TR{if $item.docid} data-published="{$item.published}"{if $item.doctype == $smarty.const.DOC_INVOICE_PRO} class="teal"{/if}{if $item.closed && ($item.doctype == $smarty.const.DOC_INVOICE || $item.doctype == $smarty.const.DOC_CNOTE || $item.doctype == $smarty.const.DOC_DNOTE)} class="blend"{/if}{/if}>
+				<TR{if $item.docid} data-published="{$item.published}" data-doctype="{$item.doctype}" data-senddate="{if $item.senddate}{$item.senddate|date_format:"%Y/%m/%d %H:%M"}{else}{$item.senddate}{/if}"
+					{if $item.doctype == $smarty.const.DOC_INVOICE_PRO} class="teal"{/if}{if $item.closed && ($item.doctype == $smarty.const.DOC_INVOICE || $item.doctype == $smarty.const.DOC_CNOTE || $item.doctype == $smarty.const.DOC_DNOTE)} class="blend"{/if}{/if}>
 					<TD class="nobr">{$item.date}</TD>
 					<TD class="nobr">{$item.username|truncate:16:"...":true}</TD>
-					<TD class="text-right nobr">{if !$item.type}{($item.value*-1)|money_format}{else}-{/if}</TD>
-					<TD class="text-right nobr{if $item.type && $item.value > 0} green{/if}">{if $item.type && $item.value > 0}+{$item.value|money_format}{else}-{/if}</TD>
-					<TD class="text-right nobr">{if $item.type && $item.value < 0}{($item.value*-1)|money_format}{else}-{/if}</TD>
+					<TD class="text-right nobr">{if !$item.type}{moneyf($item.value*-1, $item.currency)}{else}-{/if}</TD>
+					<TD class="text-right nobr{if $item.type && $item.value > 0} green{/if}">{if $item.type && $item.value > 0}+{moneyf($item.value, $item.currency)}{else}-{/if}</TD>
+					<TD class="text-right nobr">{if $item.type && $item.value < 0}{moneyf($item.value*-1, $item.currency)}{else}-{/if}</TD>
 					<TD class="text-center">&raquo;</TD>
-					<TD class="text-right nobr{if $item.after < 0} red{/if}">{$item.after|money_format}</TD>
+					<TD class="text-right nobr{if $item.after < 0} red{/if}">{moneyf($item.after)}</TD>
 					<TD>{$item.comment}</TD>
 					<TD class="text-right nobr">
 						{foreach $item.customlinks as $link}
@@ -118,8 +132,11 @@
 							{if ($customerinfo.sendinvoices || $balancelist.sendinvoices) && ($item.doctype == $smarty.const.DOC_INVOICE
 								|| $item.doctype == $smarty.const.DOC_CNOTE || $item.doctype == $smarty.const.DOC_INVOICE_PRO
 								|| $item.doctype == $smarty.const.DOC_DNOTE)}
-								{button type="link" icon="mail" class="send-invoice" href="?m=invoicesend&id={$item.docid}"
-									tip="Send invoice"}
+								{textformat assign="tip" wrap=5000}
+									{if $item.senddate}{trans("Send invoice again")}<br><strong>{t a=$item.senddate|date_format:"%Y/%m/%d %H:%M"}(already sent on $a){/t}</strong>{else}{trans("Send invoice")}{/if}
+								{/textformat}
+								{button type="link" icon="{if $item.senddate}mailsent{else}mail{/if}" class="send-invoice"
+									href="?m=invoicesend&id={$item.docid}" tip=$tip}
 							{/if}
 							{if $item.doctype == $smarty.const.DOC_INVOICE}
 								{if !$item.cancelled}
@@ -154,13 +171,13 @@
 									{/if}
 								{/if}
 								{if !$item.published || ConfigHelper::checkPrivilege('published_document_modification')}
-									{button type="link" icon="view" class="lms-ui-tooltip-invoiceinfo"
+									{button type="link" icon="view" class="print-invoice lms-ui-tooltip-invoiceinfo"
 										href="?m=invoice&id={$item.docid}&dontpublish=1"
-										resourceid="{$item.docid}" external=true icon_tip="View"}
+										resourceid="{$item.docid}" icon_tip="View"}
 								{/if}
-								{button type="link" icon="print" class="lms-ui-tooltip-invoiceinfo"
+								{button type="link" icon="print" class="print-invoice lms-ui-tooltip-invoiceinfo"
 									href="?m=invoice&id={$item.docid}"
-									resourceid="{$item.docid}" external=true icon_tip="Invoice"}
+									resourceid="{$item.docid}" icon_tip="Invoice"}
 							{elseif $item.doctype == $smarty.const.DOC_INVOICE_PRO}
 								{if !$item.cancelled && !$item.archived && (!$item.published || ConfigHelper::checkPrivilege('published_document_modification'))}
 									{textformat assign="onclick" wrap=5000}
@@ -191,17 +208,33 @@
 									{/if}
 								{/if}
 								{if !$item.published || ConfigHelper::checkPrivilege('published_document_modification')}
-									{button type="link" icon="view" class="lms-ui-tooltip-invoiceinfo"
+									{button type="link" icon="view" class="print-invoice lms-ui-tooltip-invoiceinfo"
 										href="?m=invoice&id={$item.docid}&dontpublish=1"
-										resourceid="{$item.docid}" external=true icon_tip="View"}
+										resourceid="{$item.docid}" icon_tip="View"}
 								{/if}
-								{button type="link" icon="print" class="lms-ui-tooltip-invoiceinfo"
+								{button type="link" icon="print" class="print-invoice lms-ui-tooltip-invoiceinfo"
 									href="?m=invoice&id={$item.docid}"
-									resourceid="{$item.docid}" external=true icon_tip="pro forma invoice"}
+									resourceid="{$item.docid}" icon_tip="pro forma invoice"}
 							{elseif $item.doctype == $smarty.const.DOC_CNOTE}
 								{if !$item.cancelled && !$item.referenced}
 									{button type="link" icon="correction" href="?m=invoicenote&id={$item.docid}&action=init"
 										tip="Revise"}
+								{/if}
+								{if !$item.archived && !$item.referenced && (!$item.published || ConfigHelper::checkPrivilege('published_document_modification'))}
+									{textformat assign="onclick" wrap=5000}
+										{if $item.published}
+											confirmDialog($t('Document has been published already! Are you sure you want to edit it despite this?'), this)
+											.done(function() {
+											window.open($(this).attr('href'));
+											});
+										{else}
+											window.open($(this).attr('href'));
+										{/if}
+										return false;
+									{/textformat}
+									{button type="link" icon="edit" class="lms-ui-tooltip-docnumber"
+									href="?m=invoicenoteedit&id={$item.docid}&action=edit"
+									onclick=$onclick resourceid="{$item.docid}" icon_tip="Invoice"}
 								{/if}
 								{if !$item.cancelled}
 									{if !$item.archived}
@@ -215,29 +248,13 @@
 									{/if}
 								{/if}
 								{if !$item.published || ConfigHelper::checkPrivilege('published_document_modification')}
-									{button type="link" icon="view" class="lms-ui-tooltip-docnumber"
+									{button type="link" icon="view" class="print-invoice lms-ui-tooltip-docnumber"
 										href="?m=invoice&id={$item.docid}&dontpublish=1"
-										resourceid="{$item.docid}" external=true icon_tip="View"}
+										resourceid="{$item.docid}" icon_tip="View"}
 								{/if}
-								{button type="link" icon="print" class="lms-ui-tooltip-docnumber"
+								{button type="link" icon="print" class="print-invoice lms-ui-tooltip-docnumber"
 									href="?m=invoice&id={$item.docid}"
-									resourceid="{$item.docid}" external=true icon_tip="Credit note"}
-								{if !$item.archived && !$item.referenced && (!$item.published || ConfigHelper::checkPrivilege('published_document_modification'))}
-									{textformat assign="onclick" wrap=5000}
-										{if $item.published}
-											confirmDialog($t('Document has been published already! Are you sure you want to edit it despite this?'), this)
-												.done(function() {
-													window.open($(this).attr('href'));
-												});
-										{else}
-											window.open($(this).attr('href'));
-										{/if}
-										return false;
-									{/textformat}
-									{button type="link" icon="edit" class="lms-ui-tooltip-docnumber"
-										href="?m=invoicenoteedit&id={$item.docid}&action=edit"
-										onclick=$onclick resourceid="{$item.docid}" icon_tip="Invoice"}
-								{/if}
+									resourceid="{$item.docid}" icon_tip="Credit note"}
 							{elseif $item.doctype == $smarty.const.DOC_RECEIPT}
 								{button type="link" icon="edit" class="lms-ui-tooltip-docnumber"
 									href="?m=receiptedit&id={$item.docid}"
@@ -319,18 +336,23 @@
 				{button icon="cash" label="cash receipt" id="print-receipts"}
 				{button icon="dnote" label="debit notes" id="print-notes"}
 				<label>
-					<INPUT type="checkbox" form="addbalance-form" name="original" {if preg_match('/original/i', $default_printpage)} checked{/if}>
-					{trans("original")}
+					<INPUT type="checkbox" form="addbalance-form" name="which[{$smarty.const.DOC_ENTITY_ORIGINAL}]"
+							value="{$smarty.const.DOC_ENTITY_ORIGINAL}"
+							{if preg_match('/original/i', $default_printpage)} checked{/if}>
+					{$_DOCENTITIES[$smarty.const.DOC_ENTITY_ORIGINAL]}
 				</label>
 				<label>
-					<INPUT type="checkbox" form="addbalance-form" name="copy" {if preg_match('/copy/i', $default_printpage)} checked{/if}>
-					{trans("copy")}
+					<INPUT type="checkbox" form="addbalance-form" name="which[{$smarty.const.DOC_ENTITY_COPY}]"
+							value="{$smarty.const.DOC_ENTITY_COPY}"
+							{if preg_match('/copy/i', $default_printpage)} checked{/if}>
+					{$_DOCENTITIES[$smarty.const.DOC_ENTITY_COPY]}
 				</label>
 				<div id="duplicate-box">
 					<label>
-						<INPUT type="checkbox" form="addbalance-form" name="duplicate" id="duplicate-checkbox"
+						<INPUT type="checkbox" form="addbalance-form" name="which[{$smarty.const.DOC_ENTITY_DUPLICATE}]" id="duplicate-checkbox"
+								value="{$smarty.const.DOC_ENTITY_DUPLICATE}"
 								{if preg_match('/duplicate/i', $default_printpage)} checked{/if}>
-						{trans("duplicate")}
+						{$_DOCENTITIES[$smarty.const.DOC_ENTITY_DUPLICATE]}
 					</label>
 					<div id="duplicate-box-date-selector"
 							{if !preg_match('/duplicate/i', $default_printpage)} style="display: none;"{/if}>
@@ -355,6 +377,7 @@
 					<INPUT type="text" form="addbalance-form" name="addbalance[time]" size="15" maxlength="16" {tip class="lms-ui-datetime" text="Enter transaction time in 'yyyy/mm/dd hh:mm' format (empty field means current time). Click to select date from calendar."} {if $time}value="{$time|date_format:"%Y/%m/%d %H:%M"}"{/if}>
 					{$layout.logname|truncate:16:"...":true}
 					<INPUT type="text" size="8" form="addbalance-form" name="addbalance[value]" accesskey="s" {if $value}value="{$value}"{/if} {tip text="Enter transaction value"}>&nbsp;
+					{currency_selection selected=LMS::$default_currency elementname="addbalance[currency]" form="addbalance-form"}
 					<SELECT SIZE="1" form="addbalance-form" name="addbalance[taxid]" {tip text="Select Tax value"}>
 						{foreach item=tax from=$taxeslist}
 						<OPTION value="{$tax.id}" {if ($taxid && $tax.id == $taxid) || (!$taxid && $tax.value == $default_taxrate)}selected{/if}>{$tax.label}</OPTION>
@@ -372,8 +395,8 @@
 						{trans("income/expense")}
 					</label>
 					{if $sourcelist}
-					<div class="isource lms-ui-button-isource">
-						<i></i>
+					<div class="isource">
+						<i class="lms-ui-icon-isource"></i>
 						<SELECT form="addbalance-form" name="addbalance[sourceid]" {tip text="Select import source (optional)" trigger="source"}>
 							<OPTION value="0">{trans("- none -")}</OPTION>
 							{foreach $sourcelist as $source}
@@ -430,37 +453,58 @@
 	}
 
 	$('#print-receipts').click(function() {
-		if (!$(this).closest('.lms-ui-multi-check').find('input.lms-ui-multi-check:checked').length) {
+		if (!$('tr[data-doctype="{$smarty.const.DOC_RECEIPT}"] :checked').length) {
+			alertDialog($t('No document of given type has been selected!'), this);
 			return;
 		}
 
 		var add = "";
-		if(document.addbalance.original.checked && document.addbalance.copy.checked)
-			add = "&which=original,copy";
-		else if(document.addbalance.original.checked && !document.addbalance.copy.checked)
-			add = "&which=original";
-		else if(!document.addbalance.original.checked && document.addbalance.copy.checked)
-			add = "&which=copy";
+		var which = 0;
+		$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+		add += "&which=" + which;
 
 		document.addbalance.action = "?m=receipt&print=cached&cash=1" + add;
 		document.addbalance.target = "_blank";
 		document.addbalance.submit();
 	});
 
+	$('.print-invoice').click(function() {
+		var add = "";
+		var which = 0;
+		$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+			which += parseInt($(this).val());
+		});
+		add += "&which=" + which;
+		if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
+			var duplicate_date = parseInt($('[name="duplicate-date"]').val());
+			if (duplicate_date > 0) {
+				add += "&duplicate-date=" + duplicate_date;
+			}
+		}
+
+		window.open($(this).attr('href') + add);
+		return false;
+	});
 
 	$('#print-invoices,#print-notes').click(function() {
-		if (!$(this).closest('.lms-ui-multi-check').find('input.lms-ui-multi-check:checked').length) {
+		var print_invoices = $(this).is('#print-invoices');
+		if ((print_invoices && !$('tr[data-doctype="{$smarty.const.DOC_INVOICE}"] :checked').length
+			&& !$('tr[data-doctype="{$smarty.const.DOC_CNOTE}"] :checked').length)
+			|| (!print_invoices && !$('tr[data-doctype="{$smarty.const.DOC_DNOTE}"] :checked').length)) {
+			alertDialog($t('No document of given type has been selected!'), this);
 			return;
 		}
 
 		function print_doc(type) {
 			var add = "";
-			if(document.addbalance.original.checked)
-				add = "&original=1";
-			if(document.addbalance.copy.checked)
-				add += "&copy=1";
-			if (document.addbalance.duplicate.checked) {
-				add += "&duplicate=1";
+			var which = 0;
+			$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+				which += parseInt($(this).val());
+			});
+			add += "&which=" + which;
+			if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
 				var duplicate_date = parseInt($('[name="duplicate-date"]').val());
 				if (duplicate_date > 0) {
 					add += "&duplicate-date=" + duplicate_date;
@@ -472,7 +516,7 @@
 			document.addbalance.submit();
 		}
 
-		print_doc($(this).is('#print-invoices') ? 'invoice' : 'note');
+		print_doc(print_invoices ? 'invoice' : 'note');
 	});
 
 	function show_list()
@@ -560,26 +604,61 @@
 	{/if}
 
 	$('.send-invoice').click(function(e) {
-		confirmDialog($t('Are you sure, you want to send invoice to customer \'$a\'?', '{$customerinfo.customername|escape:"javascript"|escape:"html"}'), this)
+		var senddate = $(this).closest('tr').attr('data-senddate');
+		if (parseInt(senddate) === 0) {
+			confirmDialog($t('Are you sure, you want to send invoice to customer \'$a\'?', '{$customerinfo.customername|escape:"javascript"|escape:"html"}'), this)
+				.done(function() {
+					var add = "";
+					var which = 0;
+					$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+						which += parseInt($(this).val());
+					});
+					add += "&which=" + which;
+					if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
+						var duplicate_date = parseInt($('[name="duplicate-date"]').val());
+						if (duplicate_date > 0) {
+							add += "&duplicate-date=" + duplicate_date;
+						}
+					}
+					window.open($(this).attr('href') + add);
+				});
+		} else {
+			confirmDialog($t("Invoice was sent to customer '$a' already on $b. Are you sure, you want to send invoice again?", '{$customerinfo.customername|escape:"javascript"|escape:"html"}', senddate), this)
 			.done(function() {
-				window.open($(this).attr('href'));
-			});
+					var add = "";
+					var which = 0;
+					$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+						which += parseInt($(this).val());
+					});
+					add += "&which=" + which;
+					if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
+						var duplicate_date = parseInt($('[name="duplicate-date"]').val());
+						if (duplicate_date > 0) {
+							add += "&duplicate-date=" + duplicate_date;
+						}
+					}
+					window.open($(this).attr('href') + add);
+				});
+		}
 		return false;
 	});
 
 	$('#send-invoices').click(function() {
-		if (!$(this).closest('.lms-ui-multi-check').find('input.lms-ui-multi-check:checked').length) {
+		if (!$('tr[data-doctype="{$smarty.const.DOC_INVOICE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_CNOTE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_DNOTE}"] :checked').length) {
+			alertDialog($t('No document of given type has been selected!'), this);
 			return;
 		}
 
 		confirmDialog($t("Are you sure, you want to send invoices to customer?"), this).done(function() {
 			var add = "";
-			if(document.addbalance.original.checked)
-				add = "&original=1";
-			if(document.addbalance.copy.checked)
-				add += "&copy=1";
-			if(document.addbalance.duplicate.checked) {
-				add += "&duplicate=1";
+			var which = 0;
+			$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+				which += parseInt($(this).val());
+			});
+			add += "&which=" + which;
+			if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
 				var duplicate_date = parseInt($('[name="duplicate-date"]').val());
 				if (duplicate_date > 0) {
 					add += "&duplicate-date=" + duplicate_date;
@@ -593,7 +672,10 @@
 	});
 
 	$('#archive-invoices').click(function() {
-		if (!$(this).closest('.lms-ui-multi-check').find('input.lms-ui-multi-check:checked').length) {
+		if (!$('tr[data-doctype="{$smarty.const.DOC_INVOICE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_CNOTE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_DNOTE}"] :checked').length) {
+			alertDialog($t('No document of given type has been selected!'), this);
 			return;
 		}
 
@@ -605,7 +687,10 @@
 	});
 
 	$('#unarchive-invoices').click(function() {
-		if (!$(this).closest('.lms-ui-multi-check').find('input.lms-ui-multi-check:checked').length) {
+		if (!$('tr[data-doctype="{$smarty.const.DOC_INVOICE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_CNOTE}"] :checked').length
+				&& !$('tr[data-doctype="{$smarty.const.DOC_DNOTE}"] :checked').length) {
+			alertDialog($t('No document of given type has been selected!'), this);
 			return;
 		}
 

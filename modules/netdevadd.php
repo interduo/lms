@@ -44,6 +44,7 @@ if (isset($netdev)) {
     $netdev['clients'] = (empty($netdev['clients'])) ? 0 : intval($netdev['clients']);
     $netdev['ownerid'] = (empty($netdev['ownerid'])) ? 0 : intval($netdev['ownerid']);
 
+    $netdev['name'] = trim($netdev['name']);
     if ($netdev['name'] == '') {
         $error['name'] = trans('Device name is required!');
     } elseif (strlen($netdev['name']) > 60) {
@@ -83,6 +84,13 @@ if (isset($netdev)) {
         $netdev['location_street_name'] = $teryt['location_street_name'];
     }
 
+    if (empty($netdev['ownerid']) && !ConfigHelper::checkPrivilege('full_access')
+        && ConfigHelper::checkConfig('phpui.teryt_required')
+        && !empty($netdev['location_city_name']) && ($netdev['location_country_id'] == 2 || empty($netdev['location_country_id']))
+        && (!isset($netdev['teryt']) || empty($netdev['location_city']))) {
+        $error['netdev[teryt]'] = trans('TERRIT address is required!');
+    }
+
     $hook_data = $LMS->executeHook(
         'netdevadd_validation_before_submit',
         array(
@@ -100,6 +108,9 @@ if (isset($netdev)) {
 
         if (!isset($netdev['shortname'])) {
             $netdev['shortname'] = '';
+        }
+        if (!isset($netdev['login'])) {
+            $netdev['login'] = '';
         }
         if (!isset($netdev['secret'])) {
             $netdev['secret'] = '';
@@ -191,7 +202,7 @@ if (isset($netdev)) {
         $netdev['model'] = $netdev['modelid'];
     }
 
-    $netdev['name'] = trans('$a (clone)', $netdev['name']);
+    $netdev['name'] = trans('$a (clone)', trim($netdev['name']));
     $netdev['clone'] = isset($_GET['clone']) ? $_GET['clone'] : null;
     $netdev['teryt'] = !empty($netdev['location_city']) && !empty($netdev['location_street']);
     $SMARTY->assign('netdev', $netdev);
@@ -213,6 +224,12 @@ $SMARTY->assign('NNprojects', $LMS->GetProjects());
 $SMARTY->assign('NNnodes', $LMS->GetNetNodes());
 $SMARTY->assign('producers', $LMS->GetProducers());
 $SMARTY->assign('models', $LMS->GetModels());
+
+if (!empty($netdev['ownerid'])) {
+    $addresses = $LMS->getCustomerAddresses($netdev['ownerid']);
+    $LMS->determineDefaultCustomerAddress($addresses);
+    $SMARTY->assign('addresses', $addresses);
+}
 
 if (ConfigHelper::checkConfig('phpui.ewx_support')) {
     $SMARTY->assign('channels', $DB->GetAll('SELECT id, name FROM ewx_channels ORDER BY name'));

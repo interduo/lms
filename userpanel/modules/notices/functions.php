@@ -45,8 +45,8 @@ function module_main()
         header('Location: ?m=notices');
     } else {
         $notice = $DB->GetAll(
-            'SELECT m.subject, m.cdate, m.body, m.type, mi.id, mi.messageid, mi.destination, mi.status,
-                mi.lastdate, mi.lastreaddate
+            'SELECT m.subject, m.cdate, m.body, m.type, m.contenttype, mi.id, mi.messageid, mi.destination, mi.status,
+                mi.lastdate, mi.lastreaddate, mi.body as mibody
 			FROM customers c
 			JOIN messageitems mi ON mi.customerid = c.id
 			JOIN messages m ON m.id = mi.messageid
@@ -58,11 +58,16 @@ function module_main()
     }
 
     if (isset($_GET['confirm_urgent'])) {
-        $confirm_urgent = $_GET['confirm_urgent'];
-        $DB->Execute(
-            'UPDATE messageitems SET status = ?, lastdate = ?NOW? WHERE id = ?',
-            array(MSG_DELIVERED, $confirm_urgent)
-        );
+        $notice_handler = UserpanelNoticeHandler::getInstance();
+        $notice_handler->markNoticeAsDelivered($_GET['confirm_urgent']);
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            print json_encode(array(
+                'urgent_notice' => $notice_handler->getUrgentNotice(),
+                'unread_notices' => $notice_handler->getUnreadNotices(),
+            ));
+            return;
+        }
         header('Location: ?m=notices');
     }
     $SMARTY->display('module:notices.html');
@@ -70,9 +75,16 @@ function module_main()
 
 function setNoticeRead($noticeid)
 {
-    global $DB;
+    $db = LMSDB::getInstance();
     $result = new xajaxResponse();
-    $DB->Execute('UPDATE messageitems SET lastreaddate = ?NOW? WHERE id = ?', array($noticeid));
+
+    $notice_handler = UserpanelNoticeHandler::getInstance();
+    $notice_handler->markNoticeAsRead($noticeid);
+    $unread_notices = $notice_handler->getUnreadNotices();
+    if (empty($unread_notices)) {
+        $result->script("$('.lms-userpanel-notices').removeClass('lms-userpanel-icon-warning');");
+    }
+
     return $result;
 }
 

@@ -721,6 +721,18 @@ $menu = array(
                     'prio' => 10,
                 ),
                 array(
+                    'name' => trans('Schedule'),
+                    'link' => '?m=eventschedule',
+                    'tip' => trans('Schedule'),
+                    'prio' => 11,
+                ),
+                array(
+                    'name' => trans('Overdue events'),
+                    'link' => '?m=eventlist&overdue_events_only=1',
+                    'tip' => trans('Overdue events'),
+                    'prio' => 12,
+                ),
+                array(
                     'name' => trans('New Event'),
                     'link' => '?m=eventadd',
                     'tip' => trans('New Event Addition'),
@@ -735,13 +747,27 @@ $menu = array(
             ),
         ),
 
-        'password' => array(
-            'name' => trans('Password'),
+        'auth' => array(
+            'name' => trans('Authentication'),
             'css' => 'lms-ui-icon-password',
             'link' => '?m=chpasswd',
-            'tip' => trans('Allows you to change your password'),
-            'accesskey' => 'p',
-            'prio' => 65,
+            'tip' => trans('Authentication management'),
+            'accesskey' => '',
+            'prio' => 63,
+            'submenu' => array(
+                array(
+                    'name' => trans('Password'),
+                    'link' => '?m=chpasswd',
+                    'tip' => trans('Allows you to change your password'),
+                    'prio' => 10,
+                ),
+                array(
+                    'name' => trans('Settings'),
+                    'link' => '?m=twofactorauthinfo',
+                    'tip' => trans('Allows you to view current two factor authentication settings'),
+                    'prio' => 20,
+                ),
+            ),
         ),
 
         'config' => array(
@@ -749,74 +775,80 @@ $menu = array(
             'css' => 'lms-ui-icon-configuration',
             'link' =>'?m=configlist',
             'tip' => trans('System Configuration'),
-            'accesskey' =>'o',
+            'accesskey' => 'o',
             'prio' => 60,
             'submenu' => array(
                 array(
                     'name' => trans('User Interface'),
-                    'link' =>'?m=configlist',
+                    'link' => '?m=configlist',
                     'tip' => trans('Allows you to configure UI'),
                     'prio' => 10,
+                ),
+                array(
+                    'name' => trans('New setting'),
+                    'link' => '?m=configadd',
+                    'tip' => trans('Allows you to add new configuration setting'),
+                    'prio' => 20,
                 ),
                 array(
                     'name' => trans('Tax Rates'),
                     'link' => '?m=taxratelist',
                     'tip' => trans('Tax Rates Definitions'),
-                    'prio' => 20,
+                    'prio' => 30,
                 ),
                 array(
                     'name' => trans('Numbering Plans'),
                     'link' => '?m=numberplanlist',
                     'tip' => trans('Numbering Plans Definitions'),
-                    'prio' => 30,
+                    'prio' => 40,
                 ),
                 array(
                     'name' => trans('States'),
                     'link' => '?m=statelist',
                     'tip' => trans('Country States Definitions'),
-                    'prio' => 40,
+                    'prio' => 50,
                 ),
                 array(
                     'name' => trans('Divisions'),
                     'link' => '?m=divisionlist',
                     'tip' => trans('Company Divisions Definitions'),
-                    'prio' => 50,
+                    'prio' => 60,
                 ),
                 array(
                     'name' => trans('Hosts'),
                     'link' => '?m=hostlist',
                     'tip' => trans('List of Hosts'),
-                    'prio' => 60,
+                    'prio' => 70,
                 ),
                 array(
                     'name' => trans('Daemon'),
                     'link' => '?m=daemoninstancelist',
                     'tip' => trans('Daemon(s) Configuration'),
-                    'prio' => 70,
+                    'prio' => 80,
                 ),
                 array(
                     'name' => trans('Import Sources'),
                     'link' => '?m=cashsourcelist',
                     'tip' => trans('List of Cash Import Sources'),
-                    'prio' => 80,
+                    'prio' => 90,
                 ),
                 array(
                     'name' => trans('Promotions'),
                     'link' => '?m=promotionlist',
                     'tip' => trans('List of promotions'),
-                    'prio' => 90,
+                    'prio' => 100,
                 ),
                 array(
                     'name' => trans('Plugins'),
                     'link' => '?m=pluginlist',
                     'tip' => trans('Plugin Management'),
-                    'prio' => 100,
+                    'prio' => 110,
                 ),
                 array(
                     'name' => trans('Investment projects'),
                     'link' => '?m=invprojectlist',
                     'tip' => trans('Investment projects Management'),
-                    'prio' => 110,
+                    'prio' => 120,
                 ),
             ),
         ),
@@ -836,7 +868,7 @@ $menu = array(
     );
 
 // menu item for EtherWerX STM channels management
-if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.ewx_support', false))) {
+if (ConfigHelper::checkConfig('phpui.ewx_support')) {
     $menu['netdevices']['submenu'][] = array(
         'name' => trans('Channels List'),
         'link' => '?m=ewxchlist',
@@ -851,7 +883,7 @@ if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.ewx_support', false)
     );
 }
 
-if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.logging', false))) {
+if (ConfigHelper::checkConfig('phpui.logging')) {
     $menu['log'] = array(
         'name' => trans('Transaction Log'),
         'css' => 'lms-ui-icon-archiveview',

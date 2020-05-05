@@ -54,6 +54,10 @@ $messagelist          = $LMS->GetMessages($customerid);
 $params = array(
     'customerid' => $customerid,
 );
+if (isset($_GET['events-from-date'])) {
+    $params['datefrom'] = date_to_timestamp($_GET['events-from-date']);
+    $SMARTY->assign('events_from_date', $_GET['events-from-date']);
+}
 if ($allevents) {
     $params['closed'] = '';
 }
@@ -134,9 +138,9 @@ if (!empty($cashregistries)) {
 }
 
 // prepare saved receipt to print
-if ($receipt = $SESSION->get('receiptprint')) {
+if ($receipt = $SESSION->get('receiptprint', true)) {
     $SMARTY->assign('receipt', $receipt);
-    $SESSION->remove('receiptprint');
+    $SESSION->remove('receiptprint', true);
 }
 
 $SMARTY->assign(array(

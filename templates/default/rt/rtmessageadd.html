@@ -24,6 +24,11 @@
 		min-width: 14em;
 	}
 
+	#smsnotify-contacts .lms-ui-box-row-field {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
 </style>
 <H1>{$layout.pagetitle}</H1>
 <FORM method="POST" name="message" id="message-form" action="?m=rtmessageadd">
@@ -92,11 +97,23 @@
 				<INPUT type="checkbox" name="message[customernotify]" id="customernotify" value="1"{if isset($message.customernotify)} checked{/if}>
 			{/box_row}
 
-{if $message.phonefrom || $group_action}
+{if !empty($contacts) || $group_action}
 			{box_row icon="img/phone.gif" label="Notify customer via SMS:" labelid="smsnotify"}
 				<INPUT type="checkbox" name="message[smsnotify]" id="smsnotify" value="1"{if $message.smsnotify} checked{/if}>
 				<input type="hidden" name="message[phonefrom]" value="{if $group_action}-1{else}{$message.phonefrom}{/if}">
 			{/box_row}
+
+			{if !$group_action}
+				{box_row id="smsnotify-contacts" visible=!empty($message.smsnotify)}
+					{foreach $contacts as $contact}
+						<label>
+							<input type="checkbox" name="message[contacts][{$contact@index}]" value="{$contact.contact}"
+								{if $contact.checked} checked{/if}>
+							{$contact.contact}{if $contact.name} ({$contact.name}){/if}
+						</label>
+					{/foreach}
+				{/box_row}
+			{/if}
 {/if}
 
 			{box_row icon="img/dead.gif" label="Status:"}
@@ -147,9 +164,11 @@
 				</SELECT>
 			{/box_row}
 
-{if !$group_action}
 			{box_row icon="img/queue.gif" label="Queue:"}
 				<SELECT size="1" name="message[queueid]" {tip text="Select queue" trigger="queue"} onchange="xajax_queue_changed($(this).val(), $('#rtverifiers').val())">
+					{if $group_action}
+						<option value="-100"{if $message.queueid == -100} selected{/if} data-newmessage-notify="1">{trans("- no changes -")}</option>
+					{/if}
 					{foreach $queuelist as $item}
 					<OPTION value="{$item.id}"{if $item.newmessagesubject && $item.newmessagebody} data-newmessage-notify="1"{/if}{if $item.id == $message.queueid} selected{/if}>{$item.name}</OPTION>
 					{/foreach}
@@ -159,11 +178,14 @@
 			{box_row icon="img/users.gif" label="Owner:"}
 				<SELECT size="1" name="message[owner]" {tip text="Select user" trigger="owner"}>
 					<OPTION value="0">- {trans("select user")} -</OPTION>
+					{if $group_action}
+						<option value="-100"{if $message.owner == -100} selected{/if}>{trans("- no changes -")}</option>
+					{/if}
 					{foreach $userlist as $user}
 					{if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
 						|| (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
 						|| $user.id == $message.owner}
-					<OPTION value="{$user.id}"{if !$user.access} class="blend"{/if}{if $user.id == $message.owner} selected{/if}>{$user.name}</OPTION>
+					<OPTION value="{$user.id}"{if !$user.access} class="blend"{/if}{if $user.id == $message.owner} selected{/if}>{$user.rname} ({$user.login})</OPTION>
 					{/if}
 					{/foreach}
 				</SELECT>
@@ -173,9 +195,8 @@
 					{trans("assign to me")}
 				</label>
 			{/box_row}
-{/if}
 
-			{box_row icon="img/verifier.png" label="Verifier:" field_id="rtverifiers"}
+			{box_row icon="verifier" label="Verifier:" field_id="rtverifiers"}
 				{if $group_action || !$ticket.verifierid || $ticket.verifierid == $layout.logid}
 					<SELECT size="1" name="message[verifierid]" {tip text="Select user" trigger="verifierid"}>
 						<OPTION value="0">- {trans("select user")} -</OPTION>
@@ -186,7 +207,7 @@
 							{if !ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users')
 								|| (ConfigHelper::checkConfig('phpui.helpdesk_hide_disabled_users') && $user.access)
 								|| $user.id == $message.verifierid}
-							<OPTION value="{$user.id}"{if !$user.access} class="blend"{/if}{if $user.id == $message.verifierid} selected{/if}>{$user.name}</OPTION>
+							<OPTION value="{$user.id}"{if !$user.access} class="blend"{/if}{if $user.id == $message.verifierid} selected{/if}>{$user.rname} ({$user.login})</OPTION>
 							{/if}
 						{/foreach}
 					</SELECT>
@@ -216,12 +237,7 @@
 			{/box_row}
 
 			{box_row id="categories" icon="img/queue.gif" label="Categories:" class="categories"}
-				{foreach $categories as $category}
-					<label class="nobr">
-						<INPUT type="checkbox" name="message[categories][{$category.id}]" value="1" {if $category.checked > 0}checked{/if} {tip trigger="categories"}>
-						{$category.name}
-					</label>
-				{/foreach}
+				{include file="rt/rtcategoryselection.html" name_prefix="message[categories]" categories=$categories}
 			{/box_row}
 
 		{/box_panel}
@@ -257,6 +273,10 @@
 			$('#customernotify-row').show();
 		}
 		{/if}
+
+		$('#smsnotify').change(function() {
+			$('#smsnotify-contacts').toggle($(this).prop('checked'));
+		});
 
 		$('[name="message[category_change]"]').change(function() {
 			if (parseInt($(this).val())) {

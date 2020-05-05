@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2016 LMS Developers
+ *  Copyright (C) 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -27,8 +27,6 @@
 /**
  * LMSConfigManager
  *
- * @author Maciej Lew <maciej.lew.1987@gmail.com>
- * @author Tomasz Chiliński <tomasz.chilinski@chilan.com>
  */
 class LMSConfigManager extends LMSManager implements LMSConfigManagerInterface
 {
@@ -119,10 +117,19 @@ class LMSConfigManager extends LMSManager implements LMSConfigManagerInterface
         return $sections;
     }
 
-    public function GetConfigOptionId($var, $section)
+    public function ConfigOptionExists($params)
     {
-        return $this->db->GetOne('SELECT id FROM uiconfig WHERE section = ? AND var = ?', array($section, $var));
+        extract($params);
+        if (isset($section)) {
+            return $this->db->GetOne(
+                'SELECT id FROM uiconfig WHERE section = ? AND var = ?',
+                array($section, $variable)
+            );
+        } else {
+            return $this->db->GetOne('SELECT id FROM uiconfig WHERE id = ?', array($id));
+        }
     }
+
 
     public function GetConfigDefaultType($option)
     {
@@ -192,5 +199,111 @@ class LMSConfigManager extends LMSManager implements LMSConfigManagerInterface
                 break;
         }
         return null;
+    }
+
+    public function GetConfigVariable($config_id)
+    {
+        return $this->db->GetRow(
+            'SELECT * FROM uiconfig WHERE id = ?',
+            array($config_id)
+        );
+    }
+
+    public function CloneConfigSection($section, $new_section, $userid = null)
+    {
+        if (empty($userid)) {
+            $variables = $this->db->GetAll(
+                'SELECT var, value, description, disabled, type FROM uiconfig WHERE section = ?',
+                array($section)
+            );
+            if (!empty($variables)) {
+                foreach ($variables as $variable) {
+                    $args = array_merge(array('section' => $new_section), $variable);
+                    $this->db->Execute(
+                        'INSERT INTO uiconfig (section, var, value, description, disabled, type)
+                        VALUES (?, ?, ?, ?, ?, ?)',
+                        array_values($args)
+                    );
+                    if ($this->syslog) {
+                        $args[SYSLOG::RES_UICONF] = $this->db->GetLastInsertID('uiconfig');
+                        $this->syslog->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_ADD, $args);
+                    }
+                }
+            }
+        } else {
+            $variables = $this->db->GetAll(
+                'SELECT id, var, value, description, disabled, type FROM uiconfig
+                WHERE section = ?',
+                array($section)
+            );
+            if (!empty($variables)) {
+                foreach ($variables as $variable) {
+                    $args = array(
+                        'section' => $new_section,
+                        'var' => $variable['var'],
+                        'value' => $variable['value'],
+                        'description' => $variable['description'],
+                        'disabled' => $variable['disabled'],
+                        'type' => $variable['type'],
+                        'ref_' . SYSLOG::getResourceKey(SYSLOG::RES_UICONF) => $variable['id'],
+                        'ref_' . SYSLOG::getResourceKey(SYSLOG::RES_USER) => $userid,
+                    );
+                    $this->db->Execute(
+                        'INSERT INTO uiconfig (section, var, value, description, disabled, type, configid, userid)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                        array_values($args)
+                    );
+                    if ($this->syslog) {
+                        $args[SYSLOG::RES_UICONF] = $this->db->GetLastInsertID('uiconfig');
+                        $this->syslog->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_ADD, $args);
+                    }
+                }
+            }
+        }
+    }
+
+    public function DeleteConfigOption($id, $global = true)
+    {
+        if ($global) {
+            if ($this->syslog) {
+                $local_options = $this->db->GetAll('SELECT id, userid FROM uiconfig WHERE configid = ?', array($id));
+            }
+
+            $this->db->Execute('DELETE FROM uiconfig WHERE configid = ?', array($id));
+
+            if ($this->syslog && !empty($local_options)) {
+                foreach ($local_options as $local_option) {
+                    $args = array(
+                        SYSLOG::RES_UICONF => $local_option['id'],
+                        SYSLOG::RES_USER => $local_option['userid'],
+                        'ref_' . SYSLOG::getResourceKey(SYSLOG::RES_UICONF) => $id
+                    );
+                    $this->syslog->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_DELETE, $args);
+                }
+            }
+        }
+
+        $this->db->Execute('DELETE FROM uiconfig WHERE id = ?', array($id));
+
+        if ($this->syslog) {
+            $args = array(SYSLOG::RES_UICONF => $id);
+            $this->syslog->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_DELETE, $args);
+        }
+    }
+
+    public function toggleConfigOption($id)
+    {
+        if ($this->syslog) {
+            $disabled = $this->db->GetOne('SELECT disabled FROM uiconfig WHERE id = ?', array($id));
+            $args = array(
+                SYSLOG::RES_UICONF => $id,
+                'disabled' => $disabled ? 0 : 1
+            );
+            $this->syslog->AddMessage(SYSLOG::RES_UICONF, SYSLOG::OPER_UPDATE, $args);
+        }
+        $this->db->Execute(
+            'UPDATE uiconfig SET disabled = CASE disabled WHEN 0 THEN 1 ELSE 0 END WHERE id = ?',
+            array($id)
+        );
     }
 }

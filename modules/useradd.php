@@ -1,9 +1,11 @@
 <?php
 
+use PragmaRX\Google2FA\Google2FA;
+
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -24,11 +26,18 @@
  *  $Id$
  */
 
+if (isset($_GET['fromuser'])) {
+    header('Content-Type: application/json');
+    die(json_encode($LMS->GetUserRights($_GET['fromuser'])));
+}
+
+include(MODULES_DIR . DIRECTORY_SEPARATOR . 'usercopypermissions.inc.php');
+
 $acl = isset($_POST['acl']) ? $_POST['acl'] : array();
 $useradd = isset($_POST['useradd']) ? $_POST['useradd'] : array();
 
 if (count($useradd)) {
-        $error = array();
+    $error = array();
 
     foreach ($useradd as $key => $value) {
         if (!is_array($value)) {
@@ -36,11 +45,11 @@ if (count($useradd)) {
         }
     }
 
-    if ($useradd['login']=='' && $useradd['firstname']=='' && $useradd['lastname']=='' && $useradd['password']=='' && $useradd['confirm']=='') {
+    if ($useradd['login'] == '' && $useradd['firstname'] == '' && $useradd['lastname'] == '' && $useradd['password'] == '' && $useradd['confirm'] == '') {
         $SESSION->redirect('?m=useradd');
     }
 
-    if ($useradd['login']=='') {
+    if ($useradd['login'] == '') {
         $error['login'] = trans('Login can\'t be empty!');
     } elseif (!preg_match('/^[a-z0-9.-_]+$/i', $useradd['login'])) {
         $error['login'] = trans('Login contains forbidden characters!');
@@ -48,7 +57,7 @@ if (count($useradd)) {
         $error['login'] = trans('User with specified login exists or that login was used in the past!');
     }
 
-    if ($useradd['email']!='' && !check_email($useradd['email'])) {
+    if ($useradd['email'] != '' && !check_email($useradd['email'])) {
         $error['email'] = trans('E-mail isn\'t correct!');
     }
 
@@ -68,7 +77,7 @@ if (count($useradd)) {
     }
 
     if (!empty($useradd['accessfrom'])) {
-        $accessfrom=date_to_timestamp($useradd['accessfrom']);
+        $accessfrom = date_to_timestamp($useradd['accessfrom']);
         if (empty($accessfrom)) {
             $error['accessfrom'] = trans('Incorrect charging time!');
         }
@@ -77,7 +86,7 @@ if (count($useradd)) {
     }
 
     if (!empty($useradd['accessto'])) {
-        $accessto=date_to_timestamp($useradd['accessto']);
+        $accessto = date_to_timestamp($useradd['accessto']);
         if (empty($accessto)) {
             $error['accessto'] = trans('Incorrect charging time!');
         }
@@ -96,15 +105,48 @@ if (count($useradd)) {
         $useradd['ntype'] = array_sum(Utils::filterIntegers($useradd['ntype']));
     }
 
-        $hook_data = $LMS->executeHook('useradd_validation_before_submit', array('useradd' => $useradd,
-                                                                                 'error' => $error));
-        $useradd = $hook_data['useradd'];
-        $error   = $hook_data['error'];
+    if ($useradd['twofactorauth'] == 1) {
+        if (strlen($useradd['twofactorauthsecretkey']) != 16) {
+            $error['twofactorauthsecretkey'] = trans('Incorrect secret key format!');
+        } else {
+            $google2fa = new Google2FA();
+            if ($google2fa->removeInvalidChars($useradd['twofactorauthsecretkey']) != $useradd['twofactorauthsecretkey']) {
+                $error['twofactorauthsecretkey'] = trans('Secret key contains invalid characters!');
+            }
+        }
+    }
+
+    $hook_data = $LMS->executeHook('useradd_validation_before_submit', array(
+        'useradd' => $useradd,
+        'error' => $error
+    ));
+    $useradd = $hook_data['useradd'];
+    $error = $hook_data['error'];
 
     if (!$error) {
+        if ($useradd['twofactorauth'] == -1) {
+            $useradd['twofactorauth'] = 1;
+            $google2fa = new Google2FA();
+            $useradd['twofactorauthsecretkey'] = $google2fa->generateSecretKey();
+        } elseif (empty($useradd['twofactorauth'])) {
+            $useradd['twofactorauthsecretkey'] = null;
+        }
+
         $useradd['accessfrom'] = $accessfrom;
         $useradd['accessto'] = $accessto;
         $id = $LMS->UserAdd($useradd);
+
+        if (isset($useradd['copy-permissions']) && !empty($useradd['src_userid'])) {
+            $LMS->CopyPermissions($useradd['src_userid'], $id, array_flip($useradd['copy-permissions']));
+            $LMS->executeHook(
+                'user_modify_copy_permissions',
+                array(
+                    'src-userid' => $useradd['src_userid'],
+                    'dst-userid' => $id,
+                    'copy-permissions' => $useradd['copy-permissions'],
+                )
+            );
+        }
 
         if (isset($_POST['selected'])) {
             foreach ($_POST['selected'] as $idx => $name) {
@@ -113,7 +155,7 @@ if (count($useradd)) {
                 if ($SYSLOG) {
                     $args = array(
                         SYSLOG::RES_EXCLGROUP =>
-                        $DB->GetLastInsertID('excludedgroups'),
+                            $DB->GetLastInsertID('excludedgroups'),
                         SYSLOG::RES_CUSTGROUP => $idx,
                         SYSLOG::RES_USER => $id
                     );
@@ -122,8 +164,8 @@ if (count($useradd)) {
             }
         }
 
-                $LMS->executeHook('useradd_after_submit', $id);
-        $SESSION->redirect('?m=userinfo&id='.$id);
+        $LMS->executeHook('useradd_after_submit', $id);
+        $SESSION->redirect('?m=userinfo&id=' . $id);
     } elseif (isset($_POST['selected'])) {
         foreach ($_POST['selected'] as $idx => $name) {
             $useradd['selected'][$idx]['id'] = $idx;
@@ -139,7 +181,7 @@ $access = AccessRights::getInstance();
 $accesslist = $access->getArray($rights);
 
 if ($AUTH->nousers == true) {           // if there is no users
-    $accesslist['full_access']['enabled']=1;       // then new users should have "full privileges" checked to make new installation more human error proof.
+    $accesslist['full_access']['enabled'] = 1;       // then new users should have "full privileges" checked to make new installation more human error proof.
 }
 
 $layout['pagetitle'] = trans('New User');
@@ -147,6 +189,7 @@ $layout['pagetitle'] = trans('New User');
 $SMARTY->assign('useradd', $useradd);
 $SMARTY->assign('error', $error);
 $SMARTY->assign('accesslist', $accesslist);
+$SMARTY->assign('users', $LMS->GetUserNames());
 $SMARTY->assign('available', $DB->GetAllByKey('SELECT id, name FROM customergroups ORDER BY name', 'id'));
 
 $SMARTY->display('user/useradd.html');
