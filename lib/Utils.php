@@ -234,4 +234,22 @@ class Utils
 
         return $result;
     }
+
+    public static function checkZip($zip, $country = null)
+    {
+        if (ConfigHelper::checkConfig('phpui.skip_zip_validation')) {
+            return true;
+        }
+        if (!isset($country) || empty($country)) {
+            $country = $GLOBALS['_language'];
+        } else if (preg_match('/^[0-9]+$/', $country)) {
+            $LMS = LMS::getInstance();
+            $country = $LMS->getCountryCodeById($country);
+        }
+        if (isset($GLOBALS['LANGDEFS'][$country]['check_zip'])) {
+            return $GLOBALS['LANGDEFS'][$country]['check_zip']($zip);
+        } else {
+            return true;
+        }
+    }
 }
