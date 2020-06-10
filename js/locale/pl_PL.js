@@ -23,6 +23,8 @@
  *  $Id$
  */
 
+$_LANG['Customer has not any assigned email contacts with "documents" flag!'] = 'Klient nie posiada przypisanych żadnych adresów poczty elektronicznej z ustawioną flagą "dokumenty"!';
+
 $_LANG['link technologies'] = 'technologie łącza';
 $_LANG['service types'] = 'typy usług';
 $_LANG['<!uke-income>Service type'] = 'Typ usługi';
