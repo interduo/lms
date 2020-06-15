@@ -1582,19 +1582,11 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         return $res;
     }
 
-    /**
-     * Deletes customer
-     *
-     * @global type $LMS
-     * @param int $id Customer id
-     */
-    public function deleteCustomer($id)
+    private function deleteCustomerHelper($id)
     {
         global $LMS;
 
         $disable_customer_contacts = ConfigHelper::checkConfig('phpui.disable_contacts_during_customer_delete');
-
-        $this->db->BeginTrans();
 
         $this->db->Execute('UPDATE customers SET deleted=1, moddate=?NOW?, modid=?
                 WHERE id=?', array(Auth::GetCurrentUser(), $id));
@@ -1657,8 +1649,8 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 if (!empty($contacts)) {
                     foreach ($contacts as $contact) {
                         $args = array(
-                        SYSLOG::RES_CUSTCONTACT => $contact,
-                        SYSLOG::RES_CUST => $id,
+                            SYSLOG::RES_CUSTCONTACT => $contact,
+                            SYSLOG::RES_CUST => $id,
                         );
                         $this->syslog->AddMessage(SYSLOG::RES_CUSTCONTACT, SYSLOG::OPER_UPDATE, $args);
                     }
@@ -1718,7 +1710,18 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         if (!empty($userpanel_dir)) {
             $this->db->Execute('DELETE FROM up_rights_assignments WHERE customerid=?', array($id));
         }
+    }
 
+    /**
+     * Deletes customer
+     *
+     * @global type $LMS
+     * @param int $id Customer id
+     */
+    public function deleteCustomer($id)
+    {
+        $this->db->BeginTrans();
+        $this->deleteCustomerHelper($id);
         $this->db->CommitTrans();
     }
 
@@ -1735,7 +1738,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         $addr_ids = $this->db->GetCol('SELECT address_id FROM customer_addresses WHERE customer_id = ?', array($id));
         $this->db->Execute('DELETE FROM addresses WHERE id in (' . implode($addr_ids, ',') . ')');
 
-        $this->deleteCustomer($id);
+        $this->deleteCustomerHelper($id);
 
         $this->db->Execute('DELETE FROM customers WHERE id = ?', array($id));
 
