@@ -309,18 +309,14 @@
 					{/if}
 				{/if}
 			{/if}
-			{if $filter.state == 50}
-			<A href="?m=customeredit&amp;id={$customer.id}&amp;action=recover"><IMG src="img/recover.gif" alt="{trans("Recover")}" title="{trans("Recover")}"></A>
+			{if $customer.deleted}
+				{if ConfigHelper::checkPrivilege('permanent_customer_removal')}
+					<a class="remove-button" href="?m=customerdel&id={$customer.id}&type=permanent"><IMG src="img/delete.gif" alt="{trans("Remove permanently")}" title="{trans("Remove permanently")}"></a>
+				{/if}
+				<a href="?m=customeredit&id={$customer.id}&action=recover"><img src="img/recover.gif" alt="{trans("Recover")}" title="{trans("Recover")}"></a>
 			{else}
-				{if $customer.deleted}
-					{if ConfigHelper::checkPrivilege('permanent_customer_removal')}
-						<a class="remove-button" href="?m=customerdel&id={$customer.id}&type=permanent"><IMG src="img/delete.gif" alt="{trans("Remove permanently")}" title="{trans("Remove permanently")}"></a>
-					{/if}
-					<a href="?m=customeredit&id={$customer.id}&action=recover"><img src="img/recover.gif" alt="{trans("Recover")}" title="{trans("Recover")}"></a>
-				{else}
-					{if ConfigHelper::checkPrivilege('customer_removal')}
-						<A class="delete-customer" href="?m=customerdel&id={$customer.id}"><IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
-					{/if}
+				{if ConfigHelper::checkPrivilege('customer_removal')}
+					<A class="delete-customer" href="?m=customerdel&id={$customer.id}"><IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
 				{/if}
 				<A href="?m=customeredit&id={$customer.id}"><IMG src="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 			{/if}
