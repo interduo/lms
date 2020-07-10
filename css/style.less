@@ -534,7 +534,7 @@ INPUT {
 		}
 	}
 	&.hiddenbtn {
-		display : none;
+		display : none !important;
 	}
 	&.blend {
 		border-style: solid;
@@ -1921,7 +1921,8 @@ div.lms-ui-filter-container {
 		width: 80%;
 		& > *,
 		& > form > * {
-			margin: 1px;
+			margin: 0.2em;
+			display: inline-block;
 		}
 	}
 }
