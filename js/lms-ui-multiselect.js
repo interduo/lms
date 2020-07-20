@@ -146,7 +146,7 @@ function multiselect(options) {
 		if (!text) {
 			text = $(this).text();
 		}
-		$('<span/>').html(text).appendTo(li);
+		$('<span/>').html(text.trim()).appendTo(li);
 
 		$.each($(this).data(), function(key, value) {
 			li.attr('data-' + key, value);
