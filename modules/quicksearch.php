@@ -667,7 +667,7 @@ switch ($mode) {
         break;
 
     case 'ticket':
-        if (empty($search)) {
+        if (empty($search) || !ConfigHelper::checkPrivilege('helpdesk_operation')) {
             die;
         }
 
