@@ -42,7 +42,7 @@ $parameters = array(
     'b' => 'backup',
     'a' => 'archive',
     'o:' => 'output-directory:',
-    'n' => 'no-attachment',
+    'n' => 'no-attachments',
 );
 
 foreach ($parameters as $key => $val) {
