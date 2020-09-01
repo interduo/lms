@@ -52,7 +52,7 @@ $LANGDEFS = array(
         'currency' => 'EUR',
 //        'mobile' => '(88[08]|50[0-9]|6[09][0-9])[0-9]{6}',
         'check_zip' => function ($zip) {
-            return preg_match('/^[0-9]{5}$/', $zip);
+            return preg_match('/^(LT-?)?[0-9]{5}$/', $zip);
         }
     ),
     'lt' => 'lt_LT',
