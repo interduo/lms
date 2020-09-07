@@ -18,37 +18,6 @@
     </TR>
     </THEAD>
     <TBODY>
-    <TR>
-        <TD>
-            {icon name="uptime"}
-        </TD>
-        <TD class="bold nobr">
-            {trans("Begin time:")}
-        </TD>
-        <TD>
-            {$event.date|date_format:"%x (%A)"}
-            {($event.date + $event.begintime)|date_format:"%H:%M"}
-        </TD>
-    </TR>
-    {if $event.begintime != $event.endtime || $event.enddate > $event.date}
-        <TR>
-            <TD>
-                {icon name="uptime"}
-            </TD>
-            <TD class="bold nobr">
-                {trans("End time:")}
-            </TD>
-            <TD>
-                {if $event.enddate}
-                    {$event.enddate|date_format:"%x (%A)"}
-                    {($event.enddate + $event.endtime)|date_format:"%H:%M"}
-                {else}
-                    {$event.date|date_format:"%x (%A)"}
-                    {($event.date + $event.endtime)|date_format:"%H:%M"}
-                {/if}
-            </TD>
-        </TR>
-    {/if}
     {if $event.description}
         <TR>
             <TD>
@@ -90,82 +59,6 @@
             {if $event.private}{trans("private")}{else}{trans("public")}{/if}
         </TD>
     </TR>
-    <TR>
-        <TD>
-            {icon name="user"}
-        </TD>
-        <TD class="bold">
-            {trans("Created by:")}
-        </TD>
-        <TD class="nobr">
-            <A href="?m=userinfo&id={$event.userid}">{$event.username}</A>
-        </TD>
-    </TR>
-    {if $event.creationdate != 0}
-        <TR>
-            <TD>
-                {icon name="uptime"}
-            </TD>
-            <TD class="bold">
-                {trans("Creation time:")}
-            </TD>
-            <TD>
-                {$event.creationdate|date_format:"%x (%X)"}
-            </TD>
-        </TR>
-    {/if}
-    {if $event.moduserid != 0}
-        <TR>
-            <TD>
-                {icon name="user"}
-            </TD>
-            <TD class="bold">
-                <B>{trans("Last modified by:")}</B>
-            </TD>
-            <TD class="nobr">
-                <A href="?m=userinfo&id={$event.moduserid}">{$event.modusername}</A>
-            </TD>
-        </TR>
-    {/if}
-    {if $event.moddate != 0}
-        <TR>
-            <TD>
-                {icon name="uptime"}
-            </TD>
-            <TD class="bold">
-                {trans("Last modification time:")}
-            </TD>
-            <TD>
-                {$event.moddate|date_format:"%x (%X)"}
-            </TD>
-        </TR>
-    {/if}
-    {if $event.closeduserid != 0}
-        <TR>
-            <TD>
-                {icon name="user"}
-            </TD>
-            <TD class="bold nobr">
-                <B>{trans("Closed by")}:</B>
-            </TD>
-            <TD class="nobr">
-                <A href="?m=userinfo&id={$event.closeduserid}">{$event.closedusername}</A>
-            </TD>
-        </TR>
-    {/if}
-    {if $event.closeddate != 0}
-        <TR>
-            <TD>
-                {icon name="timetable"}
-            </TD>
-            <TD class="bold nobr">
-                {trans("Closed time")}:
-            </TD>
-            <TD>
-                {$event.closeddate|date_format:"%x (%X)"}
-            </TD>
-        </TR>
-    {/if}
     <TR>
         <TD>
 	    {icon name="customer"}
@@ -281,6 +174,7 @@
             {else}
                 {button type='link-button' href="?m=eventedit&id={$event.id}&action=open" label='Open' icon='open'}
             {/if}
+            {button type='link-button' href="?m=eventinfo&id={$event.id}" label='Event Info' icon='info'}
         </TD>
     </TR>
     </TBODY>
