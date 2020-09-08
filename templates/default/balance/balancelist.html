@@ -132,6 +132,9 @@
 		<TD colspan="10" class="nobr">
 			<div style="float: left;">
 				<strong>{trans("Filter:")}</strong>
+				{if $listdata.cat == 'cashimport' && !is_array($listdata.search) && isset($sourcefilename)}
+					<INPUT type="hidden" name="sourcefileid" id="sourcefileid" value="{$listdata.search}">
+				{/if}
 				<INPUT type="hidden" name="sourcefileid" id="sourcefileid" value="{if isset($sourcefilename)}{$listdata.search}{/if}">
 				<INPUT type="text" name="search" id="search" value="{if $listdata.cat == 'cashimport' && isset($sourcefilename)}{$sourcefilename}{else}{$listdata.search}{/if}"
 					size="15" {tip text="Enter value of searching data and select category"}>
