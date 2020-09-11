@@ -24,8 +24,12 @@
  *  $Id$
  */
 
+<<<<<<< HEAD
 define('DBVERSION', '2020050406'); // here should be always the newest version of database!
                  // it placed here to avoid read disk every time when we call this file.
+=======
+define('DBVERSION', '2020091100'); // here should be always the newest version of database!
+>>>>>>> bc726858e... enhancement: added separate receipt/bill sale flag for invoices
 
 /**
  *
