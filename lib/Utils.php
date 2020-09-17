@@ -37,6 +37,22 @@ class Utils
         });
     }
 
+    public static function array_column(array $array, $column_key, $index_key = null)
+    {
+        if (!is_array($array) || empty($column_key)) {
+            return $array;
+        }
+        $result = array();
+        foreach ($array as $idx => $item) {
+            if (isset($index_key)) {
+                $result[$item[$index_key]] = $item[$column_key];
+            } else {
+                $result[$idx] = $item[$column_key];
+            }
+        }
+        return $result;
+    }
+
     // taken from RoundCube
     /**
      * Generate a random string
