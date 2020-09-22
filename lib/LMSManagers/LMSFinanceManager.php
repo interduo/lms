@@ -2199,6 +2199,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
             $result['flags'] = array(
                 DOC_FLAG_RECEIPT => ($result['flags'] & DOC_FLAG_RECEIPT) ? 1 : 0,
+                DOC_FLAG_TELECOM_SERVICE => ($result['flags'] & DOC_FLAG_TELECOM_SERVICE) ? 1 : 0,
             );
 
             if ($result['reference']) {
