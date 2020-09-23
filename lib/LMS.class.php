@@ -712,6 +712,12 @@ class LMS
         return $manager->isSplitPaymentSuggested($customerid, $cdate, $value);
     }
 
+    public function isTelecomServiceSuggested($customerid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->isTelecomServiceSuggested($customerid);
+    }
+
     public function getCustomerSMSOptions()
     {
         $manager = $this->getCustomerManager();
