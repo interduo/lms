@@ -1449,7 +1449,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             $result['flags'] = array();
             foreach ($CUSTOMERFLAGS as $cflag => $flag) {
                 if ($flags & $cflag) {
-                    $result['flags'][] = $cflag;
+                    $result['flags'][$cflag] = $cflag;
                 }
             }
 
