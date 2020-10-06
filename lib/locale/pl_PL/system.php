@@ -207,7 +207,7 @@ function get_currency_value($currency, $date = null)
 
     $i = 0;
     do {
-        $result = file_get_contents('https://api.nbp.pl/api/exchangerates/rates/A/' . $currency . '/'
+        $result = @file_get_contents('https://api.nbp.pl/api/exchangerates/rates/A/' . $currency . '/'
             . (empty($date) ? '' : date('Y-m-d', $date) . '/') . '?format=json');
         if ($result !== false) {
             break;
