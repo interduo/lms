@@ -2266,9 +2266,6 @@ if (!empty($intersect)) {
                     ));
                     break;
                 case 'unblock':
-                    if (empty($customers)) {
-                        break;
-                    }
                     $customers = $DB->GetCol(
                         "SELECT id FROM customers WHERE status = ?"
                         . (empty($customers) ? '' : " AND id NOT IN (" . implode(',', $customers) . ")"),
