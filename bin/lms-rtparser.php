@@ -32,7 +32,6 @@ $parameters = array(
     's' => 'silent',
     'h' => 'help',
     'v' => 'version',
-    'd' => 'debug',
     'q:' => 'queue:',
 );
 
@@ -67,8 +66,6 @@ lms-rtparser.php
 -h, --help                      print this help and exit;
 -v, --version                   print version info and exit;
 -s, --silent                    suppress any output, except errors
--d, --debug                     print out debug information, do not log any messages into
-                                system;
 -q, --queue=<queueid>           queue ID (it means, QUEUE ID, numeric! NOT NAME! also
                                 its required to run!)
 
