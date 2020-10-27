@@ -274,4 +274,25 @@ class Utils
             return true;
         }
     }
+
+    public static function validateVat($trader_country, $trader_id, $requester_country, $requester_id)
+    {
+        static $vies = null;
+
+        if (!isset($vies)) {
+            $vies = new \DragonBe\Vies\Vies();
+            if (!$vies->getHeartBeat()->isAlive()) {
+                throw new Exception('VIES service is not available at the moment, please try again later.');
+            }
+        }
+
+        $vatResult = $vies->validateVat(
+            $trader_country,    // Trader country code
+            $trader_id,         // Trader VAT ID
+            $requester_country, // Requester country code
+            $requester_id       // Requester VAT ID
+        );
+
+        return $vatResult->isValid();
+    }
 }
