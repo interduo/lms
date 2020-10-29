@@ -227,8 +227,8 @@ if (empty($customers)) {
 }
 
 foreach ($customers as $customer) {
-    $div_ccode = empty($customer['div_ccode']) ? Localisation::getCurrentViesCode() : Localisation::getViesCodeByCountryCode($customer['div_ccode']);
-    $customer_ccode = empty($customer['ccode']) ? $div_ccode : Localisation::getViesCodeByCountryCode($customer['ccode']);
+    $div_ccode = empty($customer['div_ccode']) ? $_language : $customer['div_ccode'];
+    $customer_ccode = empty($customer['ccode']) ? $div_ccode : $customer['ccode'];
     $customername = trim($customer['customername']);
 
     if (empty($div_ccode) || empty($customer_ccode)) {
