@@ -206,9 +206,9 @@ if (!empty($customergroups)) {
 
 $customers = $DB->GetAll(
     "SELECT c.id, " . $DB->Concat('c.lastname', "' '", 'c.name') . " AS customername,
-        c.ten, c.countryid, c.ccode, c.divisionid, c.flags,
-        (CASE WHEN d.label IS NULL THEN d.shortname ELSE d.label END) AS div_name,
-        d.ten AS div_ten, d.countryid AS div_countryid, d.ccode AS div_ccode
+        c.ten, c.countryid, c.divisionid, c.flags,
+        d.shortname AS div_name,
+        d.ten AS div_ten, d.countryid AS div_countryid
     FROM customeraddressview c
     JOIN vdivisions d ON d.id = c.divisionid
     WHERE d.ten <> ? AND c.ten <> ? AND c.status IN ?"
@@ -226,9 +226,20 @@ if (empty($customers)) {
     die('No customers found to check their VAT payer status in VIES database!' . PHP_EOL);
 }
 
+$vies_country_codes = array(
+    1 => 'LT',
+    2 => 'PL',
+    3 => 'RO',
+    4 => 'SK',
+    6 => 'CZ',
+);
+
 foreach ($customers as $customer) {
-    $div_ccode = empty($customer['div_ccode']) ? $_language : $customer['div_ccode'];
-    $customer_ccode = empty($customer['ccode']) ? $div_ccode : $customer['ccode'];
+    $div_ccode = empty($customer['div_countryid']) && isset($vies_country_codes[$customer['div_countryid']])
+        ? $vies_country_codes[$customer['div_countryid']] : strtoupper(substr($_language, 0, 2));
+    $customer_ccode = empty($customer['countryid'])
+        ? $div_ccode
+        : (isset($vies_country_codes[$customer['countryid']]) ? $vies_country_codes[$customer['countryid']] : $div_ccode);
     $customername = trim($customer['customername']);
 
     if (empty($div_ccode) || empty($customer_ccode)) {
