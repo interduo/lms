@@ -38,6 +38,7 @@ $parameters = array(
     'g:' => 'fakehour:',
     'l:' => 'part-size:',
     'i:' => 'interval:',
+    'I' => 'ignore-send-date',
     'e:' => 'extra-file:',
     'b' => 'backup',
     'a' => 'archive',
@@ -84,6 +85,7 @@ lms-sendinvoices.php
 -s, --part-size=NN              defines part size of invoices that should be sent
                                 (can be specified as percentage value);
 -i, --interval=ms               force delay interval between subsequent posts
+    --ignore-send-date          send documents which have already been sent earlier;
 -e, --extra-file=/tmp/file.pdf  send additional file as attachment
 -b, --backup                    make financial document file backup
 -a, --archive                   archive financial documents in documents directory
@@ -398,7 +400,7 @@ if ($backup || $archive) {
     }
 }
 
-$ignore_send_date = ConfigHelper::checkConfig('sendinvoices.ignore_send_date');
+$ignore_send_date = isset($options['ignore-send-date']) || ConfigHelper::checkConfig('sendinvoices.ignore_send_date');
 
 $query = "SELECT d.id, d.number, d.cdate, d.name, d.customerid, d.type AS doctype, d.archived, d.senddate, n.template" . ($backup || $archive ? '' : ', m.email') . "
 		FROM documents d
