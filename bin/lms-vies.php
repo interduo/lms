@@ -235,8 +235,17 @@ $vies_country_codes = array(
 );
 
 foreach ($customers as $customer) {
-    $div_ccode = empty($customer['div_countryid']) && isset($vies_country_codes[$customer['div_countryid']])
-        ? $vies_country_codes[$customer['div_countryid']] : strtoupper(substr($_language, 0, 2));
+    if (empty($customer['div_countryid'])) {
+        if (isset($vies_country_codes[$customer['div_countryid']])) {
+            $div_ccode = $vies_country_codes[$customer['div_countryid']];
+        } else {
+            $div_ccode = strtoupper(substr($_language, 0, 2));
+        }
+    } elseif (isset($vies_country_codes[$customer['div_countryid']])) {
+        $div_ccode = $vies_country_codes[$customer['div_countryid']];
+    } else {
+        $div_ccode = strtoupper(substr($_language, 0, 2));
+    }
     $customer_ccode = empty($customer['countryid'])
         ? $div_ccode
         : (isset($vies_country_codes[$customer['countryid']]) ? $vies_country_codes[$customer['countryid']] : $div_ccode);
