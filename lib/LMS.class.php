@@ -2666,6 +2666,7 @@ class LMS
                 'message' => $message,
                 'messageid' => $messageid,
                 'service' => $service,
+                'transliterate_message' => $transliterate_message,
                 'sms_options' => $sms_options,
             );
 
