@@ -2666,6 +2666,7 @@ class LMS
                 'message' => $message,
                 'messageid' => $messageid,
                 'service' => $service,
+                'sms_options' => $sms_options,
             );
 
             // call external SMS handler(s)
@@ -2675,6 +2676,9 @@ class LMS
             if ($data['abort']) {
                 if (is_string($data['result'])) {
                     $errors[] = $data['result'];
+                    continue;
+                } elseif (is_array($data['result'])) {
+                    $errors = array_merge($errors, $data['result']);
                     continue;
                 } else {
                     return $data['result'];
