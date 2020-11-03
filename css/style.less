@@ -107,6 +107,14 @@ TABLE		{ border-collapse: collapse; border-color: #000000 }
 	opacity: 0.8;
 	right: 1.8em;
 	bottom: 0.6em;
+
+	transform: translateX(120px);
+	transition: transform 400ms 300ms;
+	will-change: transform;
+	&:hover {
+		transform: translateX(10px) !important;
+	}
+
 	z-index: 30000;
 }
 
