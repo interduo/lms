@@ -48,7 +48,12 @@ if (isset($_POST['queue'])) {
 
     if (isset($queue['users'])) {
         foreach ($queue['users'] as $key => $value) {
-            $queue['rights'][] = array('id' => $key, 'rights' => array_sum($value), 'name' => $queue['usernames'][$key]);
+            $queue['rights'][] = array(
+                'id' => $key,
+                'rights' => array_sum($value),
+                'rname' => $queue['usernames'][$key],
+                'login' => $queue['userlogins'][$key],
+            );
         }
     }
 
@@ -130,9 +135,6 @@ if (isset($_POST['queue'])) {
 
         $SESSION->redirect('?m=rtqueueinfo&id='.$queue['id']);
     }
-
-    $oldqueue = $LMS->GetQueue($_GET['id']);
-    $queue['rights'] = $oldqueue['rights'];
 } else {
     $queue = $LMS->GetQueue($_GET['id']);
     $categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
