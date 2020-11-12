@@ -236,11 +236,7 @@ $vies_country_codes = array(
 
 foreach ($customers as $customer) {
     if (empty($customer['div_countryid'])) {
-        if (isset($vies_country_codes[$customer['div_countryid']])) {
-            $div_ccode = $vies_country_codes[$customer['div_countryid']];
-        } else {
-            $div_ccode = strtoupper(substr($_language, 0, 2));
-        }
+        $div_ccode = strtoupper(substr($_language, 0, 2));
     } elseif (isset($vies_country_codes[$customer['div_countryid']])) {
         $div_ccode = $vies_country_codes[$customer['div_countryid']];
     } else {
