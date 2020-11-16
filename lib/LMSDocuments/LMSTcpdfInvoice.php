@@ -788,6 +788,10 @@ class LMSTcpdfInvoice extends LMSInvoice
 
     public function invoice_body_standard()
     {
+        if (ConfigHelper::checkConfig('invoices.jpk_flags')) {
+            $this->invoice_jpk_flags();
+        }
+
         $this->invoice_cancelled();
         $this->invoice_no_accountant();
         $this->invoice_header_image();
