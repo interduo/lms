@@ -535,6 +535,14 @@ if (!ConfigHelper::checkConfig('phpui.big_networks')) {
     $SMARTY->assign('customerlist', $LMS->GetAllCustomerNames());
 }
 
+if (!empty($_GET['description'])) {
+    $event['description'] = preg_replace('/[^A-Za-z0-9. -]/', '', $_GET['description']);
+}
+
+if (!empty($_GET['title'])) {
+    $event['title'] = preg_replace('/[^A-Za-z0-9. -]/', '', $_GET['title']);
+}
+
 $SMARTY->assign('max_userlist_size', ConfigHelper::getConfig('phpui.event_max_userlist_size'));
 $SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('usergroups', $usergroups);
