@@ -401,6 +401,8 @@ if (isset($_POST['event'])) {
     }
     if (!isset($eventticketid)) {
         $event['helpdesk'] = ConfigHelper::checkConfig('phpui.default_event_ticket_assignment') ? 'new' : 'none';
+    } elseif ($eventticketid == '-1') {
+        $event['helpdesk'] = 'none';
     }
 }
 
