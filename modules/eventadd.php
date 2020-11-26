@@ -543,6 +543,11 @@ if (!empty($_GET['title'])) {
     $event['title'] = preg_replace('/[^A-Za-z0-9. -]/', '', $_GET['title']);
 }
 
+if (isset($_GET['today'])) {
+    $now = time();
+    $event['begin'] = date('Y/m/d H:i', strtotime("today", $now));
+}
+
 $SMARTY->assign('max_userlist_size', ConfigHelper::getConfig('phpui.event_max_userlist_size'));
 $SMARTY->assign('userlist', $userlist);
 $SMARTY->assign('usergroups', $usergroups);
