@@ -536,11 +536,11 @@ if (!ConfigHelper::checkConfig('phpui.big_networks')) {
 }
 
 if (!empty($_GET['description'])) {
-    $event['description'] = preg_replace('/[^[:alpha:]ąćęłńóśźżĄĆĘŁŃÓŚŹŻ., -=!@#%&*()?]/', '', $_GET['description']);
+    $event['description'] = filter_var($_GET['description'], FILTER_SANITIZE_SPECIAL_CHARS);
 }
 
 if (!empty($_GET['title'])) {
-    $event['title'] = preg_replace('/[^[:alpha:]ąćęłńóśźżĄĆĘŁŃÓŚŹŻ., -=!@#%&*()?]/', '', $_GET['title']);
+    $event['title'] = filter_var($_GET['title'], FILTER_SANITIZE_SPECIAL_CHARS);
 }
 
 if (isset($_GET['today'])) {
