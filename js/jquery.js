@@ -297,7 +297,8 @@ function init_comboboxes(selector) {
 			$.grep($('select', scombobox).attr('class').split(' '), function(value) {
 				return value != 'lms-ui-combobox';
 			}));
-		if ($(this).attr('data-value')) {
+		if (typeof($(this).attr('data-value')) === 'string' &&
+			$(this).attr('data-value').length) {
 			scombobox.scombobox('val', $(this).attr('data-value'));
 			$(this).removeAttr('data-value');
 		} else if ($(this).attr('data-id-value')) {
