@@ -30,7 +30,7 @@
 class LMS
 {
     const SOFTWARE_NAME = 'LMS';
-    const SOFTWARE_VERSION = '25.23';
+    const SOFTWARE_VERSION = '25.24';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
 
     public $DB;   // database object
