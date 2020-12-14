@@ -388,6 +388,11 @@ if (isset($_POST['document'])) {
 
         $DB->CommitTrans();
 
+        if ($LMS->DocumentExists($docid) && !empty($document['confirmdate'])) {
+            $document['id'] = $docid;
+            $LMS->NewDocumentCustomerNotifications($document);
+        }
+
         if (!isset($document['reuse'])) {
             if (isset($_GET['print'])) {
                 $SESSION->save('documentprint', $docid);
