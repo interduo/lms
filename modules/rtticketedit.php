@@ -109,7 +109,14 @@ if ($id && !isset($_POST['ticket'])) {
                     'sms_body' => $sms_body,
                 ));
 
-                $SESSION->redirect('?m=rtticketview&id=' . $id);
+                if ($SESSION->is_set('backto')) {
+                    $SESSION->redirect(
+                        '?' . $SESSION->get('backto') . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : '')
+                    );
+                } else {
+                    $SESSION->redirect('?m=rtticketview&id=' . $id);
+                }
+
                 break;
             case 'assign':
                 if (isset($_GET['check-conflict'])) {
@@ -130,6 +137,14 @@ if ($id && !isset($_POST['ticket'])) {
                 break;
             case 'unread':
                 $LMS->MarkTicketAsUnread($id);
+                $SESSION->redirect('?m=rtqueueview'
+                    . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+                break;
+            case 'resetpriority':
+                $ticket = $LMS->GetTicketContents($id);
+                if ($ticket['priority'] != RT_PRIORITY_NORMAL) {
+                    $LMS->TicketChange($id, array('priority' => RT_PRIORITY_NORMAL));
+                }
                 $SESSION->redirect('?m=rtqueueview'
                     . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
                 break;
@@ -154,9 +169,16 @@ if ($id && !isset($_POST['ticket'])) {
                     $emails = array_map(function ($contact) {
                         return $contact['fullname'];
                     }, $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_EMAIL));
+
+                    $all_phones = $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_LANDLINE | CONTACT_MOBILE);
+
                     $phones = array_map(function ($contact) {
                         return $contact['fullname'];
-                    }, $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_LANDLINE | CONTACT_MOBILE));
+                    }, $all_phones);
+
+                    $mobile_phones = array_filter($all_phones, function ($contact) {
+                        return $contact['type'] & (CONTACT_MOBILE | CONTACT_DISABLED) == CONTACT_MOBILE;
+                    });
                 }
 
                 $mailfname = '';
@@ -176,29 +198,40 @@ if ($id && !isset($_POST['ticket'])) {
 
                 $from = $mailfname . ' <' . $mailfrom . '>';
 
-                if (!empty($queue['resolveticketsubject']) && !empty($queue['resolveticketbody'])) {
-                    if (!empty($ticket['customerid'])) {
-                        if (!empty($emails)) {
-                            $ticketid = sprintf("%06d", $id);
-                            $custmail_subject = $queue['resolveticketsubject'];
-                            $custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
-                            $custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
-                            $custmail_body = $queue['resolveticketbody'];
-                            $custmail_body = str_replace('%tid', $ticketid, $custmail_body);
-                            $custmail_body = str_replace('%cid', $info['id'], $custmail_body);
-                            $custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
-                            $custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
-                            $custmail_body = str_replace('%title', $ticket['subject'], $custmail_body);
-                            $custmail_headers = array(
-                                'From' => $from,
-                                'Reply-To' => $from,
-                                'Subject' => $custmail_subject,
-                            );
-                            $smtp_options = $LMS->GetRTSmtpOptions();
-                            foreach (explode(',', $info['emails']) as $email) {
-                                $custmail_headers['To'] = '<' . $email . '>';
-                                $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $smtp_options);
-                            }
+                if (!empty($ticket['customerid'])) {
+                    $ticketid = sprintf("%06d", $id);
+                    if (!empty($queue['resolveticketsubject']) && !empty($queue['resolveticketbody']) && !empty($emails)) {
+                        $custmail_subject = $queue['resolveticketsubject'];
+                        $custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
+                        $custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
+                        $custmail_body = $queue['resolveticketbody'];
+                        $custmail_body = str_replace('%tid', $ticketid, $custmail_body);
+                        $custmail_body = str_replace('%cid', $info['id'], $custmail_body);
+                        $custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
+                        $custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
+                        $custmail_body = str_replace('%title', $ticket['subject'], $custmail_body);
+                        $custmail_headers = array(
+                            'From' => $from,
+                            'Reply-To' => $from,
+                            'Subject' => $custmail_subject,
+                        );
+                        $smtp_options = $LMS->GetRTSmtpOptions();
+                        foreach (explode(',', $info['emails']) as $email) {
+                            $custmail_headers['To'] = '<' . $email . '>';
+                            $LMS->SendMail($email, $custmail_headers, $custmail_body, null, null, $smtp_options);
+                        }
+                    }
+                    if (!empty($queue['resolveicketsmsbody']) && !empty($mobile_phones)) {
+                        $custsms_body = $queue['resolveticketsmsbody'];
+                        $custsms_body = str_replace('%tid', $ticketid, $custsms_body);
+                        $custsms_body = str_replace('%cid', $info['id'], $custsms_body);
+                        $custsms_body = str_replace('%pin', $info['pin'], $custsms_body);
+                        $custsms_body = str_replace('%customername', $info['customername'], $custsms_body);
+                        $custsms_body = str_replace('%title', $ticket['subject'], $custsms_body);
+                        $custsms_body = str_replace('%service', $ticket['service'], $custsms_body);
+
+                        foreach ($mobile_phones as $phone) {
+                            $LMS->SendSMS($phone['contact'], $custsms_body);
                         }
                     }
                 }
@@ -269,6 +302,11 @@ $ticket['oldverifierid'] = $ticket['verifierid'];
 $categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
 if (empty($categories)) {
     $categories = array();
+}
+
+$aet = ConfigHelper::getConfig('rt.allow_modify_resolved_tickets_newer_than', 86400);
+if ($ticket['state'] == RT_RESOLVED && !ConfigHelper::checkPrivilege('superuser') && $aet && (time() - $ticket['resolvetime'] > $aet)) {
+    die("Cannot edit ticket - ticket was resolved more than " . $aet . " seconds.");
 }
 
 if (isset($_POST['ticket'])) {

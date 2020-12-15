@@ -29,7 +29,7 @@ if (isset($_POST['tariff'])) {
     $limit = isset($_POST['limit']) ? $_POST['limit'] : array();
 
     foreach ($tariff as $key => $value) {
-        if ($key != 'authtype' && $key != 'tags') {
+        if ($key != 'authtype' && $key != 'tags' && $key != 'flags') {
             $tariff[$key] = trim($value);
         }
     }
@@ -288,7 +288,7 @@ if (isset($_POST['tariff'])) {
     if (!empty($default_assignment_period)) {
         $tariff['period'] = $default_assignment_period;
     }
-    $tariff['currency'] = LMS::$default_currency;
+    $tariff['currency'] = Localisation::getDefaultCurrency();
 }
 
 $layout['pagetitle'] = trans('New Subscription');

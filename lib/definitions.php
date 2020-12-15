@@ -104,6 +104,8 @@ define('CCONSENT_MAILINGNOTICE', 3);
 define('CCONSENT_EINVOICE', 4);
 define('CCONSENT_USERPANEL_SMS', 5);
 define('CCONSENT_USERPANEL_SCAN', 6);
+define('CCONSENT_TRANSFERFORM', 7);
+define('CCONSENT_SMSNOTICE', 8);
 
 $CCONSENTS = array(
     CCONSENT_DATE => array(
@@ -122,8 +124,13 @@ $CCONSENTS = array(
         'type' => 'boolean',
     ),
     CCONSENT_MAILINGNOTICE => array(
-        'label' => trans('message delivery via e-mail or sms'),
+        'label' => trans('message delivery via e-mail'),
         'name' => 'mailing_notice',
+        'type' => 'boolean',
+    ),
+    CCONSENT_SMSNOTICE => array(
+        'label' => trans('message delivery via sms'),
+        'name' => 'sms_notice',
         'type' => 'boolean',
     ),
     CCONSENT_USERPANEL_SMS => array(
@@ -134,6 +141,11 @@ $CCONSENTS = array(
     CCONSENT_USERPANEL_SCAN => array(
         'label' => trans('document form approval in customer panel using scans'),
         'name' => 'userpanel_document_scan_approval',
+        'type' => 'boolean',
+    ),
+    CCONSENT_TRANSFERFORM => array(
+        'label' => trans('invoice transfer form'),
+        'name' => 'transfer_form',
         'type' => 'boolean',
     ),
 );
@@ -166,8 +178,6 @@ $CONFIG_TYPES = array(
     CONFIG_TYPE_MAIL_SECURE => trans('mail security protocol'),
     CONFIG_TYPE_DATE_FORMAT => trans('date format'),
 );
-
-$CATEGORY_DEFAULT_STYLE = 'border: 1px black solid; color: black; background: #FFFFFF; padding: 1px; text-decoration: none;';
 
 // Helpdesk ticket status
 define('RT_NEW', 0);
@@ -373,61 +383,67 @@ define('RT_TYPE_REMOVE', 8);
 define('RT_TYPE_OTHER', 9);
 define('RT_TYPE_CONF', 10);
 define('RT_TYPE_PAYMENT', 11);
+define('RT_TYPE_TRANSFER', 12);
 
 
 $RT_TYPES = array(
     RT_TYPE_OTHER => array(
-        'label' => trans('Other'),
+        'label' => 'Other',
         'class' => 'lms-ui-rt-ticket-type-other',
         'name' => 'RT_TYPE_OTHER'
     ),
     RT_TYPE_OFFER => array(
-        'label' => trans('Offer'),
+        'label' => 'Offer',
         'class' => 'lms-ui-rt-ticket-type-offer',
         'name' => 'RT_TYPE_OFFER'
     ),
     RT_TYPE_DOCS => array(
-        'label' => trans('Documents'),
+        'label' => 'Documents',
         'class' => 'lms-ui-rt-ticket-type-docs',
         'name' => 'RT_TYPE_DOCS'
     ),
     RT_TYPE_FAULT => array(
-        'label' => trans('Fault'),
+        'label' => 'Fault',
         'class' => 'lms-ui-rt-ticket-type-fault',
         'name' => 'RT_TYPE_FAULT'
     ),
     RT_TYPE_INST => array(
-        'label' => trans('Instalation'),
+        'label' => 'Instalation',
         'class' => 'lms-ui-rt-ticket-type-inst',
         'name' => 'RT_TYPE_INST'
     ),
     RT_TYPE_MOD => array(
-        'label' => trans('Modification'),
+        'label' => 'Modification',
         'class' => 'lms-ui-rt-ticket-type-mod',
         'name' => 'RT_TYPE_MOD'
     ),
     RT_TYPE_CONF => array(
-        'label' => trans('Configuration'),
+        'label' => 'Configuration',
         'class' => 'lms-ui-rt-ticket-type-conf',
         'name' => 'RT_TYPE_CONF'
     ),
     RT_TYPE_START => array(
-        'label' => trans('Start service'),
+        'label' => 'Start service',
         'class' => 'lms-ui-rt-ticket-type-start',
         'name' => 'RT_TYPE_START'
     ),
     RT_TYPE_STOP => array(
-        'label' => trans('Hold service'),
+        'label' => 'Hold service',
         'class' => 'lms-ui-rt-ticket-type-stop',
         'name' => 'RT_TYPE_STOP'
     ),
+    RT_TYPE_TRANSFER => array(
+      'label' => 'Transfer service',
+      'class' => 'lms-ui-rt-ticket-type-transfer',
+      'name' => 'RT_TYPE_TRANSFER'
+    ),
     RT_TYPE_REMOVE => array(
-        'label' => trans('Deinstalation'),
+        'label' => 'Deinstalation',
         'class' => 'lms-ui-rt-ticket-type-remove',
         'name' => 'RT_TYPE_REMOVE'
     ),
     RT_TYPE_PAYMENT => array(
-        'label' => trans('Payment'),
+        'label' => 'Payment',
         'class' => 'lms-ui-rt-ticket-type-payment',
         'name' => 'RT_TYPE_PAYMENT'
     ),
@@ -569,16 +585,18 @@ define('DOC_BREACH', -6);
 define('DOC_PAYMENTBOOK', -7);
 define('DOC_PAYMENTSUMMONS', -8);
 define('DOC_PAYMENTPRESUMMONS', -9);
-define('DOC_OTHER', -128);
 define('DOC_BILLING', -10);
 define('DOC_PRICELIST', -11);
 define('DOC_PROMOTION', -12);
 define('DOC_WARRANTY', -13);
 define('DOC_REGULATIONS', -14);
 define('DOC_CONF_FILE', -15);
+define('DOC_OFFER', -16);
+define('DOC_OTHER', -128);
 
 
 $DOCTYPES = array(
+    DOC_OFFER           =>      trans('offer'),
     DOC_BILLING         =>      trans('billing'),
     DOC_INVOICE         =>      trans('invoice'),
     DOC_INVOICE_PRO     =>      trans('pro-forma invoice'),
@@ -587,12 +605,12 @@ $DOCTYPES = array(
     DOC_CNOTE       =>  trans('credit note'), // faktura korygujaca
 //    DOC_CMEMO     =>  trans('credit memo'), // nota korygujaca
     DOC_DNOTE       =>  trans('debit note'), // nota obciazeniowa/debetowa/odsetkowa
-    DOC_CONTRACT        =>      trans('contract'),
-    DOC_ANNEX       =>  trans('annex'),
-    DOC_PROTOCOL        =>      trans('protocol'),
-    DOC_ORDER       =>  trans('order'),
+    DOC_CONTRACT        =>      trans('contract'), //umowa
+    DOC_ANNEX       =>  trans('annex'), //aneks umowy
+    DOC_PROTOCOL        =>      trans('protocol'), //protokol uruchomienia
+    DOC_ORDER       =>  trans('order'), //zamowienie
     DOC_SHEET       =>  trans('customer sheet'), // karta klienta
-    DOC_BREACH      =>  trans('contract termination'),
+    DOC_BREACH      =>  trans('contract termination'), //rozwiazanie umowy
     DOC_PAYMENTBOOK  => trans('payments book'), // ksiazeczka oplat
     DOC_PAYMENTSUMMONS  => trans('payment summons'), // wezwanie do zapłaty
     DOC_PAYMENTPRESUMMONS  => trans('payment pre-summons'), // przedsądowe wezw. do zapłaty
@@ -693,6 +711,9 @@ define('SERVICE_PHONE', 4);
 define('SERVICE_TV', 5);
 define('SERVICE_TRANSMISSION', 6);
 
+// Tariff flags
+define('TARIFF_FLAG_REWARD_PENALTY', 1);
+
 // VoIP call types
 define('CALL_INCOMING', 1);
 define('CALL_OUTGOING', 2);
@@ -727,16 +748,16 @@ $SERVICETYPES = array(
 );
 
 $PAYTYPES = array(
-    1   => trans('cash'),
-    2   => trans('transfer'),
-    3   => trans('transfer/cash'),
-    4   => trans('card'),
-    5   => trans('compensation'),
-    6   => trans('barter'),
-    7   => trans('contract'),
-    8   => trans('paid'),
-    9   => trans('cash on delivery'),
-    10  => trans('instalments'),
+    1   => 'cash',
+    2   => 'transfer',
+    3   => 'transfer/cash',
+    4   => 'card',
+    5   => 'compensation',
+    6   => 'barter',
+    7   => 'contract',
+    8   => 'paid',
+    9   => 'cash on delivery',
+    10  => 'instalments',
 );
 
 // Contact types
@@ -953,6 +974,11 @@ $USERPANEL_AUTH_TYPES = array(
         'label' => trans('PPPoE login:'),
         'label_secret' => trans('PPPoE password:'),
         'selection' => trans('PPPoE login and password'),
+    ),
+    6   => array(
+        'label' => trans('SSN/TEN:'),
+        'label_secret' => trans('PIN:'),
+        'selection' => trans('SSN/TEN and PIN'),
     ),
 );
 
@@ -1171,7 +1197,6 @@ if (isset($SMARTY)) {
     $SMARTY->assign('_EVENTTYPES', $EVENTTYPES);
     $SMARTY->assign('_EVENTSTYLES', $EVENTSTYLES);
     $SMARTY->assign('_SESSIONTYPES', $SESSIONTYPES);
-    $SMARTY->assign('_CATEGORY_DEFAULT_STYLE', $CATEGORY_DEFAULT_STYLE);
     $SMARTY->assign('_EXISTINGASSIGNMENTS', $EXISTINGASSIGNMENTS);
     $SMARTY->assign('_CURRENCIES', $CURRENCIES);
     $SMARTY->assign('_TAX_CATEGORIES', $TAX_CATEGORIES);

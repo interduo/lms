@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2016 LMS Developers
+ *  (C) Copyright 2001-2020 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -426,11 +426,11 @@ class LMSTcpdfInvoice extends LMSInvoice
     {
         $this->backend->SetFont(self::TCPDF_FONT, '', 8);
         $seller = '<b>' . trans('Seller:') . '</b><br>';
-        $tmp = $this->data['division_header'];
+        $tmp = str_replace('%ten%', format_ten($this->data['division_ten'], $this->data['export']), $this->data['division_header']);
 
         if (!ConfigHelper::checkConfig('invoices.show_only_alternative_accounts')
-            || empty($this->data['bankccounts'])) {
-            $accounts = array(bankaccount($this->data['customerid'], $this->data['account']));
+            || empty($this->data['bankaccounts'])) {
+            $accounts = array(bankaccount($this->data['customerid'], $this->data['account'], $this->data['export']));
         } else {
             $accounts = array();
         }
@@ -439,7 +439,7 @@ class LMSTcpdfInvoice extends LMSInvoice
             $accounts = array_merge($accounts, $this->data['bankaccounts']);
         }
         foreach ($accounts as &$account) {
-            $account = format_bankaccount($account);
+            $account = format_bankaccount($account, $this->data['export']);
         }
         $account_text = ($this->use_alert_color ? '<span style="color:red">' : '')
             . implode("\n", $accounts)
@@ -468,12 +468,15 @@ class LMSTcpdfInvoice extends LMSInvoice
         $buyer .= $this->data['name'] . '<br>';
         $buyer .= $this->data['address'] . '<br>';
         $buyer .= $this->data['zip'] . ' ' . $this->data['city'];
-        if ($this->data['division_countryid'] && $this->data['countryid'] && $this->data['division_countryid'] != $this->data['countryid']) {
+        if ($this->data['export']) {
             $buyer .= ', ' . trans($this->data['country']);
         }
         $buyer .= '<br>';
         if ($this->data['ten']) {
-            $buyer .= trans('TEN') . ': ' . $this->data['ten'] . '<br>';
+            $currentSystemLanguage = Localisation::getCurrentSystemLanguage();
+            Localisation::setSystemLanguage($this->data['lang']);
+            $buyer .= trans('TEN') . ': ' . format_ten($this->data['ten'], $this->data['export']) . '<br>';
+            Localisation::setSystemLanguage($currentSystemLanguage);
         } elseif (!ConfigHelper::checkValue(ConfigHelper::getConfig('invoices.hide_ssn', true)) && $this->data['ssn']) {
             $buyer .= trans('SSN') . ': ' . $this->data['ssn'] . '<br>';
         }
@@ -503,8 +506,8 @@ class LMSTcpdfInvoice extends LMSInvoice
                 $postbox .= $this->data['zip'] . ' ' . $this->data['city'] . '<br>';
             }
 
-            if ($this->data['division_countryid'] && $this->data['post_countryid'] && $this->data['division_countryid'] != $this->data['post_countryid']) {
-                $postbox .= ', ' . trans($this->data['post_country']) . '<br>';
+            if ($this->data['export']) {
+                $postbox .= trans(empty($this->data['post_country']) ? $this->data['country'] : $this->data['post_country']) . '<br>';
             }
 
             $this->backend->SetFont(self::TCPDF_FONT, 'B', 10);
@@ -633,7 +636,7 @@ class LMSTcpdfInvoice extends LMSInvoice
             }
         }
         if (!ConfigHelper::checkConfig('invoices.hide_payment_type')) {
-            $this->backend->writeHTMLCell(0, 0, '', '', trans('Payment type:') . ' <b>' . $this->data['paytypename'] . '</b>', 0, 1, 0, true, 'R');
+            $this->backend->writeHTMLCell(0, 0, '', '', trans('Payment type:') . ' <b>' . trans($this->data['paytypename']) . '</b>', 0, 1, 0, true, 'R');
             if (!empty($this->data['splitpayment'])) {
                 $this->backend->writeHTMLCell(0, 0, '', '', '<b>' . trans('(split payment)') . '</b>', 0, 1, 0, true, 'R');
             }
@@ -673,12 +676,12 @@ class LMSTcpdfInvoice extends LMSInvoice
             //$this->backend->Write(0, trans('Notes:'), '', 0, 'L', true, 0, false, false, 0);
             $tmp = $this->data['division_footer'];
 
-            $accounts = array(bankaccount($this->data['customerid'], $this->data['account']));
+            $accounts = array(bankaccount($this->data['customerid'], $this->data['account'], $this->data['export']));
             if (ConfigHelper::checkConfig('invoices.show_all_accounts')) {
                 $accounts = array_merge($accounts, $this->data['bankaccounts']);
             }
             foreach ($accounts as &$account) {
-                $account = format_bankaccount($account);
+                $account = format_bankaccount($account, $this->data['export']);
             }
             $tmp = str_replace('%bankaccount', implode("\n", $accounts), $tmp);
             $tmp = str_replace('%bankname', $this->data['div_bank'], $tmp);
@@ -788,6 +791,10 @@ class LMSTcpdfInvoice extends LMSInvoice
 
     public function invoice_body_standard()
     {
+        if (!empty($this->data['div_ccode'])) {
+            Localisation::setSystemLanguage($this->data['div_ccode']);
+        }
+
         if (ConfigHelper::checkConfig('invoices.jpk_flags')) {
             $this->invoice_jpk_flags();
         }
@@ -857,6 +864,10 @@ class LMSTcpdfInvoice extends LMSInvoice
                 1
             );
         }
+
+        if (!empty($this->data['div_ccode'])) {
+            Localisation::resetSystemLanguage();
+        }
     }
 
     protected function invoice_transferform($transferform)
@@ -895,10 +906,11 @@ class LMSTcpdfInvoice extends LMSInvoice
             $payment_barcode = $payment_docnumber;
         }
 
-        $tranferform_common_data = $transferform->GetCommonData(array('customerid' => $this->data['customerid']));
+        $tranferform_common_data = $transferform->GetCommonData(array('customerid' => $this->data['customerid'], 'export' => $this->data['export']));
         $tranferform_custom_data = array(
             'title' => $payment_title,
             'value' => $payment_value,
+            'export' => $this->data['export'],
             'currency' => $this->data['currency'],
             'paytype' => $this->data['paytype'],
             'pdate' => $this->data['pdate'],
@@ -911,6 +923,10 @@ class LMSTcpdfInvoice extends LMSInvoice
 
     public function invoice_body_ft0100()
     {
+        if (!empty($this->data['div_ccode'])) {
+            Localisation::setSystemLanguage($this->data['div_ccode']);
+        }
+
         if (ConfigHelper::checkConfig('invoices.jpk_flags')) {
             $this->invoice_jpk_flags();
         }
@@ -946,7 +962,10 @@ class LMSTcpdfInvoice extends LMSInvoice
             }
 
             /* FT-0100 form */
-            $this->invoice_transferform(new LMSTcpdfTransferForm('Transfer form', $pagesize = 'A4', $orientation = 'portrait'));
+            $lms = LMS::getInstance();
+            if ($lms->checkCustomerConsent($this->data['customerid'], CCONSENT_TRANSFERFORM)) {
+                $this->invoice_transferform(new LMSTcpdfTransferForm('Transfer form', $pagesize = 'A4', $orientation = 'portrait'));
+            }
         }
 
         $docnumber = docnumber(array(
@@ -987,6 +1006,10 @@ class LMSTcpdfInvoice extends LMSInvoice
                 $this->data['protection_password'],
                 1
             );
+        }
+
+        if (!empty($this->data['div_ccode'])) {
+            Localisation::resetSystemLanguage();
         }
     }
 }

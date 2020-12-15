@@ -123,9 +123,13 @@
 				</TD>
 				<TD style="width: 99%;" class="nobr">
 					{if isset($customer.id)}
-					{customerlist form="setcustomer" customers=$customerlist selected=$customer.id selectname="customer" inputname="customerid" customOnChange="document.getElementById('radio_customer').checked=true;xajax_GetCashRegistriesXajax($('[name=customerid]').val(), $('[name=\'receipt[regid]\']').val())"}
+					{customerlist form="setcustomer" customers=$customerlist selected=$customer.id version=2
+						selectname="customer" inputname="customerid"
+						customOnChange="document.getElementById('radio_customer').checked=true;xajax_GetCashRegistriesXajax($('[name=customerid]').val(), $('[name=\'receipt[regid]\']').val())"}
 					{else}
-					{customerlist form="setcustomer" customers=$customerlist selected=$receipt.customerid selectname="customer" inputname="customerid" customOnChange="document.getElementById('radio_customer').checked=true;xajax_GetCashRegistriesXajax($('[name=customerid]').val(), $('[name=\'receipt[regid]\']').val())"}
+					{customerlist form="setcustomer" customers=$customerlist selected=$receipt.customerid version=2
+						selectname="customer" inputname="customerid"
+						customOnChange="document.getElementById('radio_customer').checked=true;xajax_GetCashRegistriesXajax($('[name=customerid]').val(), $('[name=\'receipt[regid]\']').val())"}
 					{/if}
 				</TD>
 			</TR>
@@ -322,7 +326,7 @@
 <P>
 <TABLE class="lmsbox">
     <THEAD>
-	{if $receipt.o_type == "customer" && $receipt['currency'] == LMS::$currency}
+	{if $receipt.o_type == "customer" && $receipt['currency'] == Localisation::getCurrentCurrency()}
 	<TR>
 		<TD colspan="4">
 			<FORM name="additemlist" method="POST" action="?m=receiptadd&amp;action=additemlist">
@@ -355,7 +359,7 @@
 								<TD onclick="checkElement('mark{$item.id}')">{$item.number}</TD>
 								<TD align="right" onclick="checkElement('mark{$item.id}')" class="nobr">
 									{moneyf($item.value * $item.currencyvalue)}
-									{if $item.currency != LMS::$currency}
+									{if $item.currency != Localisation::getCurrentCurrency()}
 										<br>({moneyf($item.value, $item.currency)})
 									{/if}
 								</TD>

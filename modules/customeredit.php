@@ -57,7 +57,10 @@ if (isset($_GET['search'])) {
     unset($customerlist['below']);
     unset($customerlist['over']);
 
-    if ($customerlist && isset($_POST['consents']) && !empty($_POST['consents'])) {
+    require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
+    if ($customerlist && ((isset($_POST['consents']) && !empty($_POST['consents']))
+        || (isset($_GET['type']) && isset($_POST['contactflags'][$_GET['type']]) && !empty($_POST['contactflags'][$_GET['type']])
+            && isset($CUSTOMERCONTACTTYPES[$_GET['type']])))) {
         foreach ($customerlist as $row) {
             switch ($_GET['oper']) {
                 case 'addconsents':
@@ -66,17 +69,39 @@ if (isset($_GET['search'])) {
                 case 'removeconsents':
                     $LMS->removeCustomerConsents($row['id'], $_POST['consents']);
                     break;
+                case 'addflags':
+                    $LMS->addCustomerContactFlags($row['id'], $_GET['type'], $_POST['contactflags'][$_GET['type']]);
+                    break;
+                case 'removeflags':
+                    $LMS->removeCustomerContactFlags($row['id'], $_GET['type'], $_POST['contactflags'][$_GET['type']]);
+                    break;
             }
         }
     }
 
-    if ($SESSION->is_set('backto')) {
+    if ($SESSION->is_set('backto', true)) {
+        $SESSION->redirect('?' . $SESSION->get('backto', true));
+    } elseif ($SESSION->is_set('backto')) {
         $SESSION->redirect('?' . $SESSION->get('backto'));
     } else {
         $SESSION->redirect('?m=customerlist');
     }
 }
 
+if (isset($_GET['oper'])) {
+    switch ($_GET['oper']) {
+        case 'karma-raise':
+            header('Content-Type: application/json');
+            $result = $LMS->raiseCustomerKarma($_GET['id']);
+            die(json_encode($result));
+            break;
+        case 'karma-lower':
+            header('Content-Type: application/json');
+            $result = $LMS->lowerCustomerKarma($_GET['id']);
+            die(json_encode($result));
+            break;
+    }
+}
 if (!isset($_POST['xjxfun'])) {
     require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
 
@@ -88,7 +113,14 @@ if (!isset($_POST['xjxfun'])) {
     } elseif (!$exists) {
         $SESSION->redirect('?m=customerlist');
     } else {
-        $backurl = $SESSION->is_set('backto') ? '?' . $SESSION->get('backto') : '?m=customerlist';
+        if ($SESSION->is_set('backto', true)) {
+            $backto = $SESSION->get('backto', true);
+        } elseif ($SESSION->is_set('backto')) {
+            $backto = $SESSION->get('backto');
+        } else {
+            $backto = '';
+        }
+        $backurl = $backto ? '?' . $backto : '?m=customerlist';
 
         $pin_min_size = intval(ConfigHelper::getConfig('phpui.pin_min_size', 4));
         if (!$pin_min_size) {
@@ -132,17 +164,30 @@ if (!isset($_POST['xjxfun'])) {
                     $customerdata['addresses'][ $k ]['show'] = true;
                 }
 
+                $countryCode = null;
+                if (!empty($v['location_country_id'])) {
+                    $countryCode = $LMS->getCountryCodeById($v['location_country_id']);
+                    if ($v['location_address_type'] == BILLING_ADDRESS) {
+                        $billingCountryCode = $countryCode;
+                    }
+                }
+
                 if (!ConfigHelper::checkPrivilege('full_access') && ConfigHelper::checkConfig('phpui.teryt_required')
                     && !empty($v['location_city_name']) && ($v['location_country_id'] == 2 || empty($v['location_country_id']))
-                    && (!isset($v['teryt']) || empty($v['location_city']))) {
+                    && (!isset($v['teryt']) || empty($v['location_city'])) && $LMS->isTerritState($v['location_state_name'])) {
                     $error['customerdata[addresses][' . $k . '][teryt]'] = trans('TERRIT address is required!');
                     $customerdata['addresses'][ $k ]['show'] = true;
                 }
 
-                if ($v['location_zip'] && !Utils::checkZip($v['location_zip'], $v['location_country_id'])) {
+                Localisation::setSystemLanguage($countryCode);
+                if ($v['location_zip'] && !check_zip($v['location_zip'])) {
                     $error['customerdata[addresses][' . $k . '][location_zip]'] = trans('Incorrect ZIP code!');
                     $customerdata['addresses'][ $k ]['show'] = true;
                 }
+            }
+
+            if (isset($billingCountryCode)) {
+                Localisation::setSystemLanguage($billingCountryCode);
             }
 
             if ($customerdata['ten'] !='') {
@@ -214,9 +259,12 @@ if (!isset($_POST['xjxfun'])) {
                 $icnwarning = 1;
             }
 
+            Localisation::resetSystemLanguage();
+
             if ($customerdata['pin'] == '') {
                 $error['pin'] = trans('PIN code is required!');
-            } elseif (!validate_random_string($customerdata['pin'], $pin_min_size, $pin_max_size, $pin_allowed_characters)) {
+            } elseif ((!ConfigHelper::checkConfig('phpui.validate_changed_pin') || $customerdata['pin'] != $LMS->getCustomerPin($_GET['id']))
+                && !validate_random_string($customerdata['pin'], $pin_min_size, $pin_max_size, $pin_allowed_characters)) {
                 $error['pin'] = trans('Incorrect PIN code!');
             }
 
@@ -430,9 +478,7 @@ $customerinfo = $hook_data['customerinfo'];
 $SMARTY->assign('xajax', $LMS->RunXajax());
 $SMARTY->assign(compact('pin_min_size', 'pin_max_size', 'pin_allowed_characters'));
 $SMARTY->assign('customerinfo', $customerinfo);
-$SMARTY->assign('cstateslist', $LMS->GetCountryStates());
-$SMARTY->assign('countrieslist', $LMS->GetCountries());
-$SMARTY->assign('divisions', $LMS->GetDivisions());
+$SMARTY->assign('divisions', $LMS->GetDivisions(array('userid' => Auth::GetCurrentUser())));
 $SMARTY->assign('recover', ($action == 'recover' ? 1 : 0));
 $SMARTY->assign('customeredit_sortable_order', $SESSION->get_persistent_setting('customeredit-sortable-order'));
 $SMARTY->display('customer/customeredit.html');

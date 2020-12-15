@@ -767,17 +767,4 @@ $SMARTY->assign('suggested_flags', array(
     'telecomservice' => true,
 ));
 
-$total_value = 0;
-if (!empty($contents)) {
-    foreach ($contents as $item) {
-        $total_value += $item['s_valuebrutto'];
-    }
-}
-
-$SMARTY->assign('is_split_payment_suggested', $LMS->isSplitPaymentSuggested(
-    $cnote['customerid'],
-    date('Y/m/d', $cnote['cdate']),
-    $total_value
-));
-
 $SMARTY->display('invoice/invoicenotemodify.html');

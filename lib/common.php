@@ -137,6 +137,37 @@ function check_ipv6($ip)
     return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false;
 }
 
+/**
+ * Validates the format of a CIDR notation string
+ *
+ * @param string $cidr
+ * @return bool
+ */
+function check_cidr($cidr)
+{
+    $parts = explode('/', $cidr);
+    if (count($parts) != 2) {
+        return false;
+    }
+
+    $ip = $parts[0];
+    $netmask = intval($parts[1]);
+
+    if ($netmask < 0) {
+        return false;
+    }
+
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return $netmask <= 32;
+    }
+
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        return $netmask <= 128;
+    }
+
+    return false;
+}
+
 function check_mask($mask)
 {
     $i=0;
@@ -484,18 +515,18 @@ function isboolean($value)
 function moneyf($value, $currency = null)
 {
     if (empty($currency)) {
-        $currency = LMS::$currency;
+        $currency = Localisation::getCurrentCurrency();
     }
     return sprintf('%01.2f %s', $value, $currency);
 }
 
 function moneyf_in_words($value, $currency = null)
 {
-    if (empty($currency) || $currency == LMS::$currency) {
-        $currency = LMS::$currency;
+    if (empty($currency) || $currency == Localisation::getCurrentCurrency()) {
+        $currency = Localisation::getCurrentCurrency();
     }
     return sprintf(
-        $GLOBALS['LANGDEFS'][$GLOBALS['_language']]['money_format_in_words'],
+        Localisation::getCurrentMoneyFormatInWords(),
         to_words(floor($value)),
         $currency,
         round(($value - floor($value)) * 100)
@@ -1197,26 +1228,7 @@ function validate_random_string($string, $min_size, $max_size, $characters)
 
 function trans()
 {
-    global $_LANG;
-
-    $args = func_get_args();
-    $content = array_shift($args);
-
-    if (is_array($content)) {
-        $args = array_values($content);
-        $content = array_shift($args);
-    }
-
-    if (isset($_LANG[$content])) {
-        $content = trim($_LANG[$content]);
-    }
-
-    for ($i = 1, $len = count($args); $i <= $len; $i++) {
-        $content = str_replace('$'.chr(97+$i-1), $args[$i-1], $content);
-    }
-
-    $content = preg_replace('/<![^>]+>/', '', $content);
-    return $content;
+    return call_user_func_array('Localisation::trans', func_get_args());
 }
 
 function check_url($url)
@@ -1454,7 +1466,7 @@ function geocode($location)
 function exchangeratesapi_get_currency_value($currency, $date = null)
 {
     $result = file_get_contents('https://api.exchangeratesapi.io/'
-        . (empty($date) ? 'latest' : date('Y-m-d', $date)) . '?base=' . $currency . '&symbols=' . LMS::$currency);
+        . (empty($date) ? 'latest' : date('Y-m-d', $date)) . '?base=' . $currency . '&symbols=' . Localisation::getCurrentCurrency());
     if ($result === false) {
         return null;
     }
@@ -1464,8 +1476,8 @@ function exchangeratesapi_get_currency_value($currency, $date = null)
         return null;
     }
 
-    if (!isset($result['rates'][LMS::$currency])) {
+    if (!isset($result['rates'][Localisation::getCurrentCurrency()])) {
         return null;
     }
-    return $result['rates'][LMS::$currency];
+    return $result['rates'][Localisation::getCurrentCurrency()];
 }

@@ -53,6 +53,29 @@ if (isset($_GET['ajax']) && isset($_GET['op'])) {
 
 $ticket['childtickets'] = $LMS->GetChildTickets($id);
 
+if (!empty($ticket['childtickets'])) {
+    $childticketscontent = $LMS->GetQueueContents(array('parentids' => $id, 'count' => false, 'rights' => true));
+    unset($childticketscontent['total']);
+    unset($childticketscontent['state']);
+    unset($childticketscontent['order']);
+    unset($childticketscontent['direction']);
+    unset($childticketscontent['owner']);
+    unset($childticketscontent['removed']);
+    unset($childticketscontent['priority']);
+    unset($childticketscontent['deadline']);
+    unset($childticketscontent['service']);
+    unset($childticketscontent['type']);
+    unset($childticketscontent['unread']);
+    unset($childticketscontent['rights']);
+    unset($childticketscontent['verifier']);
+    unset($childticketscontent['netnode']);
+    unset($childticketscontent['projectids']);
+    unset($childticketscontent['cid']);
+    unset($childticketscontent['subject']);
+    unset($childticketscontent['fromdate']);
+    unset($childticketscontent['todate']);
+}
+
 if (!empty($ticket['relatedtickets'])) {
     foreach ($ticket['relatedtickets'] as $rticket) {
         if ($LMS->CheckTicketAccess($rticket['id'])) {
@@ -106,7 +129,7 @@ if ($ticket['customerid'] && ConfigHelper::checkConfig('phpui.helpdesk_customeri
 }
 
 $iteration = $LMS->GetQueueContents(array('ids' => $ticket['queueid'], 'order' => 'createtime,desc',
-    'state' => -1, 'priority' => null, 'owner' => -1, 'catids' => null));
+    'state' => -1));
 
 if (!empty($iteration['total'])) {
     foreach ($iteration as $idx => $element) {
@@ -158,8 +181,12 @@ if (isset($_GET['highlight'])) {
         unset($message);
 }
 
+$aet = ConfigHelper::getConfig('rt.allow_modify_resolved_tickets_newer_than', 86400);
+
+$SMARTY->assign('aet', $aet);
 $SMARTY->assign('ticket', $ticket);
 $SMARTY->assign('relatedticketscontent', $relatedticketscontent);
+$SMARTY->assign('childticketscontent', $childticketscontent);
 $SMARTY->assign('parentticketcontent', $parentticketcontent);
 
 $SMARTY->assign('categories', $categories);

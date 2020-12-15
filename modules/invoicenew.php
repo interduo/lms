@@ -120,21 +120,23 @@ switch ($action) {
                 );
             }
 
-            $customer = $LMS->GetCustomer($invoice['customerid']);
-            $invoice['proformaid'] = $_GET['id'];
-            $invoice['proformanumber'] = docnumber(array(
-                'doctype' => DOC_INVOICE_PRO,
-                'cdate' => $invoice['cdate'],
-                'template' => $invoice['template'],
-                'customerid' => $invoice['customerid'],
-            ));
-            $invoice['preserve-proforma'] = ConfigHelper::checkConfig('phpui.default_preserve_proforma_invoice');
+            if (!isset($_GET['clone'])) {
+                $customer = $LMS->GetCustomer($invoice['customerid']);
+                $invoice['proformaid'] = $_GET['id'];
+                $invoice['proformanumber'] = docnumber(array(
+                    'doctype' => DOC_INVOICE_PRO,
+                    'cdate' => $invoice['cdate'],
+                    'template' => $invoice['template'],
+                    'customerid' => $invoice['customerid'],
+                ));
+                $invoice['preserve-proforma'] = ConfigHelper::checkConfig('phpui.default_preserve_proforma_invoice');
+            }
         } else {
             if (!empty($_GET['customerid']) && $LMS->CustomerExists($_GET['customerid'])) {
                 $customer = $LMS->GetCustomer($_GET['customerid'], true);
                 $invoice['customerid'] = $_GET['customerid'];
             }
-            $invoice['currency'] = LMS::$default_currency;
+            $invoice['currency'] = Localisation::getDefaultCurrency();
         }
         $invoice['number'] = '';
         $invoice['numberplanid'] = null;

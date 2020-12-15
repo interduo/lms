@@ -97,6 +97,13 @@
                                     {else}
                                         <span class="blend">({trans("period undefined")})</span>
                                     {/if}
+                                    {if $tariff.flags}
+                                        {if $tariff.value < 0}
+                                            {icon name="reward" tip="reward"}
+                                        {else}
+                                            {icon name="penalty" tip="penalty"}
+                                        {/if}
+                                    {/if}
                                 </TD>
                             </TR>
                             <TR>
@@ -382,15 +389,12 @@
     {/if}
 
     <TR>
-        <TD ALIGN="RIGHT" COLSPAN="2">
-            <A HREF="?m=tariffedit&id={$tariff.id}" ACCESSKEY="E">
-                {trans("Edit")} <IMG SRC="img/edit.gif" ALT="">
-            </A>
-
+        <TD colspan="2" class="lms-ui-box-buttons">
+            {if !$tariff.count || ConfigHelper::checkPrivilege('used_tariff_edit')}
+                {button type="link-button" label="Edit" icon="edit" href="?m=tariffedit&id={$tariff.id}"}
+            {/if}
             {if $tariff.count == 0}
-            <A id="delete-tariff" HREF="?m=tariffdel&id={$tariff.id}">
-                {trans("Delete")} <IMG SRC="img/delete.gif" ALT="">
-            </A>
+                {button id="delete-tariff" label="Delete" icon="delete"}
             {/if}
         </TD>
     </TR>
@@ -478,7 +482,7 @@
     <script>
         $('#delete-tariff').click(function() {
             confirmDialog($t("Are you sure, you want to delete that tariff?"), this).done(function() {
-                location.href = $(this).attr('href');
+                location.href = '?m=tariffdel&id={$tariff.id}';
             });
             return false;
         });

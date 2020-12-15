@@ -34,11 +34,15 @@ if (isset($_GET['set'])) {
 }
 
 if (isset($_POST['tariff'])) {
+    if (!$LMS->isTariffEditable($_GET['id'])) {
+        return;
+    }
+
     $tariff = $_POST['tariff'];
     $limit = isset($_POST['limit']) ? $_POST['limit'] : array();
 
     foreach ($tariff as $key => $value) {
-        if ($key != 'authtype' && $key != 'tags') {
+        if ($key != 'authtype' && $key != 'tags' && $key != 'flags') {
             $tariff[$key] = trim($value);
         }
     }
@@ -274,6 +278,10 @@ if (isset($_POST['tariff'])) {
     $tariff['tags'] = array_flip($tariff['tags']);
 } else {
     $tariff = $LMS->GetTariff($_GET['id']);
+
+    if (!empty($tariff['customers']) && !ConfigHelper::checkPrivilege('used_tariff_edit')) {
+        return;
+    }
 
     if ($tariff['dateto']) {
         $tariff['dateto'] = date('Y/m/d', $tariff['dateto']);

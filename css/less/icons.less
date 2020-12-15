@@ -25,7 +25,10 @@
 .lms-ui-icon {
   line-height: unset;
   vertical-align: unset;
-  font-size: 140%;
+  font-size: @fa-icon-size-normal;
+  @media screen and (max-width: @mobile-max-width) {
+    font-size: @fa-icon-size-mobile;
+  }
 }
 
 .lms-ui-icon-fixed-width {
@@ -123,6 +126,15 @@
   }
 }
 
+.lms-ui-icon-import {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-file-import;
+  }
+}
+
 .lms-ui-icon-debitnote,
 .lms-ui-icon-dnote {
   .fa-icon;
@@ -134,12 +146,22 @@
 }
 
 .lms-ui-icon-money,
-.lms-ui-icon-cash {
+.lms-ui-icon-cash,
+.lms-ui-icon-paytype {
   .fa-icon;
   .fas;
   .lms-ui-icon;
   &:before {
     content: @fa-var-money-bill;
+  }
+}
+
+.lms-ui-icon-settle {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-coins;
   }
 }
 
@@ -435,7 +457,8 @@
   }
 }
 
-.lms-ui-icon-clipboard {
+.lms-ui-icon-clipboard,
+.lms-ui-icon-notes {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -549,6 +572,17 @@
   }
 }
 
+.lms-ui-icon-usergroup,
+.lms-ui-icon-ugroup,
+.lms-ui-icon-ug {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-tag;
+  }
+}
+
 .lms-ui-icon-suspend,
 .lms-ui-icon-lock {
   .fa-icon;
@@ -582,6 +616,17 @@
 .lms-ui-icon-warnoff {
   &:before {
     color: black !important;
+  }
+}
+
+.lms-ui-icon-warnmix {
+  .lms-ui-icon-warning;
+  &:before {
+    color: burlywood !important;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
   }
 }
 
@@ -624,16 +669,25 @@
   }
 }
 
+.lms-ui-icon-mixconnected {
+  .lms-ui-icon-connect;
+  &:before {
+    color: burlywood !important;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+  }
+}
+
 .lms-ui-icon-disconnected {
   .fa-icon;
   .fas;
   .lms-ui-icon;
-  -webkit-transform: rotate(180deg);  /* to support Safari and Android browser */
-  -ms-transform: rotate(180deg);      /* to support IE 9 */
-  transform: rotate(180deg);
+  .fa-flip-horizontal;
   &:before {
     content: @fa-var-toggle-on;
-    color: darkorange !important;
+    color: black !important;
   }
 }
 
@@ -702,6 +756,15 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-undo-alt;
+  }
+}
+
+.lms-ui-icon-recover {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-trash-restore;
   }
 }
 
@@ -787,15 +850,6 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-user;
-  }
-}
-
-.lms-ui-icon-userpanel {
-  .fa-icon;
-  .fas;
-  .lms-ui-icon;
-  &:before {
-    content: @fa-var-users;
   }
 }
 
@@ -1009,6 +1063,15 @@
   }
 }
 
+.lms-ui-icon-login {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-sign-in-alt;
+  }
+}
+
 .lms-ui-icon-configuration {
   .fa-icon;
   .fas;
@@ -1034,6 +1097,15 @@
 }
 
 .lms-ui-icon-finances {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-money-bill;
+  }
+}
+
+.lms-ui-icon-invproject {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1137,7 +1209,8 @@
   }
 }
 
-.lms-ui-icon-popup {
+.lms-ui-icon-popup,
+.lms-ui-icon-external {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1173,7 +1246,8 @@
   }
 }
 
-.lms-ui-icon-password {
+.lms-ui-icon-password,
+.lms-ui-icon-lastloggedin {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1281,10 +1355,10 @@
 
 .lms-ui-icon-hide {
   .fa-icon;
-  .far;
+  .fas;
   .lms-ui-icon;
   &:before {
-    content: @fa-var-window-close;
+    content: @fa-var-times;
   }
 }
 
@@ -1294,5 +1368,269 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-images;
+  }
+}
+
+.lms-ui-icon-customisation {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-caret-down;
+  }
+}
+
+.lms-ui-icon-optional-info {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-info-circle;
+  }
+}
+
+.lms-ui-icon-modified-date {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-clock;
+  }
+}
+
+.lms-ui-icon-legal-personality {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-briefcase;
+  }
+}
+
+.lms-ui-icon-division {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-building;
+  }
+}
+
+.lms-ui-icon-customer-pin-code {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-ellipsis-h;
+  }
+}
+
+.lms-ui-icon-more {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-angle-double-down;
+  }
+}
+
+.lms-ui-icon-less {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-angle-double-up;
+  }
+}
+
+.lms-ui-icon-user-id-number {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-id-card;
+  }
+}
+
+.lms-ui-icon-account-number {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-credit-card;
+  }
+}
+
+.lms-ui-icon-customer-status-connected {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-check;
+  }
+}
+
+.lms-ui-icon-customer-status-awaiting {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    color: green;
+    content: @fa-var-user-clock;
+  }
+}
+
+.lms-ui-icon-customer-status-interested {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-plus;
+  }
+}
+
+.lms-ui-icon-customer-status-disconnected {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-times;
+  }
+}
+
+.lms-ui-icon-customer-status-debtcollection {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    color: red;
+    content: @fa-var-user-alt-slash;
+  }
+}
+
+.lms-ui-icon-redo,
+.lms-ui-icon-resend {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-redo;
+  }
+}
+
+.lms-ui-icon-secondary-selection,
+.lms-ui-icon-additional-selection {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-ellipsis-v;
+  }
+}
+
+.lms-ui-icon-menu {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-bars;
+  }
+}
+
+.lms-ui-icon-routing,
+.lms-ui-icon-routed {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-route;
+  }
+}
+
+.lms-ui-icon-finger-up {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-hand-point-up;
+  }
+}
+
+.lms-ui-icon-finger-down {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-hand-point-down;
+  }
+}
+
+.lms-ui-icon-star,
+.lms-ui-icon-karma {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-star;
+  }
+}
+
+.lms-ui-icon-notify,
+.lms-ui-icon-notification,
+.lms-ui-icon-notifications,
+.lms-ui-icon-bell {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-bell;
+  }
+}
+
+.lms-ui-icon-palette,
+.lms-ui-icon-colour,
+.lms-ui-icon-color {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-palette;
+  }
+}
+
+.lms-ui-icon-csv {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-file-csv;
+  }
+}
+
+.lms-ui-icon-reward {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-trophy;
+  }
+}
+
+.lms-ui-icon-penalty {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-skull-crossbones;
+  }
+}
+
+.lms-ui-icon-mac,
+.lms-ui-icon-hardware {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-microchip;
   }
 }

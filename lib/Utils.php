@@ -37,6 +37,22 @@ class Utils
         });
     }
 
+    public static function filterArrayByKeys(array $array, array $keys, $reverse = false)
+    {
+        $result = array();
+        $keys = array_flip($keys);
+        array_walk($array, function ($item, $key) use ($reverse, $keys, &$result) {
+            if ($reverse) {
+                if (!isset($keys[$key])) {
+                    $result[$key] = $item;
+                }
+            } elseif (isset($keys[$key])) {
+                $result[$key] = $item;
+            }
+        });
+        return $result;
+    }
+
     public static function array_column(array $array, $column_key, $index_key = null)
     {
         if (!is_array($array) || empty($column_key)) {
@@ -244,7 +260,7 @@ class Utils
 
         $result = array();
 
-        $value = ConfigHelper::getConfig('phpui.default_customer_consents', 'data_processing', true);
+        $value = ConfigHelper::getConfig('phpui.default_customer_consents', 'data_processing,transfer_form', true);
         if (!empty($value)) {
             $values = array_flip(preg_split('/[\s\.,;]+/', $value, -1, PREG_SPLIT_NO_EMPTY));
             foreach ($CCONSENTS as $consent_id => $consent) {
@@ -257,21 +273,36 @@ class Utils
         return $result;
     }
 
-    public static function checkZip($zip, $country = null)
+    public static function parseCssProperties($text)
     {
-        if (ConfigHelper::checkConfig('phpui.skip_zip_validation')) {
-            return true;
+        $result = array();
+        $text = preg_replace('/\s/', '', $text);
+        $properties = explode(';', $text);
+        if (!empty($properties)) {
+            foreach ($properties as $property) {
+                list ($name, $value) = explode(':', $property);
+                $result[$name] = $value;
+            }
         }
-        if (!isset($country) || empty($country)) {
-            $country = $GLOBALS['_language'];
-        } else if (preg_match('/^[0-9]+$/', $country)) {
-            $LMS = LMS::getInstance();
-            $country = $LMS->getCountryCodeById($country);
-        }
-        if (isset($GLOBALS['LANGDEFS'][$country]['check_zip'])) {
-            return $GLOBALS['LANGDEFS'][$country]['check_zip']($zip);
-        } else {
-            return true;
+        return $result;
+    }
+
+    public static function findNextBusinessDay($date = null)
+    {
+        $holidaysByYear = array();
+
+        list ($year, $month, $day, $weekday) = explode('/', date('Y/m/j/N', $date ? $date : time()));
+        $date = mktime(0, 0, 0, $month, $day, $year);
+
+        while (true) {
+            if (!isset($holidaysByYear[$year])) {
+                $holidaysByYear[$year] = getHolidays($year);
+            }
+            if ($weekday < 6 && !isset($holidaysByYear[$year][$date])) {
+                return $date;
+            }
+            $date = strtotime('+1 day', $date);
+            list ($year, $weekday) = explode('/', date('Y/N', $date));
         }
     }
 
@@ -342,5 +373,55 @@ class Utils
         }
 
         return $result['result']['subject']['statusVat'] == 'Czynny';
+    }
+
+    public static function determineAllowedCustomerStatus($value, $default = null)
+    {
+        global $CSTATUSES;
+
+        if (!empty($value)) {
+            $value = preg_replace('/\s+/', ',', $value);
+            $value = preg_split('/\s*[,;]\s*/', $value, -1, PREG_SPLIT_NO_EMPTY);
+        }
+        if (empty($value)) {
+            if (empty($default) || !is_array($default)) {
+                if ($default === -1) {
+                    return null;
+                } else {
+                    return array(
+                        CSTATUS_CONNECTED,
+                        CSTATUS_DEBT_COLLECTION,
+                    );
+                }
+            } else {
+                return $default;
+            }
+        } else {
+            $all_statuses = self::array_column($CSTATUSES, 'alias');
+
+            $normal = array();
+            $negated = array();
+            foreach ($value as $status) {
+                if (strpos($status, '!') === 0) {
+                    $negated[] = substr($status, 1);
+                } else {
+                    $normal[] = $status;
+                }
+            }
+
+            if (empty($normal)) {
+                $statuses = array_diff($all_statuses, $negated);
+            } else {
+                $statuses = array_diff(array_intersect($all_statuses, $normal), $negated);
+            }
+            if (empty($statuses)) {
+                return array(
+                    CSTATUS_CONNECTED,
+                    CSTATUS_DEBT_COLLECTION,
+                );
+            }
+
+            return array_keys($statuses);
+        }
     }
 }

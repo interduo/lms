@@ -100,6 +100,13 @@ if (!isset($_POST['fk'])) {
 }
 $SESSION->save('cslfk', $flagsqlskey);
 
+if (!isset($_POST['karma'])) {
+    $SESSION->restore('cslkarma', $karma);
+} else {
+    $karma = $_POST['karma'];
+}
+$SESSION->save('cslkarma', $karma);
+
 if (!isset($_POST['n'])) {
     $SESSION->restore('csln', $network);
 } else if ($_POST['n'] == 'all') {
@@ -112,7 +119,11 @@ $SESSION->save('csln', $network);
 if (!isset($_POST['g'])) {
     $SESSION->restore('cslg', $customergroup);
 } else {
-    $customergroup = $_POST['g'];
+    if (count($_POST['g']) == 1 && intval($_POST['g'][0]) <= 0) {
+        $customergroup = reset($_POST['g']);
+    } else {
+        $customergroup = $_POST['g'];
+    }
 }
 $SESSION->save('cslg', $customergroup);
 
@@ -145,6 +156,7 @@ if (isset($_GET['search'])) {
         "statesqlskey",
         "flags",
         "flagsqlskey",
+        "karma",
         "network",
         "customergroup",
         "search",
@@ -161,14 +173,16 @@ if (isset($_GET['search'])) {
     $listdata['over'] = $customerlist['over'];
     $listdata['state'] = $state;
     $listdata['flags'] = $flags;
+    $listdata['karma'] = $karma;
     $listdata['network'] = $network;
-    $listdata['customergroup'] = empty($customergroup) ? array() : array($customergroup);
+    $listdata['customergroup'] = empty($customergroup) ? array() : $customergroup;
     $listdata['nodegroup'] = $nodegroup;
     $listdata['division'] = $division;
 
     unset($customerlist['total']);
     unset($customerlist['state']);
     unset($customerlist['flags']);
+    unset($customerlist['karma']);
     unset($customerlist['direction']);
     unset($customerlist['order']);
     unset($customerlist['below']);
@@ -208,6 +222,7 @@ if (isset($_GET['search'])) {
     } elseif ($listdata['total'] == 1) {
         $SESSION->redirect('?m=customerinfo&id=' . $customerlist[0]['id']);
     } else {
+        include(LIB_DIR . DIRECTORY_SEPARATOR . 'customercontacttypes.php');
         $SMARTY->assign('customergroups', $LMS->CustomergroupGetAll());
         $SMARTY->display('customer/customersearchresults.html');
     }
@@ -225,5 +240,6 @@ if (isset($_GET['search'])) {
     $SMARTY->assign('k', $sqlskey);
     $SMARTY->assign('sk', $statesqlskey);
     $SMARTY->assign('fk', $flagsqlskey);
+    $SMARTY->assign('karma', $karma);
     $SMARTY->display('customer/customersearch.html');
 }
