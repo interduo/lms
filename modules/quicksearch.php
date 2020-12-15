@@ -79,10 +79,20 @@ if (!empty($_POST['qs'])) {
 }
 $sql_search = $DB->Escape("%$search%");
 
-if (isset($qs_properties[$mode])) {
+if (isset($_POST['properties']) && is_array($_POST['properties'])) {
+    $properties = array_flip($_POST['properties']);
+} elseif (isset($_GET['properties']) && is_array($_GET['properties'])) {
+    $properties = array_flip($_GET['properties']);
+} elseif (isset($qs_properties[$mode])) {
     $properties = $qs_properties[$mode];
 } else {
     $properties = array();
+}
+
+$resourceIdOnly = preg_match('/^#[0-9]+$/', $search) > 0;
+if ($resourceIdOnly) {
+    $properties = array('id' => 'id');
+    $search = str_replace('#', '', $search);
 }
 
 switch ($mode) {
@@ -127,13 +137,14 @@ switch ($mode) {
                     $customer_count[$customername]++;
                 }
                 foreach ($candidates as $idx => $row) {
+                    $icon = 'fa-fw lms-ui-icon-customer-status-' . $CSTATUSES[$row['status']]['alias'];
+
                     $name = truncate_str('(#' . $row['id'] . ') ' . $row['customername'], 50);
 
                     $name_classes = array();
                     if ($row['deleted']) {
                         $name_classes[] = 'blend';
                     }
-                    $name_classes[] = 'lms-ui-suggestion-customer-status-' . $CSTATUSES[$row['status']]['alias'];
                     $name_class = implode(' ', $name_classes);
 
                     $description = '';
@@ -176,7 +187,10 @@ switch ($mode) {
                         $description = trans('Notes:') . ' ' . $row['notes'];
                     }
 
-                    $result[$row['id']] = compact('name', 'name_class', 'description', 'description_class', 'action');
+                    $result[$row['id']] = array_merge(
+                        compact('name', 'icon', 'name_class', 'description', 'description_class', 'action'),
+                        array('id' => $row['id'])
+                    );
                 }
             }
             $hook_data = array(

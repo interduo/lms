@@ -56,7 +56,7 @@ interface LMSCustomerManagerInterface
 
     public function GetCustomerShortBalanceList($customerid, $limit = 10, $order = 'DESC');
 
-    public function getLastNInTable($body, $customerid, $eol, $aggregate_documents = false);
+    public function getLastNInTable($body, $customerid, $format, $aggregate_documents = false);
 
     public function customerStats();
 
@@ -117,4 +117,22 @@ interface LMSCustomerManagerInterface
     public function addCustomerConsents($customerid, $consents);
 
     public function removeCustomerConsents($customerid, $consents);
+
+    public function addCustomerContactFlags($customerid, $type, $flags);
+
+    public function removeCustomerContactFlags($customerid, $type, $flags);
+
+    public function getCustomerNotes($cid);
+
+    public function getCustomerNote($id);
+
+    public function addCustomerNote($params);
+
+    public function delCustomerNote($id);
+
+    public function raiseCustomerKarma($id);
+
+    public function lowerCustomerKarma($id);
+
+    public function getCustomerPin($id);
 }

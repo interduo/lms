@@ -1646,4 +1646,40 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
             array($dst_userid, $src_userid)
         );
     }
+
+    public function getDocumentsByFullNumber($full_number, $all_types = false)
+    {
+        return $this->db->GetAllByKey(
+            'SELECT d.* FROM documents d
+            JOIN customerview c ON c.id = d.customerid
+            WHERE d.fullnumber = ?'
+            . ($all_types ? '' : ' AND d.type < 0'),
+            'id',
+            array($full_number)
+        );
+    }
+
+    public function getDocumentsByChecksum($checksum, $all_types = false)
+    {
+        return $this->db->GetAllByKey(
+            'SELECT d.* FROM documents d
+            JOIN docrights r ON (d.type = r.doctype AND r.userid = ? AND r.rights & ' . DOCRIGHT_EDIT . ' > 0)
+            JOIN customerview c ON c.id = d.customerid
+            WHERE EXISTS (SELECT a.id FROM documentattachments a WHERE a.docid = d.id AND a.md5sum = ?)'
+            . ($all_types ? '' : ' AND d.type < 0'),
+            'id',
+            array(Auth::GetCurrentUser(), $checksum)
+        );
+    }
+
+    public function isDocumentAccessible($docid)
+    {
+        return $this->db->GetOne(
+            'SELECT d.id FROM documents d
+            JOIN docrights r ON (d.type = r.doctype AND r.userid = ? AND r.rights & ' . DOCRIGHT_EDIT . ' > 0)
+            JOIN customerview c ON c.id = d.customerid
+            WHERE d.id = ?',
+            array(Auth::GetCurrentUser(), $docid)
+        ) > 0;
+    }
 }

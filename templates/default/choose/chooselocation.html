@@ -13,21 +13,41 @@
 	}
 
 	#location-box-autosuggest {
+		max-height: 30em;
+		overflow-y: auto;
 		z-index: 1;
+	}
+
+	#location-box-autosuggest .lms-ui-suggestion-item:not(:hover):nth-child(even) {
+		background-color: #F4F0EC;
+	}
+
+	#location-box-autosuggest .lms-ui-suggestion-item .terc {
+		font-size: 80%;
+	}
+
+	@media screen and (max-width: 800px) {
+		#location-box-autosuggest .lms-ui-suggestion-list {
+			overflow: initial;
+		}
+		#location-box-autosuggest .lms-ui-suggestion-description {
+			display: none;
+		}
 	}
 
 </style>
 
 {if !empty($states)}
-<div id="location-box-autosuggest" style="display: none;"><ul></ul></div>
+<div id="location-box-autosuggest" style="display: none;" class="lms-ui-popup"><ul></ul></div>
 
 <form name="location-search" id="location-search" method="post" action="?m=chooselocation">
 	<table id="searchtable" cellpadding="5">
 		<tr>
 			<td class="dark nobr">
 				<i class="lms-ui-icon-home"></i>
-				 <input type="text" name="searchcity" value="" size="40"
-						 {tip text="Enter city name"} id="location-name" class="lms-ui-quick-search-input">
+				<input type="text" name="searchcity" value="" size="40"
+					placeholder="{trans('Enter city name')}" id="location-name"
+					class="lms-ui-quick-search-input">
 			</td>
 		</tr>
 	</table>
@@ -41,6 +61,8 @@
 		uri: '?m=chooselocation&ajax=1&mode=city&what=',
 		autosubmit: 0,
 		suggestionContainer: '#location-box-autosuggest',
+		suggestMaxLength: 0,
+		autoSubmitForm: false,
 		onSubmit: function(data) {
 			if (data.hasOwnProperty('action')) {
 				search_update(data.action.cityid, data.action.districtid, data.action.stateid);

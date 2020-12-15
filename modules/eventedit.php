@@ -29,28 +29,7 @@ include(MODULES_DIR . DIRECTORY_SEPARATOR . 'eventxajax.inc.php');
 include(MODULES_DIR . DIRECTORY_SEPARATOR . 'rtticketxajax.inc.php');
 $SMARTY->assign('xajax', $LMS->RunXajax());
 
-if (isset($_GET['action'])) {
-    if ($_GET['action'] == 'open') {
-        $DB->Execute('UPDATE events SET closed = 0, closeduserid = NULL, closeddate = 0 WHERE id = ?', array($_GET['id']));
-        $SESSION->redirect('?'.$SESSION->get('backto')
-            . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
-    } elseif ($_GET['action'] == 'close' && isset($_GET['ticketid'])) {
-        $DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW?  WHERE closed = 0 AND ticketid = ?', array(Auth::GetCurrentUser(), $_GET['ticketid']));
-        $SESSION->redirect('?'.$SESSION->get('backto'));
-    } elseif ($_GET['action'] == 'close') {
-        $DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW?  WHERE id = ?', array(Auth::GetCurrentUser(), $_GET['id']));
-        $SESSION->redirect('?'.$SESSION->get('backto')
-            . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
-    } elseif ($_GET['action'] == 'assign') {
-        $LMS->AssignUserToEvent($_GET['id'], Auth::GetCurrentUser());
-        $SESSION->redirect('?' . $SESSION->get('backto')
-            . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
-    } elseif ($_GET['action'] == 'unassign') {
-        $LMS->UnassignUserFromEvent($_GET['id'], Auth::GetCurrentUser());
-        $SESSION->redirect('?' . $SESSION->get('backto')
-            . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
-    }
-}
+$aee = ConfigHelper::getConfig('phpui.allow_modify_closed_events_newer_than', 604800);
 
 if (isset($_GET['id'])) {
     $event = $LMS->GetEvent($_GET['id']);
@@ -63,6 +42,46 @@ if (isset($_GET['id'])) {
     }
     $event['begin'] = date('Y/m/d H:i', $event['date'] + $event['begintime']);
     $event['end'] = date('Y/m/d H:i', $event['enddate'] + ($event['endtime'] == 86400 ? 0 : $event['endtime']));
+}
+
+switch ($_GET['action']) {
+    case 'open':
+        if (($event['closed'] == 1 && $aee && ((time() - $event['closeddate']) < $aee)) || ConfigHelper::checkPrivilege('superuser')) {
+            $DB->Execute('UPDATE events SET closed = 0, closeduserid = NULL, closeddate = 0 WHERE id = ?', array($_GET['id']));
+            $SESSION->redirect('?'.$SESSION->get('backto')
+                . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+        } else {
+            die(trans('Cannot open event - event closed too long ago.'));
+        }
+        break;
+    case 'close':
+        if (isset($_GET['ticketid'])) {
+            $DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW? WHERE closed = 0 AND ticketid = ?', array(Auth::GetCurrentUser(), $_GET['ticketid']));
+            $SESSION->redirect('?'.$SESSION->get('backto'));
+        } else {
+            $DB->Execute('UPDATE events SET closed = 1, closeduserid = ?, closeddate = ?NOW? WHERE id = ?', array(Auth::GetCurrentUser(), $_GET['id']));
+            $SESSION->redirect('?'.$SESSION->get('backto')
+                . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+        }
+        break;
+    case 'assign':
+        if ($event['closed'] != 1 || ($event['closed'] == 1 && $aee && ((time() - $event['closeddate']) < $aee)) || ConfigHelper::checkPrivilege('superuser')) {
+            $LMS->AssignUserToEvent($_GET['id'], Auth::GetCurrentUser());
+            $SESSION->redirect('?' . $SESSION->get('backto')
+                . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+        } else {
+            die("Cannot assign to event - event closed too long ago.");
+        }
+        break;
+    case 'unassign':
+        if ($event['closed'] != 1 || ($event['closed'] == 1 && $aee && ((time() - $event['closeddate']) < $aee)) || ConfigHelper::checkPrivilege('superuser')) {
+            $LMS->UnassignUserFromEvent($_GET['id'], Auth::GetCurrentUser());
+            $SESSION->redirect('?' . $SESSION->get('backto')
+                . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+        } else {
+            die("Cannot unassign from event - event closed too long ago.");
+        }
+        break;
 }
 
 $userlist = $LMS->GetUserNames();

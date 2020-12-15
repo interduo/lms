@@ -17,7 +17,8 @@
 <form method="post" name="{$tab_id}" id="{$tab_id}-form" action="?m=customerassignmentdel">
 </form>
 
-{tab_container id=$tab_id}
+{if !isset($data_label)}{$data_label="Customer Liabilities"}{/if}
+{tab_container id=$tab_id label=$data_label}
 
 	{tab_header content_id=$content_id}
 		{tab_header_cell icon="lms-ui-icon-assignment"}
@@ -140,6 +141,13 @@
 										</A>
 										{if $a.attribute} - {$a.attribute}{/if}
 									</strong>
+									{if $a.flags & $smarty.const.TARIFF_FLAG_REWARD_PENALTY}
+										{if $a.value < 0}
+											{icon name="reward" tip="reward"}
+										{else}
+											{icon name="penalty" tip="penalty"}
+										{/if}
+									{/if}
 								{else}
 									{$a.name}
 								{/if}
@@ -173,7 +181,7 @@
 						</div>
 						<div class="lms-ui-tab-table-column accounting">
 							{if $a.tariffid || $a.liabilityid}
-								{$a.payday}{if $a.backwardperiod} <i class="lms-ui-icon-previous" {tip text="<!assignment>backward"}></i>{/if}
+								{$a.payday}{if $a.backwardperiod} {icon name="lms-ui-icon-previous" tip="<!assignment>backward"}{/if}
 							{/if}
 						</div>
 					</div>

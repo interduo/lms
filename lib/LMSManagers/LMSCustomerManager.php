@@ -256,6 +256,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             '(SELECT cash.id AS id, time, cash.type AS type,
                 cash.value AS value, cash.currency, cash.currencyvalue,
                 taxes.label AS tax, cash.customerid AS customerid,
+                documents.comment AS documentcomment, documents.reference,
                 cash.comment, docid, vusers.name AS username,
                 documents.type AS doctype, documents.closed AS closed,
                 documents.published, documents.senddate, documents.archived, cash.importid,
@@ -271,17 +272,21 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             . ($totime ? ' AND time <= ' . intval($totime) : '') . ')
             UNION
             (SELECT ic.itemid AS id, d.cdate AS time, 0 AS type,
-            		(-ic.value * ic.count) AS value, d.currency, d.currencyvalue, NULL AS tax, d.customerid,
-            		ic.description AS comment, d.id AS docid, vusers.name AS username,
-            		d.type AS doctype, d.closed AS closed,
-            		d.published, d.senddate, 0 AS archived, NULL AS importid,
-            		0 AS referenced,
-            		d.cdate, d.number, numberplans.template
-            	FROM documents d
-            	JOIN invoicecontents ic ON ic.docid = d.id
-            	JOIN numberplans ON numberplans.id = d.numberplanid
-            	LEFT JOIN vusers ON vusers.id = d.userid
-            	WHERE ' . (ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment') ? '1=0 AND' : '')
+                    (-ic.value * ic.count) AS value, d.currency, d.currencyvalue, NULL AS tax, d.customerid,
+                    d.comment AS documentcomment, d.reference,
+                    ic.description AS comment, d.id AS docid, vusers.name AS username,
+                    d.type AS doctype, d.closed AS closed,
+                    d.published, d.senddate, 0 AS archived, NULL AS importid,
+                    (CASE WHEN d3.reference IS NULL THEN 0 ELSE 1 END) AS referenced,
+                    d.cdate, d.number, numberplans.template
+                FROM documents d
+                JOIN invoicecontents ic ON ic.docid = d.id
+                LEFT JOIN (
+                    SELECT DISTINCT reference FROM documents
+                ) d3 ON d3.reference = d.id
+                JOIN numberplans ON numberplans.id = d.numberplanid
+                LEFT JOIN vusers ON vusers.id = d.userid
+                WHERE ' . (ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment') ? '1=0 AND' : '')
                 . ' d.customerid = ? AND d.type = ?'
                 . ($totime ? ' AND d.cdate <= ' . intval($totime) : '') . ')
             ORDER BY time ' . $direction . ', id',
@@ -363,9 +368,41 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         return $result;
     }
 
-    public function getLastNInTable($body, $customerid, $eol, $aggregate_documents = false)
+    public function getLastNInTable($body, $customerid, $format, $aggregate_documents = false)
     {
+        static $cols = null;
+
         if (preg_match('/%last_(?<number>[0-9]+)_in_a_table/', $body, $m)) {
+            if (empty($cols)) {
+                $cols = array(
+                    'date' => array(
+                        'length' => 0,
+                        'label' => trans('Date'),
+                        'align' => 'left',
+                    ),
+                    'liability' => array(
+                        'length' => 0,
+                        'label' => trans('Liability'),
+                        'align' => 'right',
+                    ),
+                    'payment' => array(
+                        'length' => 0,
+                        'label' => trans('Payment'),
+                        'align' => 'right',
+                    ),
+                    'balance' => array(
+                        'length' => 0,
+                        'label' => trans('Balance'),
+                        'align' => 'right',
+                    ),
+                    'description' => array(
+                        'length' => 53,
+                        'label' => trans('Description'),
+                        'align' => 'left',
+                    ),
+                );
+            }
+
             if ($aggregate_documents) {
                 $lastN = $this->GetCustomerShortBalanceList($customerid, 0, 'DESC', $aggregate_documents);
                 $lastN = array_slice($lastN, 0, $m['number']);
@@ -376,21 +413,63 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 $lN = '';
             } else {
                 // ok, now we are going to rise up system's load
-                $lN = '-----------+--------------+--------------+--------------+------------------------------------------------------------------------------' . $eol;
-                foreach ($lastN as $row_s) {
-                    $op_time = strftime("%Y/%m/%d ", $row_s['time']);
-                    if ($row_s['value'] < 0) {
-                        $op_liability = sprintf("%9.2f %s ", $row_s['value'], $row_s['currency']);
-                        $op_payment = '              ';
-                    } else {
-                        $op_liability = '              ';
-                        $op_payment = sprintf("%9.2f %s ", $row_s['value'], $row_s['currency']);
+                if ($format == 'html') {
+                    $lN = '<table><thead><tr>' . PHP_EOL;
+                    foreach ($cols as $col_name => $col) {
+                        $lN .= '<th style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: ' . $col['align'] . '; vertical-align: middle;">' . $col['label'] . '</th>' . PHP_EOL;
                     }
-                    $op_after = sprintf("%9.2f %s ", $row_s['after'], LMS::$currency);
-                    $for_what = sprintf(" %-52s", $row_s['comment']);
-                    $lN .= $op_time . '|' . $op_liability . '|' . $op_payment . '|' . $op_after . '|' . $for_what . $eol;
+                    $lN .= '</thead><tbody>' . PHP_EOL;
+                } else {
+                    $chunks = array();
+                    $titles = array();
+                    foreach ($cols as $col_name => $col) {
+                        $cols[$col_name]['length'] = $col_length = max(mb_strlen($col['label']) + 2, 13, $col['length']);
+                        $chunks[] = str_repeat('-', $col_length);
+                        $titles[] = ' ' . str_pad($col['label'], $col_length - 2 + strlen($col['label']) - mb_strlen($col['label']), ' ', $col['align'] == 'right' ? STR_PAD_LEFT : STR_PAD_RIGHT) . ' ';
+                    }
+                    $horizontal_line = implode('+', $chunks);
+                    $lN = $horizontal_line . PHP_EOL;
+                    $lN .= implode('|', $titles) . PHP_EOL;
+                    $lN .= $horizontal_line . PHP_EOL;
                 }
-                $lN .= '-----------+--------------+--------------+--------------+------------------------------------------------------------------------------' . $eol;
+                foreach ($lastN as $row_s) {
+                    $cols['date']['value'] = strftime('%Y/%m/%d', $row_s['time']);
+                    if ($row_s['value'] < 0) {
+                        $cols['liability']['value'] = moneyf($row_s['value'] * -1, $row_s['currency']);
+                        $cols['payment']['value'] = '';
+                    } else {
+                        $cols['liability']['value'] = '';
+                        $cols['payment']['value'] = moneyf($row_s['value'], $row_s['currency']);
+                    }
+                    $cols['balance']['value'] = moneyf($row_s['after'], Localisation::getCurrentCurrency());
+                    $cols['description']['value'] = $row_s['comment'];
+                    if ($format == 'html') {
+                        $lN .= '<tr>' . PHP_EOL
+                            . '<td style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: center; vertical-align: middle;">'
+                                . $cols['date']['value'] . '</td>' . PHP_EOL . '
+                            <td style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: right; vertical-align: middle;">'
+                                . $cols['liability']['value'] . '</td>' . PHP_EOL . '
+                            <td style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: right; vertical-align: middle;'
+                                . ($cols['payment']['value'] > 0 ? ' color: green;' : ($cols['payment'] < 0 ? 'color: red;' : '')) . '">'
+                                . ($cols['payment']['value'] > 0 ? '+' : '') . $cols['payment']['value'] . '</td>' . PHP_EOL . '
+                            <td style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: right; vertical-align: middle;'
+                                . ($cols['balance']['value'] < 0 ? 'color: red;' : '') . '">' . $cols['balance']['value'] . '</td>' . PHP_EOL . '
+                            <td style="border: 1px solid black; white-space: nowrap; padding: 0.3em; text-align: left; vertical-align: middle;">'
+                                . $cols['description']['value'] . '</td>' . PHP_EOL
+                        . '</tr>' . PHP_EOL;
+                    } else {
+                        $chunks = array();
+                        foreach ($cols as $col_name => $col) {
+                            $chunks[] = ' ' . str_pad($col['value'], $col['length'] - 2, ' ', $col['align'] == 'right' ? STR_PAD_LEFT : STR_PAD_RIGHT) . ' ';
+                        }
+                        $lN .= implode('|', $chunks) . PHP_EOL;
+                    }
+                }
+                if ($format == 'html') {
+                    $lN .= '</tbody></table>' . PHP_EOL;
+                } else {
+                    $lN .= $horizontal_line . PHP_EOL;
+                }
             }
             $body = preg_replace('/%last_[0-9]+_in_a_table/', $lN, $body);
         }
@@ -528,14 +607,49 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             'flags'          => $flags,
         );
 
-        if ($this->db->Execute('INSERT INTO customers (extid, name, lastname, type,
+        $reuse_customer_id = ConfigHelper::checkConfig('phpui.reuse_customer_id');
+
+        if ($reuse_customer_id) {
+            $this->db->BeginTrans();
+            $this->db->LockTables('customers');
+
+            $cids = $this->db->GetCol('SELECT id FROM customers ORDER BY id');
+            $id = 0;
+            if (!empty($cids)) {
+                foreach ($cids as $cid) {
+                    if ($cid - $id > 1) {
+                        break;
+                    }
+                    $id = $cid;
+                }
+            }
+            $id++;
+
+            $args[SYSLOG::RES_CUST] = $id;
+        }
+
+        $result = $this->db->Execute('INSERT INTO customers (extid, name, lastname, type,
                         ten, ssn, status, creationdate,
                         creatorid, info, notes, message, documentmemo, pin, regon, rbename, rbe,
-                        icn, cutoffstop, divisionid, paytime, paytype, flags)
+                        icn, cutoffstop, divisionid, paytime, paytype, flags' . ($reuse_customer_id ? ', id' : ''). ')
                     VALUES (?, ?, ' . ($capitalize_customer_names ? 'UPPER(?)' : '?') . ', ?, ?, ?, ?, ?NOW?,
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', array_values($args))
-        ) {
-            $id = $this->db->GetLastInsertID('customers');
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?' . ($reuse_customer_id ? ', ?' : '') . ')', array_values($args));
+
+        if ($reuse_customer_id) {
+            $this->db->UnLockTables();
+            $this->db->CommitTrans();
+        }
+
+        if ($result) {
+            if ($reuse_customer_id) {
+                switch (ConfigHelper::getConfig('database.type')) {
+                    case 'postgres':
+                        $this->db->Execute('SELECT setval(\'customers_id_seq\', (SELECT MAX(id) FROM customers))');
+                        break;
+                }
+            } else {
+                $id = $this->db->GetLastInsertID('customers');
+            }
 
             // INSERT ADDRESSES
             foreach ($customeradd['addresses'] as $v) {
@@ -631,6 +745,9 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 break;
             case 'extid':
                 $sqlord = ' ORDER BY extid';
+                break;
+            case 'karma':
+                $sqlord = ' ORDER BY karma';
                 break;
             default:
                 $sqlord = ' ORDER BY customername';
@@ -783,6 +900,9 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                         FROM customer_addresses ca
                         JOIN addresses a ON a.id = ca.address_id
                         WHERE a.zip IS NULL)';
+                    break;
+                case 75:
+                    $state_conditions[] = 'c.id IN (SELECT DISTINCT customerid FROM assignments WHERE commited = 1 AND (vdiscount > 0 OR pdiscount > 0))';
                     break;
                 default:
                     if ($state_item > 0 && $state_item < 50 && intval($state_item)) {
@@ -1012,7 +1132,16 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                         case 'balance_date':
                             break;
                         case 'ten':
-                            $searchargs[] = "REPLACE(REPLACE(ten, '-', ''), ' ', '') ?LIKE? " . $this->db->Escape('%' . preg_replace('/[\- ]/', '', $value) . '%');
+                            if ($value == '*') {
+                                $searchargs[] = "ten <> ''";
+                            } else {
+                                $searchargs[] = "REPLACE(REPLACE(ten, '-', ''), ' ', '') ?LIKE? " . $this->db->Escape('%' . preg_replace('/[\- ]/', '', $value) . '%');
+                            }
+                            break;
+                        case 'karma':
+                            if (intval($value)) {
+                                $searchargs[] = 'c.karma ' . ($value > 0 ? '>' : '<') . '= ' . $value;
+                            }
                             break;
                         default:
                             $searchargs[] = "$key ?LIKE? " . $this->db->Escape("%$value%");
@@ -1036,7 +1165,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         } else {
             $capitalize_customer_names = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.capitalize_customer_names', true));
             $sql .= 'SELECT DISTINCT c.id AS id, c.lastname, c.name, ' . $this->db->Concat($capitalize_customer_names ? 'UPPER(lastname)' : 'lastname', "' '", 'c.name') . ' AS customername,
-                c.type, c.deleted,
+                c.karma, c.type, c.deleted,
                 status, full_address, post_full_address, c.address, c.zip, c.city, countryid, countries.name AS country, cc.email, ccp.phone, ten, ssn, c.info AS info,
                 extid, message, c.divisionid, c.paytime AS paytime, COALESCE(b.balance, 0) AS balance,
                 COALESCE(t.value, 0) AS tariffvalue, s.account, s.warncount, s.online,
@@ -1404,10 +1533,15 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
     public function GetCustomerNetworks($id, $count = null)
     {
         return $this->db->GetAll('
-            SELECT *
-            FROM vnetworks
-            WHERE ownerid = ?
-            ORDER BY name ASC
+            SELECT n.*,
+            nd.id AS routernetdevid, nd.name AS routernetdevname,
+            rn.nodeid AS routernodeid, nodes.name AS routernodename, INET_NTOA(nodes.ipaddr) AS routerip
+            FROM vnetworks n
+            LEFT JOIN routednetworks rn ON rn.netid = n.id
+            LEFT JOIN nodes ON nodes.id = rn.nodeid
+            LEFT JOIN netdevices nd ON nd.id = nodes.netdev AND nodes.ownerid IS NULL AND nodes.netdev IS NOT NULL
+            WHERE n.ownerid = ?
+            ORDER BY n.name ASC
             ' . ($count ? ' LIMIT ' . $count : ''), array($id));
     }
 
@@ -1664,6 +1798,18 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         global $LMS;
 
         $disable_customer_contacts = ConfigHelper::checkConfig('phpui.disable_contacts_during_customer_delete');
+        $delete_related_resources = preg_split(
+            '/[\s\.,;]+/',
+            ConfigHelper::getConfig(
+                'phpui.delete_related_customer_resources',
+                'assignments,customergroups,nodegroups,nodes,userpanel'
+            ),
+            -1,
+            PREG_SPLIT_NO_EMPTY
+        );
+        if (empty($delete_related_resources)) {
+            $delete_related_resources = array();
+        }
 
         $this->db->Execute('UPDATE customers SET deleted=1, moddate=?NOW?, modid=?
                 WHERE id=?', array(Auth::GetCurrentUser(), $id));
@@ -1674,48 +1820,54 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 SYSLOG::OPER_UPDATE,
                 array(SYSLOG::RES_CUST => $id, 'deleted' => 1)
             );
-            $assigns = $this->db->GetAll('SELECT id, customergroupid FROM customerassignments WHERE customerid = ?', array($id));
-            if (!empty($assigns)) {
-                foreach ($assigns as $assign) {
-                    $args = array(
-                    SYSLOG::RES_CUSTASSIGN => $assign['id'],
-                    SYSLOG::RES_CUST => $id,
-                    SYSLOG::RES_CUSTGROUP => $assign['customergroupid']
-                    );
-                    $this->syslog->AddMessage(SYSLOG::RES_CUSTASSIGN, SYSLOG::OPER_DELETE, $args);
+            if (in_array('customergroups', $delete_related_resources)) {
+                $assigns = $this->db->GetAll('SELECT id, customergroupid FROM customerassignments WHERE customerid = ?', array($id));
+                if (!empty($assigns)) {
+                    foreach ($assigns as $assign) {
+                        $args = array(
+                            SYSLOG::RES_CUSTASSIGN => $assign['id'],
+                            SYSLOG::RES_CUST => $id,
+                            SYSLOG::RES_CUSTGROUP => $assign['customergroupid']
+                        );
+                        $this->syslog->AddMessage(SYSLOG::RES_CUSTASSIGN, SYSLOG::OPER_DELETE, $args);
+                    }
                 }
             }
         }
 
-        $this->db->Execute('DELETE FROM customerassignments WHERE customerid=?', array($id));
+        if (in_array('customergroups', $delete_related_resources)) {
+            $this->db->Execute('DELETE FROM customerassignments WHERE customerid=?', array($id));
+        }
 
         if ($this->syslog) {
-            $assigns = $this->db->GetAll('SELECT id, tariffid, liabilityid FROM assignments WHERE customerid = ?', array($id));
-            if (!empty($assigns)) {
-                foreach ($assigns as $assign) {
-                    if ($assign['liabilityid']) {
-                        $args = array(
-                        SYSLOG::RES_LIAB => $assign['liabilityid'],
-                        SYSLOG::RES_CUST => $id);
-                        $this->syslog->AddMessage(SYSLOG::RES_LIAB, SYSLOG::OPER_DELETE, $args);
-                    }
-                    $args = array(
-                    SYSLOG::RES_ASSIGN => $assign['id'],
-                    SYSLOG::RES_TARIFF => $assign['tariffid'],
-                    SYSLOG::RES_LIAB => $assign['liabilityid'],
-                    SYSLOG::RES_CUST => $id
-                    );
-                    $this->syslog->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_DELETE, $args);
-                    $nodeassigns = $this->db->GetAll('SELECT id, nodeid FROM nodeassignments WHERE assignmentid = ?', array($assign['id']));
-                    if (!empty($nodeassigns)) {
-                        foreach ($nodeassigns as $nodeassign) {
+            if (in_array('assignments', $delete_related_resources)) {
+                $assigns = $this->db->GetAll('SELECT id, tariffid, liabilityid FROM assignments WHERE customerid = ?', array($id));
+                if (!empty($assigns)) {
+                    foreach ($assigns as $assign) {
+                        if ($assign['liabilityid']) {
                             $args = array(
-                            SYSLOG::RES_NODEASSIGN => $nodeassign['id'],
-                            SYSLOG::RES_NODE => $nodeassign['nodeid'],
+                                SYSLOG::RES_LIAB => $assign['liabilityid'],
+                                SYSLOG::RES_CUST => $id);
+                            $this->syslog->AddMessage(SYSLOG::RES_LIAB, SYSLOG::OPER_DELETE, $args);
+                        }
+                        $args = array(
                             SYSLOG::RES_ASSIGN => $assign['id'],
+                            SYSLOG::RES_TARIFF => $assign['tariffid'],
+                            SYSLOG::RES_LIAB => $assign['liabilityid'],
                             SYSLOG::RES_CUST => $id
-                            );
-                            $this->syslog->AddMessage(SYSLOG::RES_NODEASSIGN, SYSLOG::OPER_DELETE, $args);
+                        );
+                        $this->syslog->AddMessage(SYSLOG::RES_ASSIGN, SYSLOG::OPER_DELETE, $args);
+                        $nodeassigns = $this->db->GetAll('SELECT id, nodeid FROM nodeassignments WHERE assignmentid = ?', array($assign['id']));
+                        if (!empty($nodeassigns)) {
+                            foreach ($nodeassigns as $nodeassign) {
+                                $args = array(
+                                    SYSLOG::RES_NODEASSIGN => $nodeassign['id'],
+                                    SYSLOG::RES_NODE => $nodeassign['nodeid'],
+                                    SYSLOG::RES_ASSIGN => $assign['id'],
+                                    SYSLOG::RES_CUST => $id
+                                );
+                                $this->syslog->AddMessage(SYSLOG::RES_NODEASSIGN, SYSLOG::OPER_DELETE, $args);
+                            }
                         }
                     }
                 }
@@ -1735,16 +1887,19 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             }
         }
 
-        $liabs = $this->db->GetCol('SELECT liabilityid FROM assignments WHERE liabilityid IS NOT NULL AND customerid = ?', array($id));
-        if (!empty($liabs)) {
-            $this->db->Execute('DELETE FROM liabilities WHERE id IN (' . implode(',', $liabs) . ')');
+        if (in_array('assignments', $delete_related_resources)) {
+            $liabs = $this->db->GetCol('SELECT liabilityid FROM assignments WHERE liabilityid IS NOT NULL AND customerid = ?', array($id));
+            if (!empty($liabs)) {
+                $this->db->Execute('DELETE FROM liabilities WHERE id IN (' . implode(',', $liabs) . ')');
+            }
+
+            $this->db->Execute('DELETE FROM assignments WHERE customerid=?', array($id));
         }
 
-        $this->db->Execute('DELETE FROM assignments WHERE customerid=?', array($id));
         // nodes
         $nodes = $this->db->GetCol('SELECT id FROM vnodes WHERE ownerid=?', array($id));
         if ($nodes) {
-            if ($this->syslog) {
+            if ($this->syslog && in_array('nodes', $delete_related_resources)) {
                 $macs = $this->db->GetAll('SELECT id, nodeid FROM macs WHERE nodeid IN (' . implode(',', $nodes) . ')');
                 foreach ($macs as $mac) {
                     $args = array(
@@ -1761,14 +1916,19 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 }
             }
 
-            $this->db->Execute('DELETE FROM nodegroupassignments WHERE nodeid IN (' . join(',', $nodes) . ')');
-            $plugin_data = array();
-            foreach ($nodes as $node) {
-                $plugin_data[] = array('id' => $node, 'ownerid' => $id);
+            if (in_array('nodegroups', $delete_related_resources)) {
+                $this->db->Execute('DELETE FROM nodegroupassignments WHERE nodeid IN (' . join(',', $nodes) . ')');
             }
-            $LMS->ExecHook('node_del_before', $plugin_data);
-            $this->db->Execute('DELETE FROM nodes WHERE ownerid=?', array($id));
-            $LMS->ExecHook('node_del_after', $plugin_data);
+
+            if (in_array('nodes', $delete_related_resources)) {
+                $plugin_data = array();
+                foreach ($nodes as $node) {
+                    $plugin_data[] = array('id' => $node, 'ownerid' => $id);
+                }
+                $LMS->ExecHook('node_del_before', $plugin_data);
+                $this->db->Execute('DELETE FROM nodes WHERE ownerid=?', array($id));
+                $LMS->ExecHook('node_del_after', $plugin_data);
+            }
         }
 
         // hosting
@@ -1782,10 +1942,12 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             );
         }
 
-        // Remove Userpanel rights
-        $userpanel_dir = ConfigHelper::getConfig('directories.userpanel_dir');
-        if (!empty($userpanel_dir)) {
-            $this->db->Execute('DELETE FROM up_rights_assignments WHERE customerid=?', array($id));
+        if (in_array('userpanel', $delete_related_resources)) {
+            // Remove Userpanel rights
+            $userpanel_dir = ConfigHelper::getConfig('directories.userpanel_dir');
+            if (!empty($userpanel_dir)) {
+                $this->db->Execute('DELETE FROM up_rights_assignments WHERE customerid=?', array($id));
+            }
         }
     }
 
@@ -2118,6 +2280,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             'fast' => 'sms-customers.fast',
             'from' => 'sms-customers.from',
             'phone_number_validation_pattern' => 'sms-customers.phone_number_validation_pattern',
+            'message_template' => 'sms-customers.message_template',
         );
 
         foreach ($variable_mapping as $option_name => $variable_name) {
@@ -2294,5 +2457,212 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             }
         }
         return $removed;
+    }
+
+    private function changeCustomerContactFlags($operation, $customerid, $type, $flags)
+    {
+        if (!is_array($flags)) {
+            $flags = array($flags);
+        }
+        $flags = Utils::filterIntegers($flags);
+        $contacttypes = $GLOBALS['CUSTOMERCONTACTTYPES'];
+        if (!empty($flags) && isset($contacttypes[$type])) {
+            $contacttype = $contacttypes[$type];
+            $flags = array_intersect(array_keys($contacttype['ui']['flags']), $flags);
+            if (empty($flags)) {
+                return;
+            }
+            $newtype = 0;
+            foreach ($flags as $flag) {
+                $newtype |= $flag;
+            }
+            if ($newtype) {
+                if ($operation == 'add') {
+                    $this->db->Execute(
+                        'UPDATE customercontacts SET type = type | ? WHERE customerid = ? AND type & ? > 0',
+                        array($newtype, $customerid, $contacttype['flagmask'])
+                    );
+                } else {
+                    $this->db->Execute(
+                        'UPDATE customercontacts SET type = type & ? WHERE customerid = ? AND type & ? > 0',
+                        array(~$newtype, $customerid, $contacttype['flagmask'])
+                    );
+                }
+
+                if ($this->syslog) {
+                    $contacts = $this->db->GetAll(
+                        'SELECT id, type FROM customercontacts WHERE customerid = ? AND type & ? > 0',
+                        array($customerid, $contacttype['flagmask'])
+                    );
+                    if (!empty($contacts)) {
+                        foreach ($contacts as $contact) {
+                            $args = array(
+                                SYSLOG::RES_CUSTCONTACT => $contact['id'],
+                                SYSLOG::RES_CUST => $customerid,
+                                'type' => $contact['type'],
+                            );
+                            $this->syslog->AddMessage(SYSLOG::RES_CUSTCONTACT, SYSLOG::OPER_UPDATE, $args);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public function addCustomerContactFlags($customerid, $type, $flags)
+    {
+        return $this->changeCustomerContactFlags('add', $customerid, $type, $flags);
+    }
+
+    public function removeCustomerContactFlags($customerid, $type, $flags)
+    {
+        return $this->changeCustomerContactFlags('remove', $customerid, $type, $flags);
+    }
+
+    public function getCustomerNotes($cid)
+    {
+        return $this->db->GetAll(
+            'SELECT n.id, u.login AS user, u.name AS username, u.rname AS rusername, dt, message AS note
+            FROM customernotes n
+            LEFT JOIN vusers u ON u.id = n.userid
+            WHERE customerid = ? ORDER BY dt DESC',
+            array($cid)
+        );
+    }
+
+    public function getCustomerNote($id)
+    {
+        $result = $this->db->GetRow(
+            'SELECT n.id, u.login AS user, u.name AS username, u.rname AS rusername, dt, message AS note
+            FROM customernotes n
+            LEFT JOIN vusers u ON u.id = n.userid
+            WHERE n.id = ?',
+            array($id)
+        );
+        $result['date'] = date('Y/m/d H:i', $result['dt']);
+        $result['text'] = htmlspecialchars($result['note']);
+        return $result;
+    }
+
+    public function addCustomerNote($params)
+    {
+        $res = $this->db->Execute(
+            'INSERT INTO customernotes (userid, customerid, dt, message) VALUES (?, ?, ?NOW?, ?)',
+            array(Auth::GetCurrentUser(), $params['customerid'], $params['customernote'])
+        );
+
+        if ($res) {
+            $id = $this->db->GetLastInsertID('customernotes');
+            if ($this->syslog) {
+                $args = array(
+                    SYSLOG::RES_CUSTNOTE => $id,
+                    SYSLOG::RES_CUST => $params['customerid'],
+                    'message' => $params['customernote'],
+                );
+                $this->syslog->AddMessage(SYSLOG::RES_CUSTNOTE, SYSLOG::OPER_ADD, $args);
+            }
+        } else {
+            $id = null;
+        }
+
+        return $id;
+    }
+
+    public function delCustomerNote($id)
+    {
+        if ($this->syslog) {
+            $note = $this->db->GetAll(
+                'SELECT id, customerid FROM customernotes WHERE id = ?',
+                array($id)
+            );
+            $args = array(
+                SYSLOG::RES_CUSTNOTE => $id,
+                SYSLOG::RES_CUST => $note['customerid'],
+            );
+            $this->syslog->AddMessage(SYSLOG::RES_CUSTNOTE, SYSLOG::OPER_DELETE, $args);
+        }
+
+        $res = $this->db->Execute('DELETE FROM customernotes WHERE id = ?', array($id));
+
+        return $res;
+    }
+
+    private function changeCustomerKarma($id, $diff)
+    {
+        $karma = $this->db->GetOne(
+            'SELECT karma FROM customerview WHERE id = ?',
+            array($id)
+        );
+        if (!isset($karma)) {
+            return array(
+                'karma' => 0,
+                'error' => trans('Access denied!'),
+            );
+        }
+
+        $customerKarmaChangeInterval = intval(ConfigHelper::getConfig('phpui.customer_karma_change_interval', '86400'));
+        if (!$customerKarmaChangeInterval) {
+            $customerKarmaChangeInterval = 86400;
+        }
+
+        $userid = Auth::GetCurrentUser();
+
+        $timestamp = $this->db->GetOne(
+            'SELECT timestamp
+            FROM customerkarmalastchanges
+            WHERE customerid = ? AND userid = ?',
+            array($id, $userid)
+        );
+        if (isset($timestamp) && time() - $timestamp <= $customerKarmaChangeInterval) {
+            return array(
+                'karma' => $karma,
+                'error' => trans('Karma is changed too often!'),
+            );
+        }
+
+        $karma += $diff;
+        $this->db->Execute(
+            'UPDATE customers SET karma = ? WHERE id = ?',
+            array($karma, $id)
+        );
+        if ($this->syslog) {
+            $args = array(
+                SYSLOG::RES_CUST => $id,
+                SYSLOG::RES_USER => $userid,
+                'karma' => $karma,
+            );
+            $this->syslog->AddMessage(SYSLOG::RES_CUST, SYSLOG::OPER_UPDATE, $args);
+        }
+
+        if (isset($timestamp)) {
+            $this->db->Execute(
+                'UPDATE customerkarmalastchanges SET timestamp = ?NOW? WHERE customerid = ? AND userid = ?',
+                array($id, $userid)
+            );
+        } else {
+            $this->db->Execute(
+                'INSERT INTO customerkarmalastchanges (timestamp, customerid, userid) VALUES (?NOW?, ?, ?)',
+                array($id, $userid)
+            );
+        }
+
+        return array(
+            'karma' => $karma,
+        );
+    }
+
+    public function raiseCustomerKarma($id)
+    {
+        return $this->changeCustomerKarma($id, 1);
+    }
+
+    public function lowerCustomerKarma($id)
+    {
+        return $this->changeCustomerKarma($id, -1);
+    }
+
+    public function getCustomerPin($id)
+    {
+        return $this->db->GetOne('SELECT pin FROM customers WHERE id = ?', array($id));
     }
 }

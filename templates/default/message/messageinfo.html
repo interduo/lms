@@ -19,7 +19,16 @@
     <THEAD>
 	<TR>
 		<TD>
-			<IMG SRC="img/{if $message.type == $smarty.const.MSG_SMS}sms{elseif $message.type == $smarty.const.MSG_WWW}network{elseif $message.type == $smarty.const.MSG_USERPANEL || $message.type == $smarty.const.MSG_USERPANEL_URGENT}cms{else}email{/if}.gif" ALT="">
+			{if $message.type == $smarty.const.MSG_SMS}
+				{$icon = "sms"}
+			{elseif $message.type == $smarty.const.MSG_WWW}
+				{$icon = "www"}
+			{elseif $message.type == $smarty.const.MSG_USERPANEL || $message.type == $smarty.const.MSG_USERPANEL_URGENT}
+				{$icon = "userpanel"}
+			{else}
+				{$icon = "mail"}
+			{/if}
+			{icon name=$icon class="fa-fw"}
 		</TD>
 		<TD class="bold nobr">
 			{trans("Subject:")}
@@ -32,20 +41,20 @@
     <TBODY>
 	<TR>
 		<TD>
-			<IMG SRC="img/users.gif" ALT="">
+			{icon name="user" class="fa-fw"}
 		</TD>
 		<TD class="bold">
 			{trans("User:")}
 		</TD>
 		<TD>
 			{if $message.userid}
-			<a href="?m=userinfo&id={$message.userid}">{$message.name}</a>
+			<a href="?m=userinfo&id={$message.userid}">{$message.username}</a>
 			{else}LMS{/if}
 		</TD>
 	</TR>
 	<TR>
 		<TD>
-			<IMG SRC="img/time.gif" ALT="">
+			{icon name="calendar" class="fa-fw"}
 		</TD>
 		<TD class="bold">
 			{trans("Creation date:")}
@@ -57,7 +66,7 @@
 {if $message.sender}
 	<TR>
 		<TD>
-			<IMG SRC="img/mail.gif" ALT="">
+			{icon name="mail" class="fa-fw"}
 		</TD>
 		<TD class="bold">
 			{trans("Sender:")}
@@ -69,7 +78,7 @@
 {/if}
 	<TR>
 		<TD>
-			<IMG SRC="img/edit.gif" ALT="">
+			{icon name="edit" class="fa-fw"}
 		</TD>
 		<TD class="bold nobr">
 			{trans("Message body:")}
@@ -93,7 +102,7 @@
 	{if $filecontainers}
 		<TR>
 			<TD class="valign-top">
-				<IMG SRC="img/mail.gif" ALT="">
+				{icon name="upload" class="fa-fw"}
 			</TD>
 			<TD class="bold valign-top">
 				{trans("Attachments:")}
@@ -115,6 +124,7 @@
 		<TD COLSPAN="3" class="lms-ui-box-buttons">
 			{button id="delete-message" icon="delete" label="Delete"}
 			{button icon="cancel" label="Cancel" onclick="location.href = '?m=messagelist';"}
+			{button icon="resend" label="Resend" onclick="location.href = '?m=messageadd&messageid={$message.id}';"}
 		</TD>
 	</TR>
     </TBODY>

@@ -76,6 +76,22 @@
             </TD>
         </TR>
         <TR>
+            <TD scope="col" class="text-left nobr">
+                {trans("Startup module:")}
+            </TD>
+            <TD scope="col">
+                <SELECT name="startupmodule" SIZE="1">
+                    {$menu2 = $menu}
+                    {array_multisort(Utils::array_column($menu2, 'name'), SORT_LOCALE_STRING, $menu2)}
+                    {foreach $menu2 as $m}
+                        {if $m.module !== "logout"}
+                            <OPTION value="{$m.module}" {if $startupmodule == $m.module}selected{/if}>{$m.name}</OPTION>
+                        {/if}
+                    {/foreach}
+                </SELECT>
+            </TD>
+        </TR>
+        <TR>
             <TD scope="col" class="nobr">
                 <label for="hide_nodes_modules">{trans("Disabling modules:")}</label>
             </TD>
@@ -146,6 +162,16 @@
                     <OPTION value="{$typeidx}" {if $auth_type == $typeidx} selected{/if}>{$type.selection}</OPTION>
                     {/foreach}
                 </SELECT>
+            </TD>
+        </TR>
+        <TR>
+            <TD scope="col" class="nobr">
+                <label for="pin_validation">{trans("PIN validation")}</label>
+            </TD>
+            <TD scope="col">
+                <input type="checkbox" name="pin_validation" id="pin_validation"
+                    {if !empty($pin_validation)} checked{/if}
+                    {tip text="Userpanel PIN validation"}>
             </TD>
         </TR>
         <TR>
