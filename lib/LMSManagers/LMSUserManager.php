@@ -105,10 +105,11 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
     }
 
     /**
-     * Returns active users names
+     * Returns users names with access
      *
      * @param array $params Parameters
      * @return array Users names
+     * withDeleted - (0 - show only non-deleted users (default), 1 - show also deleted users)
      */
     public function getUserNames($params = array())
     {
@@ -119,7 +120,7 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             (CASE WHEN access = 1 AND accessfrom <= ?NOW? AND (accessto >=?NOW? OR accessto = 0) THEN 1 ELSE 0 END) AS access
             FROM vusers
             WHERE deleted = 0'
-            . (isset($withDeleted) ? ' OR deleted = 1' : '' )
+            . (!empty($withDeleted) ? ' OR deleted = 1' : '' )
             . ' ORDER BY rname ASC'
         );
     }
