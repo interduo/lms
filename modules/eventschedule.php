@@ -174,7 +174,7 @@ $filter['forward'] = ConfigHelper::getConfig('phpui.timetable_days_forward');
 $eventlist = $LMS->GetEventList($filter);
 
 $userid = $filter['userid'];
-$userlistcount = count($userid);
+$userlistcount = empty($userid) ? 0 : count($userid);
 
 $params['short'] = 1;
 if (ConfigHelper::checkConfig('phpui.timetable_hide_disabled_users')) {
@@ -227,7 +227,7 @@ if (!isset($userid) || empty($userid)) {
     $filter['userid'] = $userid;
 }
 
-$usereventlistcount = count($usereventlist);
+$usereventlistcount = empty($usereventlist) ? 0 : count($usereventlist);
 
 //<editor-fold desc="group events by days">
 $usereventlistdates = array();
