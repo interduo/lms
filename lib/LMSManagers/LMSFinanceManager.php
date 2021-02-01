@@ -365,7 +365,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
             $data_schema = explode(';', $tariff['sdata']);
             $data_tariff = explode(';', $tariff['data']);
-            $datefrom    = $data['datefrom'];
+            $orig_datefrom = $datefrom = $data['datefrom'];
             $cday        = date('d', $datefrom);
 
             $use_discounts = ConfigHelper::checkConfig('phpui.promotion_use_discounts');
