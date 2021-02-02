@@ -117,12 +117,12 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
 
         $args = array(
             'type' => $type,
-            'src_' . SYSLOG::getResourceKey(SYSLOG::RES_RADIOSECTOR) => $srcradiosector,
-            'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_RADIOSECTOR) => $dstradiosector,
+            'src_' . SYSLOG::getResourceKey(SYSLOG::RES_RADIOSECTOR) => $dstradiosector,
+            'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_RADIOSECTOR) => $srcradiosector,
             'technology' => $technology,
             'speed' => $speed,
-            'src_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev2,
-            'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev1,
+            'src_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev1,
+            'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev2,
         );
         $res = $this->db->Execute('UPDATE netlinks SET type=?, srcradiosector=?, dstradiosector=?, technology=?, speed=?
 			WHERE src=? AND dst=?', array_values($args));
@@ -133,8 +133,8 @@ class LMSNetDevManager extends LMSManager implements LMSNetDevManagerInterface
                 'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_RADIOSECTOR) => $dstradiosector,
                 'technology' => $technology,
                 'speed' => $speed,
-                'src_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev1,
-                'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev2,
+                'src_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev2,
+                'dst_' . SYSLOG::getResourceKey(SYSLOG::RES_NETDEV) => $dev1,
             );
             $res = $this->db->Execute('UPDATE netlinks SET type=?, dstradiosector=?, srcradiosector=?, technology=?, speed=?
 				WHERE src=? AND dst=?', array_values($args));
