@@ -868,7 +868,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                     $state_conditions[] = 'NOT EXISTS (SELECT 1 FROM nodes WHERE ownerid = c.id)';
                     break;
                 case 66:
-                    $state_conditions[] = 'c.id IN (SELECT DISTINCT customerid FROM assignments WHERE invoice = 0 AND commited = 1)';
+                    $state_conditions[] = 'EXISTS (SELECT 1 FROM assignments WHERE invoice = 0 AND commited = 1 WHERE customerid = c.id)';
                     break;
                 case 67:
                     $state_conditions[] = 'c.building IS NULL';
@@ -896,13 +896,13 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                     $state_conditions[] = 'EXISTS (SELECT 1 FROM documents WHERE customerid = c.id AND type < 0 AND archived = 0)';
                     break;
                 case 74:
-                    $state_conditions[] = 'c.id IN (SELECT DISTINCT ca.customer_id
+                    $state_conditions[] = 'EXISTS (SELECT 1
                         FROM customer_addresses ca
                         JOIN addresses a ON a.id = ca.address_id
-                        WHERE a.zip IS NULL)';
+                        WHERE a.zip IS NULL AND ca.customer_id = c.id)';
                     break;
                 case 75:
-                    $state_conditions[] = 'c.id IN (SELECT DISTINCT customerid FROM assignments WHERE commited = 1 AND (vdiscount > 0 OR pdiscount > 0))';
+                    $state_conditions[] = 'EXISTS (SELECT 1 FROM assignments WHERE commited = 1 AND (vdiscount > 0 OR pdiscount > 0) AND customerid = c.id)';
                     break;
                 default:
                     if ($state_item > 0 && $state_item < 50 && intval($state_item)) {
