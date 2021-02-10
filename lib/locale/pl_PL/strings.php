@@ -24,6 +24,9 @@
  *  $Id$
  */
 
+$_LANG['Import configuration'] = 'Import konfiguracji';
+$_LANG['Bad file structure!'] = 'Nieprawidłowa struktura pliku!';
+
 $_LANG['new document customer notification'] = 'powiadomienie klienta o nowym dokumencie';
 
 $_LANG['- select target network device -'] = '- wybierz docelowe urządzenie sieciowe -';
