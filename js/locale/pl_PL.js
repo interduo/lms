@@ -2596,19 +2596,6 @@ $_LANG['Select country state (optional)'] = 'Wybierz województwo (opcjonalnie)'
 $_LANG['- all states -'] = '- wszystkie -';
 $_LANG['Country state:'] = 'Województwo:';
 $_LANG['customers to groups assignment'] = 'przypisywanie klientów do grup';
-<<<<<<< HEAD
-=======
-$_LANG['Assigned Customer'] = 'Przypisany klient';
-$_LANG['VLAN List'] = 'Lista VLAN-ów';
-$_LANG['VLAN Description'] = 'Opis VLAN-u';
-$_LANG['VLAN ID'] = 'Identyfikator VLAN-u';
-$_LANG['Add VLAN'] = 'Dodaj VLAN';
-$_LANG['Assigned Network node'] = 'Przypisany węzeł sieciowy';
-$_LANG['Network Node'] = 'Węzeł sieciowy';
-$_LANG['Network Node ID'] = 'ID węzła sieciowego';
-$_LANG['Modify VLAN'] = 'Modyfikuj VLAN';
-$_LANG['Allows you to display VLANs used in networks'] = 'Wyświetla VLAN-y używane w sieci';
->>>>>>> 076b4baea (improvement: separate configuration import function to dedicated form in main menu (#1955))
 $_LANG['nodes to groups assignment'] = 'przypisywanie komputerów do grup';
 $_LANG['Address is required!'] = 'Adres jest wymagany!';
 $_LANG['Add division'] = 'Nowa firma';
@@ -5068,13 +5055,3 @@ $_LANG['Penalty'] = 'Kara';
 
 $_LANG['Select network device type'] = 'Wybierz typ urządzenia sieciowego';
 $_LANG['<!netdevtype>- undefined -'] = '- nieokreślony -';
-<<<<<<< HEAD
-=======
-
-$_LANG['Starting balance at $a'] = 'Saldo początkowe na dzień $a';
-
-$_LANG['system messages'] = 'wiadomości systemowe';
-
-$_LANG['with active tariffless liabilities'] = 'z aktywnymi zobowiązaniami beztaryfowymi';
-$_LANG['with tariffless liabilities'] = 'z zobowiązaniami beztaryfowymi';
->>>>>>> 076b4baea (improvement: separate configuration import function to dedicated form in main menu (#1955))
