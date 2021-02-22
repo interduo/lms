@@ -451,6 +451,12 @@
 			tab_elem.find('.assignment-type').val('');
 			tab_elem.find('.expired').prop('checked', false);
 			tab_elem.find('.commited').prop('checked', true).trigger('change');
+
+			removeStorageItem('{$tab_id}_tariff_type_{$customerinfo.id}');
+			removeStorageItem('{$tab_id}_document_{$customerinfo.id}');
+			removeStorageItem('{$tab_id}_expired_{$customerinfo.id}');
+			removeStorageItem('{$tab_id}_commited_{$customerinfo.id}');
+
 			return false;
 		});
 
