@@ -1332,7 +1332,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                     JOIN vnodes n ON (n.id = na.nodeid)
                     WHERE n.ownerid = c.id AND na.nodegroupid = ' . intval($nodegroup) . ')' : '')
                 . (isset($sqlsarg) ? ' AND (' . $sqlsarg . ')' : '')
-                . ($sqlord != ''  && !$count ? $sqlord . ' ' . $direction : '')
+                . ($sqlord != ''  && !$count ? $sqlord . ' ' . $direction . ', c.id ASC' : '')
                 . ($limit !== null && !$count ? ' LIMIT ' . $limit : '')
                 . ($offset !== null && !$count ? ' OFFSET ' . $offset : '');
 
