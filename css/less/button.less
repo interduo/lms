@@ -175,3 +175,10 @@ a.lms-ui-link-button + button.lms-ui-button {
 td > button:last-child {
   margin-right: 0.5em;
 }
+
+i.lms-ui-button-clipboard:hover {
+  cursor: pointer;
+  &:not(.lms-ui-static) {
+    .lms-ui-icon-copy;
+  }
+}
