@@ -110,12 +110,15 @@
 					<span class="bold">{trans("Filter:")}</span>
 
 					{trans("Customer:")}
-					<select name="fvoipaccid" class="lms-ui-advanced-select">
-						<option value="" {if !$listdata.fvoipaccid}selected{/if}>{trans("- all -")}</option>
-						{foreach from=$voipaccounts item=vacc}
-						<option value="{$vacc.id}" {if $listdata.fvoipaccid == $vacc.id} selected{/if}>{$vacc.owner|truncate:40:"&hellip;":true} ({$vacc.login})</option>
+					<select name="fvownerid" class="lms-ui-advanced-select" onChange="CustomerChanged($(this).val())">
+						<option value="" {if !$listdata.fvownerid}selected{/if}>{trans("- all -")}</option>
+						{foreach from=$voipownerlist item=vown key=$idx}
+						<option value="{$idx}" {if $listdata.fvownerid == $idx} selected{/if}>{$vown|truncate:40:"...":true}</option>
 						{/foreach}
 					</select>
+
+                                       {trans("Number:")}
+                                       {include file="voipaccount/voipaccountnumbers.html"}
 
 					{trans("Period")} {trans("from")}&nbsp;
 					{date_period_preset from="#frangefrom" to="#frangeto"}
@@ -153,6 +156,7 @@
 						<OPTION VALUE="{CALL_BUSY}" {if $listdata.fstatus == $smarty.const.CALL_BUSY} SELECTED{/if}>{trans("busy<!voip>")}</OPTION>
 						<OPTION VALUE="{CALL_SERVER_FAILED}" {if $listdata.fstatus == $smarty.const.CALL_SERVER_FAILED} SELECTED{/if}>{trans("server error")}</OPTION>
 					</SELECT>
+					{button type="submit" icon="submit"}
 				</FORM>
 			</td>
 		</tr>
@@ -318,13 +322,19 @@
 </table>
 
 <script>
-
-	$(function() {
-		$('#choosefilter').find('input,select').change(function() {
-			$('#choosefilter').submit();
+	function CustomerChanged(str) {
+		$.ajax({
+			url: '?m=voipaccountbillinglist',
+			type: "POST",
+			dataType: "json",
+			data: { str : str },
+			success:
+				function(response) {
+					var selectbox = $('#customernumberselect');
+					selectbox.replaceWith( response );
+				},
 		});
-	});
-
+	}
 </script>
 
 {/block}
