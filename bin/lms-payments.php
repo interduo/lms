@@ -616,7 +616,7 @@ $query = "SELECT
 			WHEN " . HALFYEARLY . ' THEN ' . mktime(0, 0, 0, $month - 6, 1, $year)   . "
 			WHEN " . QUARTERLY  . ' THEN ' . mktime(0, 0, 0, $month - 3, 1, $year)   . "
 			WHEN " . MONTHLY . ' THEN ' . mktime(0, 0, 0, $month - 1, 1, $year)
-			. " END))))"
+        . " END))))"
         . ($customergroups ? str_replace('%customerid_alias%', 'c.id', $customergroups) : '')
     ." ORDER BY a.customerid, a.recipient_address_id, a.invoice, a.paytype, a.numberplanid, a.separatedocument, currency, voipcost.value DESC, a.id";
 
@@ -1491,8 +1491,8 @@ foreach ($assigns as $assign) {
                     } else {
                         $DB->Execute(
                             "INSERT INTO invoicecontents (docid, value, taxid, taxcategory, prodid,
-                            content, count, description, tariffid, itemid, pdiscount, vdiscount)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            content, count, description, tariffid, itemid, pdiscount, vdiscount, period)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                             array(
                                 $invoices[$cid],
                                 str_replace(',', '.', $val / $assign['count']),
@@ -1505,7 +1505,8 @@ foreach ($assigns as $assign) {
                                 empty($assign['tariffid']) ? null : $assign['tariffid'],
                                 $itemid,
                                 $assign['pdiscount'],
-                                $assign['vdiscount']
+                                $assign['vdiscount'],
+                                $assign['period'],
                             )
                         );
 
@@ -1701,8 +1702,8 @@ foreach ($assigns as $assign) {
                         } else {
                             $DB->Execute(
                                 "INSERT INTO invoicecontents (docid, value, taxid, taxcategory, prodid,
-								content, count, description, tariffid, itemid, pdiscount, vdiscount)
-								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+								content, count, description, tariffid, itemid, pdiscount, vdiscount, period)
+								VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                                 array(
                                     $invoices[$cid],
                                     str_replace(',', '.', $value / $assign['count']),
@@ -1715,7 +1716,8 @@ foreach ($assigns as $assign) {
                                     empty($assign['tariffid']) ? null : $assign['tariffid'],
                                     $itemid,
                                     $assign['pdiscount'],
-                                    $assign['vdiscount']
+                                    $assign['vdiscount'],
+                                    $assign['period'],
                                 )
                             );
 

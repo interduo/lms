@@ -1036,7 +1036,8 @@ CREATE TABLE invoicecontents (
 		CONSTRAINT invoicecontents_tariffid_fkey REFERENCES tariffs (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	pdiscount numeric(4,2) DEFAULT 0 NOT NULL,
 	vdiscount numeric(9,2) DEFAULT 0 NOT NULL,
-	taxcategory smallint DEFAULT 0 NOT NULL
+	taxcategory smallint DEFAULT 0 NOT NULL,
+	period smallint DEFAULT 3
 );
 CREATE INDEX invoicecontents_docid_idx ON invoicecontents (docid);
 
@@ -3965,6 +3966,6 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121404');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121405');
 
 COMMIT;

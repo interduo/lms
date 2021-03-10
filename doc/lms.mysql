@@ -1175,6 +1175,7 @@ CREATE TABLE invoicecontents (
 	description text NOT NULL DEFAULT '',
 	tariffid int(11) DEFAULT NULL,
 	taxcategory smallint DEFAULT 0 NOT NULL,
+	period smallint DEFAULT 3,
 	INDEX docid (docid),
 	CONSTRAINT invoicecontents_docid_fkey
 		FOREIGN KEY (docid) REFERENCES documents (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -3927,4 +3928,4 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121404');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121405');
