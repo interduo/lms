@@ -107,15 +107,14 @@
 			<td colspan="{$number_of_table_columns}">
 				<FORM method="post" action="?m={$layout.module}" name="choosefilter" id="choosefilter">
 					<INPUT type="hidden" NAME="m" VALUE="voipaccountbillinglist">
-					<span class="bold">{trans("Filter:")}</span>
-
-					{trans("Customer:")}
-					<select name="fvownerid" class="lms-ui-advanced-select" onChange="CustomerChanged($(this).val())">
-						<option value="" {if !$listdata.fvownerid}selected{/if}>{trans("- all -")}</option>
-						{foreach from=$voipownerlist item=vown key=$idx}
-						<option value="{$idx}" {if $listdata.fvownerid == $idx} selected{/if}>{$vown|truncate:40:"...":true}</option>
-						{/foreach}
-					</select>
+					{customerlist
+						form="choosefilter"
+						customers=$voipownerlist.name
+						selected=$listdata.fvownerid
+						version=2
+						selectname="fvownerid"
+						customOnChange="CustomerChanged($(this).val());"
+					}
 
 					{trans("Number:")}
 					{include file="voipaccount/voipaccountnumbers.html"}
