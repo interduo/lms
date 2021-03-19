@@ -288,6 +288,12 @@ $content_type = $format == 'html' ? 'text/html' : 'text/plain';
 $mail_content_type = $mail_format == 'html' ? 'text/html' : 'text/plain';
 $customergroups = ConfigHelper::getConfig($config_section . '.customergroups', '', true);
 $ignore_customer_consents = ConfigHelper::checkConfig($config_section . '.ignore_customer_consents');
+$ignore_contact_flags = ConfigHelper::checkConfig($config_section . '.ignore_contact_flags');
+
+$required_phone_contact_flags = CONTACT_MOBILE | ($ignore_contact_flags ? 0 : CONTACT_NOTIFICATIONS);
+$checked_phone_contact_flags = $required_phone_contact_flags | CONTACT_DISABLED;
+$required_mail_contact_flags = CONTACT_EMAIL | ($ignore_contact_flags ? 0 : CONTACT_NOTIFICATIONS);
+$checked_mail_contact_flags = $required_mail_contact_flags | CONTACT_DISABLED;
 
 $allowed_customer_status =
 Utils::determineAllowedCustomerStatus(
@@ -817,10 +823,10 @@ if (empty($types) || in_array('documents', $types)) {
             . ($notifications['documents']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             DOC_CONTRACT,
             DOC_ANNEX,
             $days,
@@ -986,10 +992,10 @@ if (empty($types) || in_array('contracts', $types)) {
             . ($customergroups ?: '')
         . " GROUP BY c.id, c.pin, c.lastname, c.name, d.dateto, m.email, x.phone",
         array(
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             $days,
             $days
         )
@@ -1171,10 +1177,10 @@ if (empty($types) || in_array('debtors', $types)) {
             DOC_INVOICE_PRO,
             DOC_DNOTE,
             $days,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             $limit
         )
     );
@@ -1371,8 +1377,8 @@ if (empty($types) || in_array('reminder', $types)) {
             $days,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             DOC_INVOICE,
             DOC_INVOICE_PRO,
             DOC_DNOTE,
@@ -1575,8 +1581,8 @@ if (empty($types) || in_array('income', $types)) {
             DOC_DNOTE,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             $days,
             $days,
         )
@@ -1740,8 +1746,8 @@ if (empty($types) || in_array('invoices', $types)) {
         array(
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
             CONTACT_EMAIL | CONTACT_INVOICES | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             DOC_INVOICE,
             DOC_INVOICE_PRO,
             DOC_CNOTE,
@@ -1912,10 +1918,10 @@ if (empty($types) || in_array('notes', $types)) {
             . ($notifications['notes']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
             DOC_DNOTE,
             $daystart,
             $dayend
@@ -2070,10 +2076,10 @@ if (empty($types) || in_array('birthday', $types)) {
         . ($notifications['birthday']['deleted_customers'] ? '' : ' AND c.deleted = 0')
         . ($customergroups ?: ''),
         array(
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags,
         )
     );
     if (!empty($customers)) {
@@ -2227,10 +2233,10 @@ if (empty($types) || in_array('warnings', $types)) {
             . ($notifications['warnings']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-            CONTACT_MOBILE | CONTACT_NOTIFICATIONS
+            $checked_mail_contact_flags,
+            $required_mail_contact_flags,
+            $checked_phone_contact_flags,
+            $required_phone_contact_flags
         )
     );
 
@@ -2400,10 +2406,10 @@ if (empty($types) || in_array('events', $types)) {
                         ) x ON (x.customerid = c.id) " . ($ignore_customer_consents ? '' : 'AND c.smsnotice = 1') . "
                         WHERE 1 = 1" . $customer_status_condition . " AND c.id = ?",
                         array(
-                            CONTACT_EMAIL | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-                            CONTACT_EMAIL | CONTACT_NOTIFICATIONS,
-                            CONTACT_MOBILE | CONTACT_NOTIFICATIONS | CONTACT_DISABLED,
-                            CONTACT_MOBILE | CONTACT_NOTIFICATIONS,
+                            $checked_mail_contact_flags,
+                            $required_mail_contact_flags,
+                            $checked_phone_contact_flags,
+                            $required_phone_contact_flags,
                             $cid
                         )
                     );
