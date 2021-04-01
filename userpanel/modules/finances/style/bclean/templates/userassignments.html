@@ -60,8 +60,8 @@
 						({if empty($assignment.upceil)}-{else}{convert_to_units($assignment.upceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/s{/if})
 					</td>
 					{/if}
-					{if $show_period}
 					<td class="text-center">{if $assignment.invoice}{trans("yes")}{else}&nbsp;{/if}</td>
+					{if $show_period}
 					<td>
 						{if $assignment.datefrom}{trans("from")} {$assignment.datefrom|date_format:"%Y/%m/%d"}{/if}
 						{if $assignment.dateto}{trans("to")} {$assignment.dateto|date_format:"%Y/%m/%d"}{/if}
