@@ -175,7 +175,7 @@
 						<B>{trans("Description:")}</B>
 					</TD>
 					<TD WIDTH="98%">
-						<TEXTAREA NAME="addbalance[comment]" rows="5" cols="50" {tip text="Enter comment"}>{$comment|replace:"\n":"<BR>"}</TEXTAREA>
+						<TEXTAREA NAME="addbalance[comment]" rows="5" cols="50" {tip text="Enter comment"}>{$comment|escape|replace:"\n":"<BR>"}</TEXTAREA>
 					</TD>
 				</TR>
 				<TR>
@@ -268,7 +268,7 @@
 						<TABLE WIDTH="100%" CELLPADDING="5">
 							<TR>
 								<TD CLASS="fall superlight">
-									{$last.comment|replace:"\n":"<BR>"}
+									{$last.comment|escape|replace:"\n":"<BR>"}
 								</TD>
 							</TR>
 						</TABLE>
