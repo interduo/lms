@@ -1,6 +1,7 @@
 <!--// $Id$ //-->
 {box title="Your subscriptions"}
 {$show_speeds = ConfigHelper::checkConfig('userpanel.show_speeds')}
+{$show_period = ConfigHelper::checkConfig('userpanel.show_period')}
 {$speed_unit_type = ConfigHelper::getConfig('userpanel.speed_unit_type')}
 {$speed_unit_aggregation_threshold = ConfigHelper::getConfig('userpanel.speed_unit_aggregation_threshold')}
 <table style="width: 100%;" cellpadding="3">
@@ -14,7 +15,9 @@
 			<td width="1%" class="nobr" align="right">{trans("Uprate (ceil):")}</td>
 		{/if}
 		<td width="1%" class="nobr">{trans("Invoice:")}</td>
-		<td width="1%" class="nobr">{trans("Period:")}</td>
+		{if $show_period}
+			<td width="1%" class="nobr">{trans("Period:")}</td>
+		{/if}
 	</tr>
 	{$total_real_value = array()}
 	{$total_real_disc_value = array()}
@@ -56,15 +59,17 @@
 			</td>
 		{/if}
 		<td>{if $assignment.invoice}{trans("yes")}{else}&nbsp;{/if}</td>
-		<td>
-			{if $assignment.datefrom}<nobr>{trans("from")} {$assignment.datefrom|date_format:"%Y/%m/%d"}</nobr>{/if}
-			{if $assignment.dateto}<nobr>{trans("to")} {$assignment.dateto|date_format:"%Y/%m/%d"}</nobr>{/if}
-		</td>
+		{if $show_period}
+			<td>
+				{if $assignment.datefrom}<nobr>{trans("from")} {$assignment.datefrom|date_format:"%Y/%m/%d"}</nobr>{/if}
+				{if $assignment.dateto}<nobr>{trans("to")} {$assignment.dateto|date_format:"%Y/%m/%d"}</nobr>{/if}
+			</td>
+		{/if}
 	</tr>
 	{/if}
 	{foreachelse}
 	<tr>
-		<td class="text-wrap" width="100%" colspan="{if $show_speeds}8{else}6{/if}">
+		<td class="text-wrap" width="100%" colspan="{if $show_speeds}{if $show_period}8{else}7{/if}{else}{if $show_period}6{else}5{/if}{/if}">
 			<p>&nbsp;</p>
 			<p><strong>{trans("You haven't got any assigned subscriptions.")}</strong></p>
 			<p>&nbsp;</p>
@@ -98,7 +103,9 @@
 			</td>
 		{/if}
 		<td>&nbsp;</td>
-		<td class="nobr" align="right">&nbsp;</td>
+		{if $show_period}
+			<td class="nobr" align="right">&nbsp;</td>
+		{/if}
 	</tr>
 </table>
 {/box}
