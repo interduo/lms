@@ -245,14 +245,27 @@ function module_main()
                 }
 
                 $queuedata = $LMS->GetQueue($ticket['queue']);
+
                 if (!empty($queuedata['newticketsubject']) && !empty($queuedata['newticketbody'])
                     && !empty($emails)) {
                     $ticketid = sprintf("%06d", $id);
                     $custmail_subject = $queuedata['newticketsubject'];
-                    $custmail_subject = str_replace('%tid', $ticketid, $custmail_subject);
+                    $custmail_subject = preg_replace_callback(
+                        '/%(\\d*)tid/',
+                        function ($m) use ($id) {
+                            return sprintf('%0' . $m[1] . 'd', $id);
+                        },
+                        $custmail_subject
+                    );
                     $custmail_subject = str_replace('%title', $ticket['subject'], $custmail_subject);
                     $custmail_body = $queuedata['newticketbody'];
-                    $custmail_body = str_replace('%tid', $ticketid, $custmail_body);
+                    $custmail_body = preg_replace_callback(
+                        '/%(\\d*)tid/',
+                        function ($m) use ($id) {
+                            return sprintf('%0' . $m[1] . 'd', $id);
+                        },
+                        $custmail_body
+                    );
                     $custmail_body = str_replace('%cid', $SESSION->id, $custmail_body);
                     $custmail_body = str_replace('%pin', $info['pin'], $custmail_body);
                     $custmail_body = str_replace('%customername', $info['customername'], $custmail_body);
@@ -531,8 +544,7 @@ function module_main()
                 $reply = $LMS->GetMessage($_GET['msgid']);
 
                 $helpdesk['subject'] = $reply['subject'];
-                $helpdesk['subject'] = preg_replace('/^Re:\s*/', '', $helpdesk['subject']);
-                $helpdesk['subject'] = 'Re: '. $helpdesk['subject'];
+                $helpdesk['subject'] = 'Re: ' . $LMS->cleanupTicketSubject($helpdesk['subject']);
 
                 $helpdesk['inreplyto'] = $reply['id'];
                 $helpdesk['references'] = implode(' ', $reply['references']);
