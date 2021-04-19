@@ -3988,6 +3988,7 @@ $_LANG['with end date'] = 'z datą zakończenia';
 $_LANG['with end date:'] = 'z datą zakończenia:';
 $_LANG['<!enddate>- any -'] = '- dowolną -';
 $_LANG['expire in $a days'] = 'wygasną w ciągu $a dni';
+$_LANG['expire in indicated number of days'] = 'wygasną za wskazaną liczbę dni';
 
 $_LANG['TERRIT not specified'] = 'bez TERYT';
 $_LANG['ZIP code not specified'] = 'bez kodu pocztowego';
