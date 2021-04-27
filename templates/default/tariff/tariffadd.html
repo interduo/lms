@@ -54,7 +54,7 @@
 							<input type="checkbox" name="tariff[flags][{$smarty.const.TARIFF_FLAG_REWARD_PENALTY}]"
 								value="{$smarty.const.TARIFF_FLAG_REWARD_PENALTY}"
 								{if isset($tariff.flags[$smarty.const.TARIFF_FLAG_REWARD_PENALTY])}checked{/if}
-								{tip text="If tariff value is negative then this is effectively penalty flag, otherwise it is reward flag"}>
+								{tip text="If tariff value is negative then this is effectively reward flag, otherwise it is penalty flag"}>
 							{trans("reward/penalty")}
 						</label>
 				    </TD>
