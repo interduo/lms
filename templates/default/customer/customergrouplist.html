@@ -71,7 +71,6 @@
 	<script>
 		$('.delete-group').click(function() {
 			var name = $(this).closest('tr').attr('data-name');
-			console.log('name=', name);
 			confirmDialog($t("Are you sure, you want to remove group '$a'?", name), this).done(function() {
 				location.href = $(this).attr('href');
 			});
