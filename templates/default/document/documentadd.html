@@ -208,27 +208,6 @@
 			</DIV>
 		</TD>
 	</TR>
-	<TR>
-		<TD>
-			<IMG src="img/confirm.gif" ALT="">
-		</TD>
-		<TD class="bold nobr">
-			<label for="closed">{trans("Confirmed:")}</label>
-		</TD>
-		<TD>
-			<INPUT type="checkbox" name="document[closed]" id="closed" value="1" {if $document.closed} checked{/if}>
-		</TD>
-	</TR>
-	<TR>
-		<TD colspan="3" class="lms-ui-box-buttons">
-			<div id="document-button-panel">
-				<div>
-					{button type="submit" icon="save" id="submit-button" label="Submit"}
-					{button type="submit" icon="print" label="Print" onclick="print_document()"}
-					{button icon="cancel" label="Cancel" onclick="location.href = '?m=documentlist';"}
-				</div>
-			</td>
-		</tr>
 		<tr>
 			<td>
 				{icon name="confirm" class="fa-fw"}
@@ -261,9 +240,8 @@
 						</label>
 					</div>
 				</div>
-			</div>
-		</TD>
-	</TR>
+			</td>
+		</tr>
     </TBODY>
 </TABLE>
 
