@@ -518,7 +518,6 @@
   }
 }
 
-.lms-ui-icon-help,
 .lms-ui-icon-info,
 .lms-ui-icon-details {
   .fa-icon;
@@ -526,6 +525,16 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-info;
+  }
+}
+
+.lms-ui-icon-help,
+.lms-ui-icon-hint {
+  .fa-icon;
+  .far;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-question-circle;
   }
 }
 
