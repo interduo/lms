@@ -410,6 +410,8 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                             $_datefrom = $data['datefrom'];
                             $datefrom = mktime(0, 0, 0, $start_month + 1, 0, $start_year);
                             $at = $datefrom;
+                        } else {
+                            $at = mktime(0, 0, 0, $start_month + ($start_day >= $data['at'] ? 1 : 0), $data['at'], $start_year);
                         }
 
                         // check if current promotion schema tariff has only activation value defined
@@ -512,7 +514,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                             $tariffid = 0;
                         }
 
-                        $period   = DISPOSABLE;
+                        $period = DISPOSABLE;
                     } else {
                         continue;
                     }
