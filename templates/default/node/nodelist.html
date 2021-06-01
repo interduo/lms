@@ -237,13 +237,16 @@
 				{icon name="nodeunk" class="fa-fw"}
 			{/if}
 			{if $node.info}
-			    {icon name="info" tip=$node.info}
+			    {icon name="info" tip=$node.info|escape}
 			{/if}
-			{$node.name}</A></span>
+			{$node.name|escape}</A></span>
 			<br>
 			<span class="nobr{if ! $node.access} blend{/if}">
 				{icon name="customer" class="fa-fw"}
-				<a href="?m=customerinfo&id={$node.ownerid}" class="lms-ui-tooltip-customerinfo" data-resourceid="{$node.ownerid}">{$node.owner|truncate:40:"...":true|replace:" ":"&nbsp;"}</a>
+				<a href="?m=customerinfo&id={$node.ownerid}"
+					class="lms-ui-tooltip-customerinfo"
+					data-resourceid="{$node.ownerid}">
+					{$node.owner|truncate:40:"...":true|replace:" ":"&nbsp;"}</a>
 			</span>
 		</TD>
 		<TD class="nobr">
