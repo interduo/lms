@@ -179,7 +179,8 @@
 				{/box_row}
 
 				{box_row icon="img/desc.gif" label="Description:"}
-					<textarea name="netdev[description]" cols="40" rows="5" {tip text="Enter additional information (optional)" }>{$netdev.description}</textarea>
+					<textarea name="netdev[description]" cols="40" rows="5"
+						{tip text="Enter additional information (optional)"}>{$netdev.description|escape}</textarea>
 				{/box_row}
 
 				{box_row icon="img/money.gif" label="Investment project:"}
