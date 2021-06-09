@@ -171,7 +171,7 @@
 			{/box_row}
 
 			{box_row icon="img/note.gif" label="Note"}
-				<TEXTAREA id="info" TYPE="TEXT" NAME="netnode[info]" VALUE="{$netnode.info}" {tip text="Enter notes (optional)"} cols="50" rows="5">{$netnode.info}</TEXTAREA>
+				<TEXTAREA id="info" TYPE="TEXT" NAME="netnode[info]" {tip text="Enter notes (optional)"} cols="50" rows="5">{$netnode.info|escape}</TEXTAREA>
 			{/box_row}
 
 			{box_row icon="img/calendar.gif" label="Last inspection:"}
@@ -179,7 +179,7 @@
 			{/box_row}
 
 			{box_row icon="img/phone.gif" label="Administrative contact:"}
-				<INPUT type="text" name="netnode[admcontact]" maxlenght="10" VALUE="{$netnode.admcontact}">
+				<INPUT type="text" name="netnode[admcontact]" maxlength="10" VALUE="{$netnode.admcontact}">
 			{/box_row}
 
 		{/box_panel}
