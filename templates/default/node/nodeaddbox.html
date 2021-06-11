@@ -137,7 +137,7 @@
 									<IMG SRC="img/ip_pub.gif" ALT="{trans("Pub. IP address:")}">
 								</TD>
 								<TD>
-									<input type="hidden" name="nodedata[pubnetid]" value="{if $nodedata.pubnetid}{$nodeinfo.pubnetid}{else}0{/if}">
+									<input type="hidden" name="nodedata[pubnetid]" value="{if $nodedata.pubnetid}{$nodedata.pubnetid}{else}0{/if}">
 									<INPUT TYPE="TEXT" NAME="nodedata[ipaddr_pub]" VALUE="{$nodedata.ipaddr_pub}" {tip text="Enter IP address (optional)" trigger="ipaddr_pub"}>
 									<a href="javascript:void(0);" onClick="return ipchoosewin({
 											ipelem: document.nodeadd['nodedata[ipaddr_pub]'],
@@ -328,7 +328,7 @@
 									<span class="bold">{trans("GPS longitude:")}</span>
 								</TD>
 								<TD>
-									<INPUT ID="longitude" TYPE="text" NAME="nodedata[longitude]" VALUE="{if $nodeinfo.longitude}{$nodeinfo.longitude}{else}{/if}" {tip text="Enter device longitude (optional)"} trigger="longitude">
+									<INPUT ID="longitude" TYPE="text" NAME="nodedata[longitude]" VALUE="{if $nodedata.longitude}{$nodedata.longitude}{else}{/if}" {tip text="Enter device longitude (optional)"} trigger="longitude">
 									<a href="javascript:void(0);" onClick="return gpscoordschoosewin(document.nodeadd.elements['nodedata[longitude]'], document.nodeadd.elements['nodedata[latitude]']);" {tip text="Click to select gps coordinates from map"}>&raquo;&raquo;&raquo;</A>
 								</TD>
 							</TR>
@@ -340,7 +340,7 @@
 									<span class="bold">{trans("GPS latitude:")}</span>
 								</TD>
 								<TD>
-									<INPUT ID="latitude" TYPE="text" NAME="nodedata[latitude]" VALUE="{if $nodeinfo.latitude}{$nodeinfo.latitude}{else}{/if}" {tip text="Enter device latitude (optional)"} trigger="latitude">
+									<INPUT ID="latitude" TYPE="text" NAME="nodedata[latitude]" VALUE="{if $nodedata.latitude}{$nodedata.latitude}{else}{/if}" {tip text="Enter device latitude (optional)"} trigger="latitude">
 									<a href="javascript:void(0);" onClick="return gpscoordschoosewin(document.nodeadd.elements['nodedata[longitude]'], document.nodeadd.elements['nodedata[latitude]']);" {tip text="Click to select gps coordinates from map"}>&raquo;&raquo;&raquo;</A>
 								</TD>
 							</TR>
