@@ -42,10 +42,10 @@
 	</TFOOT>
 	<TBODY id="nodegrouplist">
 	{foreach $nodegrouplist as $nodegroup}
-	<TR class="highlight" data-nodegroup-id="{$nodegroup.id}" data-name="{$nodegroup.name}">
+	<TR class="highlight" data-nodegroup-id="{$nodegroup.id}" data-name="{$nodegroup.name|escape}">
 		<TD onClick="return self.location.href='?m=nodegroupinfo&id={$nodegroup.id}';">
-			<IMG src="img/nodegroup.gif" alt="">&nbsp;<span class="bold">{$nodegroup.name}</span><BR>
-			{if $nodegroup.description}<IMG src="img/info1.gif" alt="">&nbsp;{$nodegroup.description}{/if}
+			<IMG src="img/nodegroup.gif" alt="">&nbsp;<span class="bold">{$nodegroup.name|escape}</span><BR>
+			{if $nodegroup.description}<IMG src="img/info1.gif" alt="">&nbsp;{$nodegroup.description|escape}{/if}
 		</TD>
 		<TD class="text-right" onClick="return self.location.href='?m=nodegroupinfo&id={$nodegroup.id}';">
 			({$nodegroup.id|string_format:"%04d"})
@@ -108,7 +108,6 @@
 	<script>
 		$('.delete-nodegroup').click(function() {
 			var name = $(this).closest('tr').attr('data-name');
-			console.log('name=', name);
 			confirmDialog($t("Are you sure, you want to remove group '$a'?", name), this).done(function() {
 				location.href = $(this).attr('href');
 			});

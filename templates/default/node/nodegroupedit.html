@@ -15,7 +15,7 @@
 			<B>{trans("Name:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" VALUE="{$nodegroup.name}" NAME="nodegroup[name]" required {tip trigger="name" bold=1}>
+			<INPUT TYPE="TEXT" VALUE="{$nodegroup.name|escape}" NAME="nodegroup[name]" required {tip trigger="name" bold=1}>
 			<B>&nbsp;({$nodegroup.id|string_format:"%04d"})</B>
 		</TD>
 	</TR>
@@ -29,7 +29,7 @@
 			<B>{trans("Description:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<TEXTAREA ROWS="5" COLS="50" NAME="nodegroup[description]" {tip text="Enter additional information (optional)"}>{$nodegroup.description}</TEXTAREA>
+			<TEXTAREA ROWS="5" COLS="50" NAME="nodegroup[description]" {tip text="Enter additional information (optional)"}>{$nodegroup.description|escape}</TEXTAREA>
 		</TD>
 	</TR>
 </FORM>
@@ -43,7 +43,7 @@
 	    		    <A id="move-members" HREF="#">{trans("Move members to group:")}</A>
 			    <SELECT SIZE="1" NAME="to" {tip text="Select group to which you want to move members"}>
 		            {foreach from=$nodegroups item=item}{if $item.id != $nodegroup.id}
-			            <OPTION VALUE="{$item.id}">{$item.name}</OPTION>
+			            <OPTION VALUE="{$item.id}">{$item.name|escape}</OPTION>
 		            {/if}{/foreach}
 		    	    </SELECT>
 			</FORM>

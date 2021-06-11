@@ -15,7 +15,7 @@
 			<B>{trans("Name:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" NAME="nodegroupadd[name]" VALUE="{$nodegroupadd.name}" required {tip trigger="name" bold=1}>
+			<INPUT TYPE="TEXT" NAME="nodegroupadd[name]" VALUE="{$nodegroupadd.name|escape}" required {tip trigger="name" bold=1}>
 		</TD>
 	</TR>
     </THEAD>
@@ -28,7 +28,7 @@
 			<B>{trans("Description:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<TEXTAREA NAME="nodegroupadd[description]" COLS="50" ROWS="5" {tip text="Enter additional information (optional)"}>{$nodegroupadd.description}</TEXTAREA>
+			<TEXTAREA NAME="nodegroupadd[description]" COLS="50" ROWS="5" {tip text="Enter additional information (optional)"}>{$nodegroupadd.description|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>

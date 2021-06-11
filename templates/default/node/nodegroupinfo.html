@@ -10,7 +10,7 @@
 			<IMG SRC="img/nodegroup.gif" ALT="">
 		</TD>
 		<TD WIDTH="99%" COLSPAN="2" NOWRAP>
-			<B>{$nodegroup.name} ({$nodegroup.id|string_format:"%04d"})</B>
+			<B>{$nodegroup.name|escape} ({$nodegroup.id|string_format:"%04d"})</B>
 		</TD>
 	</TR>
     </THEAD>
@@ -33,7 +33,7 @@
 		<TD WIDTH="98%" COLSPAN="2">
 			<TABLE WIDTH="100%" CELLPADDING="3">
 			    <TR><TD CLASS="fall superlight">
-				    {$nodegroup.description|replace:"\n":"<BR>"}
+				    {$nodegroup.description|escape|replace:"\n":"<BR>"}
 			    </TD></TR>
 			</TABLE>
 		</TD>
