@@ -172,17 +172,19 @@
 			<INPUT TYPE="text" NAME="limit" SIZE="3">
 		</TD>
 	</TR>
-	<TR {tip text="Nodes depiction way on charts"}>
-		<TD WIDTH="1%">
-			<IMG src="img/ip.gif">
-		</TD>
-		<TD nowrap>
-			<B>{trans("IP addresses instead of nodes names")}</B>
-		</TD>
-		<TD>
-			<INPUT TYPE="checkbox" NAME="showips" VALUE="1">
-		</TD>
-	</TR>
+	<tr {tip text="Nodes depiction way on charts"}>
+		<td>
+			<img src="img/ip.gif">
+		</td>
+		<td>
+			<label for="showips">
+				{trans("IP addresses instead of nodes names")}
+			</label>
+		</td>
+		<td>
+			<input type="checkbox" name="showips" id="showips" value="1">
+		</td>
+	</tr>
 	<TR>
 		<TD COLSPAN="3" ALIGN="right">
 			<A HREF="javascript:document.traffic.submit();" ACCESSKEY="s">{trans("Submit")} <IMG SRC="img/save.gif" alt=""></A>
