@@ -281,7 +281,7 @@
 												<option value="{$project.id}"{if ($nodeinfo.invprojectid == $project.id)} selected{/if}>{$project.name|escape}</option>
 											{/foreach}
 										</select>
-										<input type="text" name="nodeedit[projectname]" value="{$nodeinfo.projectname}"
+										<input type="text" name="nodeedit[projectname]" value="{$nodeinfo.projectname|escape}"
 											{tip text="Enter new project name" trigger="projectname" } ID="projectname"
 											{if !isset($nodeinfo.invprojectid) || empty($nodeinfo.invprojectid)} style="display: none;"{/if}>
 									</td>
