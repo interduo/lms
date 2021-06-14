@@ -18,7 +18,7 @@
 		</TD>
 		<TD style="width: 98%">
 			<INPUT type="text" name="customergroupadd[name]" value="{$customergroupadd.name}" size="50" required
-				maxlength="255" pattern="[\.\-_a-zA-Z0-9\p{L}]+" {tip trigger="name" bold=1}>
+				maxlength="255" pattern="{literal}[\.\-_a-zA-Z0-9\p{L}]+{/literal}" {tip trigger="name" bold=1}>
 		</TD>
 	</TR>
 	</THEAD>

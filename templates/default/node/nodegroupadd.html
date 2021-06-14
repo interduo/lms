@@ -16,7 +16,7 @@
 		</TD>
 		<TD WIDTH="98%">
 			<INPUT TYPE="TEXT" NAME="nodegroupadd[name]" VALUE="{$nodegroupadd.name|escape}"
-				maxlength="255" pattern="[\.\-_a-zA-Z0-9\p{L}]+" required
+				maxlength="255" pattern="{literal}[\.\-_a-zA-Z0-9\p{L}]+{/literal}" required
 				{tip trigger="name" bold=1}>
 		</TD>
 	</TR>
