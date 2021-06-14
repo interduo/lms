@@ -15,7 +15,8 @@
 			<B>{trans("Name:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" NAME="nodegroupadd[name]" VALUE="{$nodegroupadd.name|escape}" required {tip trigger="name" bold=1}>
+			<INPUT TYPE="TEXT" NAME="nodegroupadd[name]" VALUE="{$nodegroupadd.name|escape}" required
+				maxlength="255" {tip trigger="name" bold=1}>
 		</TD>
 	</TR>
     </THEAD>
