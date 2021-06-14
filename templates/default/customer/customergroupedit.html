@@ -16,7 +16,7 @@
 		</TD>
 		<TD WIDTH="98%">
 			<INPUT TYPE="TEXT" VALUE="{$customergroup.name}" NAME="customergroup[name]" SIZE="40" required
-				maxlength="255" pattern="[\.\-_a-zA-Z0-9\pL]+" {tip trigger="name" bold=1}>
+				maxlength="255" pattern="[\.\-_a-zA-Z0-9\p{L}]+" {tip trigger="name" bold=1}>
 			<B>&nbsp;({$customergroup.id|string_format:"%04d"})</B>
 		</TD>
 	</TR>
