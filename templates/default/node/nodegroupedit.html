@@ -15,8 +15,9 @@
 			<B>{trans("Name:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" VALUE="{$nodegroup.name|escape}" NAME="nodegroup[name]" required
-				maxlength="255" {tip trigger="name" bold=1}>
+			<INPUT TYPE="TEXT" VALUE="{$nodegroup.name|escape}" NAME="nodegroup[name]"
+				maxlength="255" pattern="[\.\-_a-zA-Z0-9\pL]+" required
+				{tip trigger="name" bold=1}>
 			<B>&nbsp;({$nodegroup.id|string_format:"%04d"})</B>
 		</TD>
 	</TR>
