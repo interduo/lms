@@ -111,7 +111,7 @@
 									</td>
 									<td>
 										{if ConfigHelper::checkConfig('phpui.protect_passwords')}
-											<button class="lms-ui-button-clipboard lms-ui-button" data-clipboard-text="{$nodeipdata.passwd}">
+											<button class="lms-ui-button-clipboard lms-ui-button" data-clipboard-text="{$nodeipdata.passwd|escape}">
 												<i class="lms-ui-icon-clipboard"></i> {trans("Copy")}
 											</button>
 										{else}
@@ -204,7 +204,7 @@
 										{trans("Description:")}
 									</td>
 									<td>
-										{$nodeipdata.info}
+										{$nodeipdata.info|escape}
 									</td>
 								</tr>
 								{/if}

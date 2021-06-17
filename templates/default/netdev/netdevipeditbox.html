@@ -147,7 +147,7 @@
 										{trans("Password:")}
 									</td>
 									<td>
-										<input type="text" name="ipadd[passwd]" id="password" value="{$nodeipdata.passwd}" {tip text="Enter password (optional)" trigger="passwd"}>
+										<input type="text" name="ipadd[passwd]" id="password" value="{$nodeipdata.passwd|escape}" {tip text="Enter password (optional)" trigger="passwd"}>
 										<a href="#" id="passGen" {tip text="Click to generate random password"}>&raquo;&raquo;&raquo;</a>
 									</td>
 								</tr>
@@ -211,7 +211,7 @@
 										{trans("Description:")}
 									</td>
 									<td>
-										<textarea name="ipadd[info]" rows="5" cols="40" {tip text="Enter additional information (optional)"}>{$nodeipdata.info}</textarea>
+										<textarea name="ipadd[info]" rows="5" cols="40" {tip text="Enter additional information (optional)"}>{$nodeipdata.info|escape}</textarea>
 									</td>
 								</tr>
 

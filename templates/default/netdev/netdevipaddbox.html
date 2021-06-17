@@ -122,7 +122,7 @@
 			<B>{trans("Password:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<INPUT TYPE="TEXT" NAME="ipadd[passwd]" VALUE="{$nodeipdata.passwd}" {tip text="Enter password (optional)" trigger="passwd"}> <a href="javascript: GenPasswd();" {tip text="Click to generate random password"}>&raquo;&raquo;&raquo;</A>
+			<INPUT TYPE="TEXT" NAME="ipadd[passwd]" VALUE="{$nodeipdata.passwd|escape}" {tip text="Enter password (optional)" trigger="passwd"}> <a href="javascript: GenPasswd();" {tip text="Click to generate random password"}>&raquo;&raquo;&raquo;</A>
 		</TD>
 	</TR>
 	<TR>
@@ -193,7 +193,7 @@
 			<B>{trans("Description:")}</B>
 		</TD>
 		<TD WIDTH="98%">
-			<TEXTAREA NAME="ipadd[info]" ROWS="5" COLS="40" {tip text="Enter additional information (optional)"}>{$nodeipdata.info}</TEXTAREA>
+			<TEXTAREA NAME="ipadd[info]" ROWS="5" COLS="40" {tip text="Enter additional information (optional)"}>{$nodeipdata.info|escape}</TEXTAREA>
 		</TD>
 	</TR>
                                         	</TABLE>
