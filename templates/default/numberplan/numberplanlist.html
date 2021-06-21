@@ -87,7 +87,9 @@
 	</TR>
     </TFOOT>
 </TABLE>
-	<script>
+<script>
+
+	$(function() {
 		$('.delete-numberplan').click(function() {
 			var name = $(this).closest('tr').attr('data-name');
 			confirmDialog($t("Are you sure, you want to delete numberplan '$a'?", name), this).done(function() {
@@ -95,5 +97,7 @@
 			});
 			return false;
 		});
-	</script>
+	});
+
+</script>
 {/block}
