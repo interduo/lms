@@ -2620,7 +2620,8 @@ if (in_array('www', $channels) && (empty($types) || in_array('messages', $types)
         JOIN (SELECT DISTINCT customerid FROM messageitems
             JOIN messages m ON m.id = messageid
             WHERE type = ? AND status = ?
-        ) m ON m.customerid = n.ownerid"
+        ) m ON m.customerid = n.ownerid
+        WHERE 1 = 1"
         . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
         . " ORDER BY ipaddr",
         array(
