@@ -42,6 +42,7 @@ $parameters = array(
     'unblock-prechecks:' => null,
     'customergroups:' => 'g:',
     'customer-status:' => null,
+    'division:' => null,
 );
 
 $long_to_shorts = array();
@@ -115,6 +116,9 @@ lms-notify.php
                                 should be assigned
     --customer-status=<status1,status2,...>
                                 notify only customers with specified status
+    --division=<shortname>
+                                limit notifications to customers which belong to specified
+                                division
 
 EOF;
     exit(0);
@@ -312,7 +316,7 @@ try {
     $DB = LMSDB::getInstance();
 } catch (Exception $ex) {
     trigger_error($ex->getMessage(), E_USER_WARNING);
-    // can't working without database
+    // can't work without database
     die("Fatal error: cannot connect to database!" . PHP_EOL);
 }
 
@@ -321,6 +325,31 @@ try {
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
 require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
+
+if (empty($fakedate)) {
+    $currtime = time();
+} else {
+    $currtime = strtotime($fakedate);
+}
+list ($year, $month, $day) = explode('/', date('Y/n/j', $currtime));
+$daystart = mktime(0, 0, 0, $month, $day, $year);
+$dayend = mktime(23, 59, 59, $month, $day, $year);
+
+$SYSLOG = SYSLOG::getInstance();
+
+// Initialize Session, Auth and LMS classes
+
+$AUTH = null;
+$LMS = new LMS($DB, $AUTH, $SYSLOG);
+
+$plugin_manager = new LMSPluginManager();
+$LMS->setPluginManager($plugin_manager);
+$plugin_manager->executeHook('lms_initialized', $LMS);
+
+$divisionid = isset($options['division']) ? $LMS->getDivisionIdByShortName($options['division']) : null;
+if (!empty($divisionid)) {
+    ConfigHelper::setFilter($divisionid);
+}
 
 // now it's time for script settings
 $smtp_options = array(
@@ -356,12 +385,12 @@ $required_mail_contact_flags = CONTACT_EMAIL | ($ignore_contact_flags ? 0 : CONT
 $checked_mail_contact_flags = $required_mail_contact_flags | CONTACT_DISABLED;
 
 $allowed_customer_status =
-Utils::determineAllowedCustomerStatus(
-    isset($options['customer-status'])
-        ? $options['customer-status']
-        : ConfigHelper::getConfig($config_section . '.allowed_customer_status', ''),
-    -1
-);
+    Utils::determineAllowedCustomerStatus(
+        isset($options['customer-status'])
+            ? $options['customer-status']
+            : ConfigHelper::getConfig($config_section . '.allowed_customer_status', ''),
+        -1
+    );
 
 $content_types = array(
     MSG_MAIL => $mail_content_type,
@@ -422,32 +451,7 @@ if (!empty($auth) && !preg_match('/^LOGIN|PLAIN|CRAM-MD5|NTLM$/i', $auth)) {
     die("Fatal error: smtp_auth setting not supported! Can't continue, exiting." . PHP_EOL);
 }
 
-if (empty($fakedate)) {
-    $currtime = time();
-} else {
-    $currtime = strtotime($fakedate);
-}
-list ($year, $month, $day) = explode('/', date('Y/n/j', $currtime));
-$daystart = mktime(0, 0, 0, $month, $day, $year);
-$dayend = mktime(23, 59, 59, $month, $day, $year);
-
 $deadline = ConfigHelper::getConfig('payments.deadline', ConfigHelper::getConfig('invoices.paytime', 0));
-
-// Include required files (including sequence is important)
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'common.php');
-require_once(LIB_DIR . DIRECTORY_SEPARATOR . 'language.php');
-include_once(LIB_DIR . DIRECTORY_SEPARATOR . 'definitions.php');
-
-$SYSLOG = SYSLOG::getInstance();
-
-// Initialize Session, Auth and LMS classes
-
-$AUTH = null;
-$LMS = new LMS($DB, $AUTH, $SYSLOG);
-
-$plugin_manager = new LMSPluginManager();
-$LMS->setPluginManager($plugin_manager);
-$plugin_manager->executeHook('lms_initialized', $LMS);
 
 // Load plugin files and register hook callbacks
 $plugins = $plugin_manager->getAllPluginInfo(LMSPluginManager::OLD_STYLE);
@@ -877,6 +881,7 @@ if (empty($types) || in_array('documents', $types)) {
         WHERE 1 = 1" . $customer_status_condition . " AND d.type IN (?, ?) AND d.closed = 0
             AND d.confirmdate >= $daystart + ? * 86400
             AND d.confirmdate < $daystart + (? + 1) * 86400"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['documents']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -1054,6 +1059,7 @@ if (empty($types) || in_array('contracts', $types)) {
             GROUP BY customerid
         ) x ON (x.customerid = c.id) " . ($ignore_customer_consents ? '' : 'AND c.smsnotice = 1') . "
         WHERE 1 = 1" . $customer_status_condition . " AND d.dateto >= $daystart + ? * 86400 AND d.dateto < $daystart + (? + 1) * 86400"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['contracts']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: '')
         . " GROUP BY c.id, c.pin, c.lastname, c.name, d.dateto, m.email, x.phone",
@@ -1231,6 +1237,7 @@ if (empty($types) || in_array('debtors', $types)) {
         ) x ON (x.customerid = c.id) " . ($ignore_customer_consents ? '' : 'AND c.smsnotice = 1') . "
         WHERE 1 = 1" . $customer_status_condition
             . " AND c.cutoffstop < $currtime AND b2.balance " . ($limit > 0 ? '>' : '<') . " ?"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['debtors']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -1430,6 +1437,7 @@ if (empty($types) || in_array('reminder', $types)) {
         WHERE 1 = 1" . $customer_status_condition . " AND d.type IN (?, ?, ?) AND d.closed = 0 AND b2.balance < ?
             AND (d.cdate + (d.paytime - ? + 1) * 86400) >= $daystart
             AND (d.cdate + (d.paytime - ? + 1) * 86400) < $dayend"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['reminder']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -1635,6 +1643,7 @@ if (empty($types) || in_array('income', $types)) {
         ) x ON (x.customerid = c.id) " . ($ignore_customer_consents ? '' : 'AND c.smsnotice = 1') . "
         WHERE 1 = 1" . $customer_status_condition
             . " AND cash.type = 1 AND cash.value > 0 AND cash.time >= $daystart + (? * 86400) AND cash.time < $daystart + (? + 1) * 86400"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['income']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -1807,6 +1816,7 @@ if (empty($types) || in_array('invoices', $types)) {
         WHERE 1 = 1" . $customer_status_condition
             . " AND (c.invoicenotice IS NULL OR c.invoicenotice = 0) AND d.type IN (?, ?, ?)
             AND d.cdate >= ? AND d.cdate <= ?"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['invoices']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -1981,6 +1991,7 @@ if (empty($types) || in_array('notes', $types)) {
         WHERE 1 = 1" . $customer_status_condition
             . " AND (c.invoicenotice IS NULL OR c.invoicenotice = 0) AND d.type = ?
             AND d.cdate >= ? AND d.cdate <= ?"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['notes']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -2296,6 +2307,7 @@ if (empty($types) || in_array('warnings', $types)) {
         ) ca ON (ca.customerid = c.id)
         WHERE 1 = 1" . $customer_status_condition
             . " AND c.id IN (SELECT DISTINCT ownerid FROM vnodes WHERE warning = 1)"
+            . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
             . ($notifications['warnings']['deleted_customers'] ? '' : ' AND c.deleted = 0')
             . ($customergroups ?: ''),
         array(
@@ -2604,11 +2616,18 @@ if (in_array('www', $channels) && (empty($types) || in_array('messages', $types)
 
     $nodes = $DB->GetAll("SELECT INET_NTOA(ipaddr) AS ip
             FROM vnodes n
+        JOIN customeraddressview c ON c.id = n.ownerid
         JOIN (SELECT DISTINCT customerid FROM messageitems
             JOIN messages m ON m.id = messageid
             WHERE type = ? AND status = ?
-        ) m ON m.customerid = n.ownerid
-        ORDER BY ipaddr", array(MSG_WWW, MSG_NEW));
+        ) m ON m.customerid = n.ownerid"
+        . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
+        . " ORDER BY ipaddr",
+        array(
+            MSG_WWW,
+            MSG_NEW
+        )
+    );
 
     if (!$debug && $fh) {
         fwrite($fh, str_replace("\\n", PHP_EOL, $notifications['messages']['header']));
@@ -2755,6 +2774,7 @@ if (!empty($intersect)) {
                     $customers = $DB->GetCol(
                         'SELECT c.id FROM customers c
                         WHERE c.id IN (' . implode(',', $customers) . ')'
+                        . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
                         . (empty($where) ? '' : ' AND (' . implode(' AND ', $where) . ')')
                     );
                     if (empty($customers)) {
@@ -2975,6 +2995,7 @@ if (!empty($intersect)) {
                         'SELECT c.id FROM customers c
                         WHERE 1 = 1' . $customer_status_condition
                         . (empty($customers) ? '' : ' AND c.id NOT IN (' . implode(',', $customers) . ')')
+                        . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
                         . (empty($where) ? '' : ' AND (' . implode(' AND ', $where) . ')')
                         . ($customergroups ?: '')
                     );
