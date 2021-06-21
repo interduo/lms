@@ -3483,13 +3483,7 @@ $_LANG['tax rate<!syslog>'] = 'stawka podatkowa';
 $_LANG['number plan<!syslog>'] = 'plan numeracyjny';
 $_LANG['Number plan:'] = 'Plan numeracyjny:';
 $_LANG['number plan assignment<!syslog>'] = 'powiązanie planu numeracyjnego z firmą';
-<<<<<<< HEAD
-=======
-$_LANG['number plan user<!syslog>'] = 'użytkownik planu numeracyjnego';
 $_LANG['Number plan is used by existing documents!'] = 'Plan numeracyjny używany w istniejących dokumentach!';
-$_LANG['VoIP account<!syslog>'] = 'konto VoIP';
-$_LANG['VoIP account number<!syslog>'] = 'number przypisany do konta VoIP';
->>>>>>> 575cfff41 (improvement: disable delete button if given number plan is used by some existing documents (LMS+ fixes #1862))
 $_LANG['division<!syslog>'] = 'firma';
 $_LANG['country<!syslog>'] = 'kraj';
 $_LANG['state<!syslog>'] = 'województwo';
