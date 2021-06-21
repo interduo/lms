@@ -51,7 +51,7 @@
 			{if $numberplanlist[numberplanlist].isdefault}{trans("yes")}{/if}
 		</TD>
 		<TD align="right" NOWRAP>
-			{if empty($$numberplanlist[numberplanlist].issued)}
+			{if empty($numberplanlist[numberplanlist].issued)}
 				<A class="delete-numberplan" href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}">
 					<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}">
 				</A>
