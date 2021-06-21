@@ -56,7 +56,8 @@
 					<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}">
 				</A>
 			{else}
-				<A class="delete-numberplan" href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}" disabled>
+				<A class="delete-numberplan lms-ui-button"
+					href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}" disabled>
 					<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Number plan is used by existing documents!")}">
 				</A>
 			{/if}
