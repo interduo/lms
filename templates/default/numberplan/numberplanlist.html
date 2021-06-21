@@ -51,7 +51,15 @@
 			{if $numberplanlist[numberplanlist].isdefault}{trans("yes")}{/if}
 		</TD>
 		<TD align="right" NOWRAP>
-			<A class="delete-numberplan" href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}"><IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}"></A>
+			{if empty($$numberplanlist[numberplanlist].issued)}
+				<A class="delete-numberplan" href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}">
+					<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Delete")}">
+				</A>
+			{else}
+				<A class="delete-numberplan" href="?m=numberplandel&id={$numberplanlist[numberplanlist].id}" disabled>
+					<IMG src="img/delete.gif" alt="{trans("Delete")}" title="{trans("Number plan is used by existing documents!")}">
+				</A>
+			{/if}
 			<A href="?m=numberplanedit&amp;id={$numberplanlist[numberplanlist].id}"><IMG src="img/edit.gif" alt="{trans("Edit")}" title="{trans("Edit")}"></A>
 		</TD>
 	</TR>
