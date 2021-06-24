@@ -1006,7 +1006,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
             if ($data['datefrom'] < $data['dateto'] || !$data['datefrom'] || !$data['dateto']) {
                 // creates one assignment record
-                if (empty($data['tariffid'])) {
+                if (isset($data['tariffid']) && empty($data['tariffid'])) {
                     $args = array(
                         'name' => $data['name'],
                         'value' => str_replace(',', '.', $data['value']),
