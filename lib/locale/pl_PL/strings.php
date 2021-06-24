@@ -24,6 +24,10 @@
  *  $Id$
  */
 
+$_LANG['Previous balance: $a $b'] = 'Dotychczasowe saldo: $a $b';
+$_LANG['Total to pay: $a'] = 'Razem do zapłaty: $a';
+$_LANG['Invoice value: $a'] = 'Wartość faktury: $a';
+
 $_LANG['Birth date cannot be empty for natural person!'] = 'Data urodzenia nie może być pusta w przypadku osoby fizycznej!';
 $_LANG['First name cannot be empty for natural person!'] = 'Imię nie może być puste w przypadku osoby fizycznej!';
 $_LANG['Last name cannot be empty for natural person!'] = 'Nazwisko nie może być puste w przypadku osoby fizycznej!';
@@ -1842,7 +1846,7 @@ $_LANG['To'] = 'Do';
 $_LANG['To:'] = 'Do:';
 $_LANG['To add a new network see "IP Networks" menu.'] = 'Aby dodać nową sieć, zobacz menu "Sieci IP".';
 $_LANG['To (day/month/year hh:mm):'] = 'Do (dzień/miesiąc/rok gg:mm):';
-$_LANG['To pay:'] = 'Do zapłaty:';
+$_LANG['To pay: $a'] = 'Do zapłaty: $a';
 $_LANG['Total:'] = 'Razem:';
 $_LANG['Total: $a'] = 'Razem: $a';
 $_LANG['Total Dues:'] = 'W tym zadłużonych:';
@@ -2100,7 +2104,7 @@ $_LANG['Remove this item'] = 'Usuń tę pozycję';
 $_LANG['Revise'] = 'Koryguj';
 $_LANG['Was:'] = 'Było:';
 $_LANG['Credit note template file. Default: "invoice.html". Should be placed in templates directory.'] = 'Szablon faktury korygującej. Domyślnie:"invoice.html". Powinien być umieszczony w katalogu templates.';
-$_LANG['To repay:'] = 'Do zwrotu:';
+$_LANG['To repay: $a'] = 'Do zwrotu: $a';
 $_LANG['Credit note date cannot be earlier than invoice date!'] = 'Data wystawienia korekty nie może być wcześniejsza od daty wystawienia korygowanej faktury';
 $_LANG['Credit note sale date cannot be earlier than invoice sale date!'] = 'Data sprzedaży korekty nie może być wcześniejsza od daty sprzedaży korygowanej faktury';
 $_LANG['Incorrect date format! Using current date.'] = 'Nieprawidłowy format daty! Przyjęto bieżącą datę.';
