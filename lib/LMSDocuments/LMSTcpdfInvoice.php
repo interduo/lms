@@ -639,7 +639,7 @@ class LMSTcpdfInvoice extends LMSInvoice
                 '',
                 trans(
                     'Previous balance: $a $b',
-                    moneyf(-$expired_balance / $this->data['currencyvalue'], $this->data['currency']),
+                    moneyf(abs($expired_balance) / $this->data['currencyvalue'], $this->data['currency']),
                     $comment
                 ),
                 0,
