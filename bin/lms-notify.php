@@ -2614,7 +2614,8 @@ if (in_array('www', $channels) && (empty($types) || in_array('messages', $types)
         $fh = fopen($notifications['messages']['file'], 'w');
     }
 
-    $nodes = $DB->GetAll("SELECT INET_NTOA(ipaddr) AS ip
+    $nodes = $DB->GetAll(
+        "SELECT INET_NTOA(ipaddr) AS ip
             FROM vnodes n
         JOIN customeraddressview c ON c.id = n.ownerid
         JOIN (SELECT DISTINCT customerid FROM messageitems

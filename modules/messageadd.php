@@ -238,7 +238,8 @@ function GetRecipients($filter, $type = MSG_MAIL)
 			WHERE customerid = c.id AND tariffid IS NULL AND liabilityid IS NULL
 				AND (datefrom = 0 OR datefrom < ?NOW?)
 				AND (dateto = 0 OR dateto > ?NOW?))' : '')
-        .' ORDER BY customername');
+        .' ORDER BY customername'
+    );
 
     return $recipients;
 }
