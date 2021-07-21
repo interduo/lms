@@ -3352,7 +3352,7 @@ CREATE VIEW vinvoicecontents AS
         END) AS netvalue,
         (CASE WHEN (d.flags & 16) > 0
             THEN
-                ROUND(ic.value * ABS(ic.count), 2)
+                ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / 100, 2)
             ELSE
                 ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)
         END) AS taxvalue,
@@ -4016,6 +4016,6 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121417');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121418');
 
 COMMIT;
