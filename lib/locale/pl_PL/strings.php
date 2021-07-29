@@ -28,6 +28,8 @@ $_LANG['Previous balance: $a $b'] = 'Dotychczasowe saldo: $a $b';
 $_LANG['Total to pay: $a'] = 'Razem do zapłaty: $a';
 $_LANG['Invoice value: $a'] = 'Wartość faktury: $a';
 
+$_LANG['Select tariff'] = 'Wybierz taryfę';
+
 $_LANG['Birth date cannot be empty for natural person!'] = 'Data urodzenia nie może być pusta w przypadku osoby fizycznej!';
 $_LANG['First name cannot be empty for natural person!'] = 'Imię nie może być puste w przypadku osoby fizycznej!';
 $_LANG['Last name cannot be empty for natural person!'] = 'Nazwisko nie może być puste w przypadku osoby fizycznej!';
