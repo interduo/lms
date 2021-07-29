@@ -2972,7 +2972,7 @@ if (!empty($intersect)) {
                                         break;
                                 }
                                 $where[] = 'EXISTS (SELECT id FROM assignments
-                                    WHERE invoice <> ' . $target_doctype . ' AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
+                                    WHERE invoice = ' . $target_doctype . ' AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
                                         AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
                                         AND customerid = c.id)';
                                 break;
@@ -3052,25 +3052,9 @@ if (!empty($intersect)) {
                                             printf("[unblock/assignment-invoice] CustomerID: %04d, AssignmentID: %04d" . PHP_EOL, $assign['customerid'], $assign['id']);
                                         }
 
-                                        if (empty($action_params)) {
-                                            $target_doctype = 0;
-                                        } else {
-                                            switch (reset($action_params)) {
-                                                case 'proforma':
-                                                    $target_doctype = DOC_INVOICE_PRO;
-                                                    break;
-                                                case 'invoice':
-                                                    $target_doctype = DOC_INVOICE;
-                                                    break;
-                                                case 'note':
-                                                    $target_doctype = DOC_DNOTE;
-                                                    break;
-                                            }
-                                        }
-
                                         if (!$debug) {
                                             $DB->Execute("UPDATE assignments SET invoice = ?
-                                                WHERE id = ?", array($target_doctype, $assign['id']));
+                                                WHERE id = ?", array(DOC_INVOICE, $assign['id']));
                                             if ($SYSLOG) {
                                                 $SYSLOG->NewTransaction('lms-notify.php');
                                                 $SYSLOG->AddMessage(
@@ -3079,7 +3063,7 @@ if (!empty($intersect)) {
                                                     array(
                                                         SYSLOG::RES_ASSIGN => $assign['id'],
                                                         SYSLOG::RES_CUST => $assign['customerid'],
-                                                        'invoice' => $target_doctype,
+                                                        'invoice' => DOC_INVOICE,
                                                     )
                                                 );
                                             }
