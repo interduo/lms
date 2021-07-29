@@ -509,7 +509,7 @@ $menu = array(
                 'documenttypes' => array(
                     'name' => trans('Access rights'),
                     'link' => '?m=documenttypes',
-                    'tip' => trans('Users access rights to documents by type'),
+                    'tip' => trans('Users access rights to document by type'),
                     'prio' => 50,
                 ),
             ),
