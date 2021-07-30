@@ -249,13 +249,14 @@ function GetCustomers($customers)
     $DB = LMSDB::getInstance();
 
     return $DB->GetAllByKey(
-        'SELECT c.id, pin, '
+        'SELECT c.id, pin, c.divisionid, '
         . $DB->Concat('c.lastname', "' '", 'c.name') . ' AS customername,
         divisions.account,
 		COALESCE((SELECT SUM(value) FROM cash WHERE customerid = c.id), 0) AS balance
 		FROM customerview c
 		LEFT JOIN divisions ON divisions.id = c.divisionid
-		WHERE c.id IN ?',
+		WHERE c.id IN ?
+		ORDER BY c.divisionid, customername',
         'id',
         array($customers)
     );
