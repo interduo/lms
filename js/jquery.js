@@ -1226,7 +1226,8 @@ $(function() {
 
 	if (tooltipsEnabled) {
 		$(document).on('mouseenter', '[title]', function () {
-			if ($(this).is('[data-tooltip]') || $(this).closest('.tox-tinymce,.tox-tinymce-aux').length) {
+			if ($(this).is('[data-tooltip]') || $(this).closest('.tox-tinymce,.tox-tinymce-aux').length ||
+				$(this).prop('disabled') || $(this).is('[disabled]')) {
 				return;
 			}
 			tooltipClass = '';
