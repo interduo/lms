@@ -662,7 +662,8 @@ function init_titlebars(selector) {
 		$(this).prop('onclick', null);
 		$(this).click(function () {
 			var elemid = $(this).attr('data-lmsbox-content');
-			showOrHide(elemid);
+			$('#' + elemid).toggle();
+			setStorageItem(elemid, $('#' + elemid).is(':visible') ? '1' : '0', 'local');
 			$('#' + elemid).find('.lms-ui-datatable').each(function () {
 				if (!$.fn.dataTable.isDataTable(this)) {
 					init_datatables(this);
@@ -946,7 +947,186 @@ function initMultiChecks(selector) {
 			});
 		});
 	});
+}
 
+function initRolloverHints(selectors) {
+	if (!Array.isArray(selectors)) {
+		selectors = [ selectors ];
+	}
+
+	$.each(selectors, function(idx, selector) {
+		$(selector).each(function() {
+			var elem = $(this);
+			if (!elem.is('[data-init]')) {
+				var content = elem.attr('data-hint');
+				var url = elem.attr('data-url');
+
+				elem.attr('data-init', '1').removeAttr('data-hint');
+
+				if (url) {
+					content = function (callback) {
+						$.ajax(url, {
+							async: true,
+							success: function(data) {
+								callback('<div class="lms-ui-hint-titlebar">' +
+									'<div class="lms-ui-hint-title"></div>' +
+									'<i class="lms-ui-icon-hide close-button"></i>' +
+									'</div>' +
+									'<div class="lms-ui-hint-content">' +
+									data +
+									'</div>'
+								);
+							}
+						});
+					}
+				} else {
+					content = '<div class="lms-ui-hint-titlebar">' +
+						'<div class="lms-ui-hint-title"></div>' +
+						'<i class="lms-ui-icon-hide close-button"></i>' +
+						'</div>' +
+						'<div class="lms-ui-hint-content">' +
+						content +
+						'</div>';
+				}
+
+				elem.tooltip({
+					items: elem,
+					show: false,
+					//hide: false,
+					track: false,
+					position: {my: "left top", at: "left bottom", collision: "flipfit"},
+					open: function (e, ui) {
+						$(ui.tooltip).find('.close-button').click(function () {
+							elem.tooltip('close').removeClass('open');
+							if ($('body.lms-ui-mobile').length) {
+								disableFullScreenPopup();
+							}
+							$(ui.tooltip).remove();
+						});
+						elem.addClass('open');
+						if ($('body.lms-ui-mobile').length) {
+							enableFullScreenPopup();
+						}
+						if (typeof (e.originalEvent) === 'undefined') {
+							return false;
+						}
+						var id = $(ui.tooltip).attr('id');
+						$('div.ui-tooltip').not('#' + id).remove();
+					},
+					close: function (e, ui) {
+						$(ui.tooltip).mouseenter(function () {
+							$(this).stop(true);
+						}).mouseleave(function () {
+							elem.tooltip('close').toggleClass('open');
+							if ($('body.lms-ui-mobile').length) {
+								disableFullScreenPopup();
+							}
+							$(this).remove();
+						});
+					},
+					create: function() {
+						elem.tooltip('open');
+					},
+					tooltipClass: 'lms-ui-hint-rollover',
+					content: content
+				});
+			}
+		});
+	});
+}
+
+function initToggleHints(selectors) {
+	if (!Array.isArray(selectors)) {
+		selectors = [ selectors ];
+	}
+
+	$.each(selectors, function(idx, selector) {
+		$(selector).each(function() {
+			var elem = $(this);
+			if (!elem.is('[data-init]')) {
+				var content = elem.attr('data-hint');
+				var url = elem.attr('data-url');
+
+				elem.attr('data-init', '1').removeAttr('data-hint');
+
+				elem.on('mouseenter mouseover mouseleave', function(e) {
+					e.stopImmediatePropagation();
+				}).click(function() {
+					if (!elem.is('[data-init="2"]')) {
+						elem.attr('data-init', '2');
+
+						if (url) {
+							content = function (callback) {
+								$.ajax(url, {
+									async: true,
+									success: function(data) {
+										callback('<div class="lms-ui-hint-titlebar">' +
+											'<div class="lms-ui-hint-title"></div>' +
+											'<i class="lms-ui-icon-hide close-button"></i>' +
+											'</div>' +
+											'<div class="lms-ui-hint-content">' +
+											data +
+											'</div>'
+										);
+										elem.tooltip('open');
+									}
+								});
+							}
+						} else {
+							content = '<div class="lms-ui-hint-titlebar">' +
+								'<div class="lms-ui-hint-title"></div>' +
+								'<i class="lms-ui-icon-hide close-button"></i>' +
+								'</div>' +
+								'<div class="lms-ui-hint-content">' +
+								content +
+								'</div>';
+						}
+
+						elem.tooltip({
+							items: elem,
+							show: false,
+							hide: false,
+							track: false,
+							position: {my: "left top", at: "left bottom", collision: "flipfit"},
+							open: function (e, ui) {
+								$(ui.tooltip).find('.close-button').click(function () {
+									elem.tooltip('close').toggleClass('open');
+									if ($('body.lms-ui-mobile').length) {
+										disableFullScreenPopup();
+									}
+								});
+								if (typeof (e.originalEvent) === 'undefined') {
+									return false;
+								}
+								var id = $(ui.tooltip).attr('id');
+								$('div.ui-tooltip').not('#' + id).remove();
+							},
+							close: function (e, ui) {
+								$(ui.tooltip).mouseenter(function () {
+									$(this).stop(true);
+								}).mouseleave(function () {
+									$(this).remove();
+								});
+							},
+							tooltipClass: 'lms-ui-hint-toggle',
+							content: content
+						});
+					}
+					if (elem.is('.open')) {
+						if ($('body.lms-ui-mobile').length) {
+							disableFullScreenPopup();
+						}
+						elem.tooltip('close').toggleClass('open');
+					} else {
+						if ($('body.lms-ui-mobile').length) {
+							enableFullScreenPopup();
+						}
+						elem.tooltip('open').toggleClass('open');
+					}
+				});
+			}
+		});
+	});
 }
 
 function showGallery(data) {
@@ -1180,6 +1360,9 @@ $(function() {
 		function(e) {
 			var elem = $(this);
 			var target = $(e.target);
+			if (target.closest('.lms-ui-ignore-target-url').length) {
+				return;
+			}
 			if (e.type == 'mousedown') {
 				elem.data('mousedown', Date.now());
 				return;
@@ -1225,7 +1408,7 @@ $(function() {
 	});
 
 	if (tooltipsEnabled) {
-		$(document).on('mouseenter', '[title]', function () {
+		$(document).on('mouseenter', '[title]:not(.lms-ui-hint-rollover,.lms-ui-hint-toggle)', function () {
 			if ($(this).is('[data-tooltip]') || $(this).closest('.tox-tinymce,.tox-tinymce-aux').length ||
 				$(this).prop('disabled') || $(this).is('[disabled]')) {
 				return;
@@ -1260,53 +1443,122 @@ $(function() {
 		});
 	}
 
-	[
-		{ class: 'lms-ui-tooltip-voipaccountinfo', url: '?m=voipaccountinfoshort&id='},
-		{ class: 'lms-ui-tooltip-invoiceinfo', url: '?m=invoiceinfo&id='},
-		{ class: 'lms-ui-tooltip-docnumber', url: '?m=number&id='},
-		{ class: 'lms-ui-tooltip-customerinfo', url: '?m=customerinfoshort&id='},
-		{ class: 'lms-ui-tooltip-nodelist', url: '?m=nodelistshort&id='},
-		{ class: 'lms-ui-tooltip-ewxnodelist', url: '?m=ewxnodelist&id='},
-		{ class: 'lms-ui-tooltip-rtticketinfo', url: '?m=rtticketinfo&id='},
-		{ class: 'lms-ui-tooltip-customerassignmentinfo', url: '?m=customerassignmentinfo&id='},
-		{ class: 'lms-ui-tooltip-nodegroupinfo', url: '?m=nodeinfo&nodegroups=1&id='},
-		{ class: 'lms-ui-tooltip-netdevlist', url: '?m=ewxdevlist&id='},
-		{ class: 'lms-ui-tooltip-eventinfoshort', url: '?m=eventinfoshort&id='}
-	].forEach(function(popup) {
-		$('.' + popup.class).tooltip({
-			items: '.' + popup.class,
-			show: false,
-			//hide: false,
-			track: false,
-			position: { my: "left top", at: "left bottom", collision: "flipfit" },
-			open: function(e, ui) {
-				if (typeof(e.originalEvent) === 'undefined') {
-					return false;
-				}
-				var id = $(ui.tooltip).attr('id');
-				$('div.ui-tooltip').not('#' + id).remove();
-			},
-			close: function(e, ui) {
-				$(ui.tooltip).mouseenter(function() {
-					$(this).stop(true);
-				}).mouseleave(function() {
-					$(this).remove();
-				});
-			},
-			tooltipClass: popup.class,
-			content: function(callback) {
-				var elem = $(this);
-				var resourceid = elem.attr('data-resourceid');
-				$.ajax(popup.url + resourceid, {
-					async: true,
-					success: function(data) {
-						callback(data);
-						// elem.tooltip('disable');
-						// elem.tooltip('enable');
+	$(document).keydown(function(e) {
+		if (e.key != 'Escape') {
+			return;
+		}
+		$(':ui-tooltip').tooltip('close').toggleClass('open');
+		disableFullScreenPopup();
+		var tooltip = $('.lms-ui-hint-rollover[data-init="1"]').data('uiTooltip');
+		if (tooltip && typeof(tooltip.tooltips) == 'object') {
+			$.each(tooltip.tooltips, function(index) {
+				$('#' + index).remove();
+			});
+		}
+	});
+
+	$(document).on('mouseenter', '.lms-ui-hint-rollover,.lms-ui-hint-toggle', function() {
+		if ($(this).is('.ui-tooltip') || $(this).is('[data-init]')) {
+			return;
+		}
+		if ($(this).is('.lms-ui-hint-rollover')) {
+			initRolloverHints(this);
+		} else {
+			initToggleHints(this);
+		}
+	});
+
+	var SpeechRecognition = window.hasOwnProperty('SpeechRecognition') ?
+		SpeechRecognition :
+		(window.hasOwnProperty('webkitSpeechRecognition') ? webkitSpeechRecognition : null);
+	var speechRecognitionTimeout = null;
+
+	if (SpeechRecognition) {
+		$('.lms-ui-button-speech-recognition').click(function () {
+			var button = $(this);
+			var input = $(button.attr('data-target'));
+			var inputId = input.attr('id');
+			button.toggleClass('active');
+			if (button.is('.active')) {
+				$('.lms-ui-button-speech-recognition.active').not(button).removeClass('active');
+				var recognition = new SpeechRecognition();
+				recognition.continuous = true;
+				recognition.lang = lmsSettings.uiLanguage.replace('_', '-');
+				recognition.interimResults = false;
+				recognition.maxAlternatives = 1;
+				recognition.onresult = function (e) {
+					var value = input.val();
+					if (e.results.length) {
+						var result = e.results[e.results.length - 1][0].transcript;
+						var editor = tinyMCE.get(inputId);
+						if (editor && !editor.isHidden()) {
+							editor.insertContent(result);
+						} else {
+							var beginSubString = value.substring(0, input.get(0).selectionStart);
+							beginSubString += beginSubString.length && beginSubString[beginSubString.length - 1] != ' ' ? ' ' : '';
+							var endSubString = value.substring(input.get(0).selectionEnd);
+							endSubString = (endSubString.length && endSubString[0] != ' ' ? ' ' : '') + endSubString;
+							input.val(beginSubString + result + endSubString);
+							input.get(0).selectionStart = input.get(0).selectionEnd = beginSubString.length + result.length;
+							if (editor) {
+								editor.setContent(input.val());
+							}
+						}
+						if (speechRecognitionTimeout) {
+							clearTimeout(speechRecognitionTimeout);
+						}
+						speechRecognitionTimeout = setTimeout(function () {
+							recognition.stop();
+							button.removeClass('active');
+						}, 5000);
 					}
-				});
+				}
+				recognition.onspeechstart = function() {
+					if (speechRecognitionTimeout) {
+						clearTimeout(speechRecognitionTimeout);
+						speechRecognitionTimeout = null;
+					}
+				}
+				recognition.onspeechend = function() {
+					if (speechRecognitionTimeout) {
+						clearTimeout(speechRecognitionTimeout);
+					}
+					speechRecognitionTimeout = setTimeout(function () {
+						recognition.stop();
+						button.removeClass('active');
+					}, 5000);
+				}
+				recognition.start();
+				speechRecognitionTimeout = setTimeout(function () {
+					recognition.stop();
+					button.removeClass('active');
+				}, 5000);
+			} else {
+				if (speechRecognitionTimeout) {
+					clearTimeout(speechRecognitionTimeout);
+					speechRecognitionTimeout = null;
+				}
 			}
 		});
+	} else {
+		$('.lms-ui-button-speech-recognition').hide();
+	}
+
+	$(document).mouseup(function(e) {
+		var hintPopups = $('.lms-ui-hint-toggle.ui-tooltip');
+		var hintTrigger = $(e.target).closest('.lms-ui-hint-toggle:not(.ui-tooltip)');
+		var hintTriggers = $('.lms-ui-hint-toggle:not(.ui-tooltip).open');
+		if ((!hintTrigger.length ||
+				!hintTriggers.is(hintTrigger)) &&
+			hintPopups.length &&
+			!hintPopups.is(e.target) &&
+			!hintPopups.has(e.target).length)
+		{
+			$('.lms-ui-hint-toggle[data-init="2"].open').filter(function() {
+				return hintTrigger.length && !$(this).is(hintTrigger) || !hintTrigger.length;
+			}).tooltip('close').toggleClass('open');
+			disableFullScreenPopup();
+		}
 	});
 
 	initAdvancedSelects('select.lms-ui-advanced-select');
@@ -1677,12 +1929,12 @@ $(function() {
 			} else {
 				inputname = $(this).closest('form').attr('name') + '[wysiwyg]';
 			}
-			parent.append($('<div class="lms-ui-wysiwyg-editor"><label>' +
-				'<input type="hidden" name="' + inputname + '" value="false">' +
-				'<input type="checkbox" name="' + inputname +
-				'" value="true"' + (wysiwyg ? ' checked' : '') + '>' + $t('visual editor') +
-				'</label></div')).find('div.lms-ui-wysiwyg-editor').append(this);
-
+			$(this).wrap('<div class="lms-ui-wysiwyg-editor"/>')
+				.parent().prepend('<label>' +
+					'<input type="hidden" name="' + inputname + '" value="false">' +
+					'<input type="checkbox" name="' + inputname +
+					'" value="true"' + (wysiwyg ? ' checked' : '') + '>' + $t('visual editor') +
+					'</label>');
 			// it is required as textarea changed value is not propagated automatically to editor instance content
 			$(this).change(function(e) {
 				var editor = tinymce.get(textareaid);

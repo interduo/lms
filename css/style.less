@@ -39,6 +39,7 @@
 @import "less/advanced-select";
 @import "less/combobox";
 @import "less/customer-select";
+@import "less/hint";
 
 html {
 	height: 100%;
@@ -641,8 +642,22 @@ input[type="text"][disabled] {
 	background-color: transparent;
 }
 
-INPUT[type="radio"] {
+input[type="radio"] {
     vertical-align: text-bottom;
+}
+
+.lms-ui-disabled {
+	color: @blend;
+	* {
+		color: inherit;
+	}
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+	&[disabled] + .lms-ui-label {
+		color: @blend;
+	}
 }
 
 input {
@@ -814,6 +829,14 @@ select {
 
 IMG		{ vertical-align: middle; border: 0; }
 
+.lms-ui-cell-flex {
+	display: inline-flex;
+	align-items: center;
+	> *:not(:last-child) {
+		margin-right: 0.3em;
+	}
+}
+
 .click-menu {
 	//font-size: 100%;
 	padding: 0 0;
@@ -955,6 +978,12 @@ IMG		{ vertical-align: middle; border: 0; }
 .suspended	{ color: #30B6C6; }
 .bold		{ font-weight: bold; }
 .crossed	{ text-decoration: line-through; }
+
+.lms-ui-crossed	{
+	text-decoration: @crossed-text-decoration;
+	text-decoration-color: @crossed-text-decoration-color;
+	text-decoration-thickness: @crossed-text-decoration-thickness;
+}
 
 .pre {
 	font-size: @font-size-high;
@@ -1222,7 +1251,7 @@ IMG		{ vertical-align: middle; border: 0; }
 }
 
 .lms-ui-assignment-not-commited {
-	text-decoration: line-through;
+	.lms-ui-crossed;
 }
 
 .lms-ui-document-closed {
@@ -1349,6 +1378,11 @@ table.lmsbox {
 						margin-left: 0.3em;
 					}
 				}
+			}
+			&.empty-table {
+				text-align: center;
+				font-weight: bold;
+				padding: 2.5em;
 			}
 		}
 		& > thead {
@@ -1660,11 +1694,9 @@ tr.space_row > td {
 
 td.empty-table {
 	background-color: @lucid;
-	p {
-		text-align: center;
-		font-weight: bold;
-		padding: 2em;
-	}
+	text-align: center;
+	font-weight: bold;
+	padding: 2.5em;
 }
 
 td.multiselect {
@@ -1729,8 +1761,32 @@ td.multiselect {
 	vertical-align: top;
 }
 
+div.valign-top {
+	display: inline-flex;
+	align-items: flex-start;
+	> :not(:last-child) {
+		margin-right: 0.5em;
+	}
+}
+
+div.valign-middle {
+	display: inline-flex;
+	align-items: center;
+	> :not(:last-child) {
+		margin-right: 0.5em;
+	}
+}
+
 .valign-bottom {
 	vertical-align: bottom;
+}
+
+div.valign-bottom {
+	display: inline-flex;
+	align-items: flex-end;
+	> :not(:last-child) {
+		margin-right: 0.5em;
+	}
 }
 
 /**
@@ -1796,6 +1852,13 @@ td.multiselect {
 	}
 	.ui-selectmenu-icon {
 		height: 15px;
+	}
+}
+
+.ui-selectmenu-menu .ui-widget-content {
+	background-color: @lucid !important;
+	.ui-menu-divider {
+		margin: 0;
 	}
 }
 
@@ -2031,7 +2094,7 @@ div.lms-ui-persistent-filter {
 }
 
 div.lms-ui-wysiwyg-editor {
-	display: flex;
+	display: inline-flex;
 	flex-direction: column;
 	justify-content: flex-start;
 	align-items: flex-start;
@@ -2167,10 +2230,10 @@ div.lms-ui-wysiwyg-editor {
 					margin: 0.25em;
 				}
 				& .lms-ui-box-row-icon {
-					align-self: flex-start;
+					//align-self: flex-start;
 				}
 				& .lms-ui-box-row-label {
-					align-self: flex-start;
+					//align-self: flex-start;
 					font-weight: bold;
 				}
 				& .lms-ui-box-row-field {
@@ -2178,7 +2241,7 @@ div.lms-ui-wysiwyg-editor {
 					flex-direction: row;
 					justify-content: flex-start;
 					align-items: center;
-					align-self: flex-start;
+					//align-self: flex-start;
 					& > * {
 						margin-right: 0.3em;
 					}
@@ -2432,6 +2495,9 @@ table.lms-ui-mac-address-selection {
 			visibility: visible;
 			cursor: pointer;
 		}
+		.mac-selector {
+			margin-left: 0.4em;
+		}
 	}
 }
 
@@ -2488,18 +2554,18 @@ fieldset {
 .lms-ui-date-container,
 .lms-ui-datetime-container {
 	display: inline-flex;
-	padding-right: 0.4em;
+	//padding-right: 0.4em;
 }
 
 .lms-ui-category-label {
 	box-shadow: 0 0.1em 0.1em #888;
+	border: @form-element-border;
 	background-color: white;
 	color: black;
 	padding: 0.35em;
 	text-decoration: none;
 	border-radius: 0.45em;
 	display: inline-block;
-	font-weight: bold;
 }
 
 #lms-ui-resource-tab-selector-container {
@@ -2508,6 +2574,13 @@ fieldset {
 	> div:first-child {
 		font-weight: bold;
 		display: inline-block;
+	}
+}
+
+.lms-ui-date-period-container {
+	white-space: nowrap;
+	> *:not(:last-child) {
+		padding-right: 0.3em;
 	}
 }
 

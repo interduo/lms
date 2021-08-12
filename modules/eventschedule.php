@@ -122,12 +122,12 @@ if (!isset($_POST['loginform']) && !empty($_POST)) {
 
     $filter['userand'] = isset($_GET['userand']) ? intval($_GET['userand']) : 0;
 
-    if (isset($_GET['a'])) {
-        $filter['userid'] = $_GET['a'];
+    if (isset($_GET['userid'])) {
+        $filter['userid'] = $_GET['userid'];
     }
 
-    if (isset($_GET['u'])) {
-        $filter['customerid'] = $_GET['u'] == 'all' ? null : $_GET['u'];
+    if (isset($_GET['customerid'])) {
+        $filter['customerid'] = $_GET['customerid'] == 'all' ? null : $_GET['customerid'];
     }
 
     if (isset($_GET['type'])) {
@@ -172,6 +172,7 @@ $layout['pagetitle'] = trans('Schedule');
 
 $filter['forward'] = ConfigHelper::getConfig('phpui.timetable_days_forward');
 $eventlist = $LMS->GetEventList($filter);
+$eventlistIds = Utils::array_column($eventlist, 'id', 'id');
 
 $userid = $filter['userid'];
 $userlistcount = empty($userid) ? 0 : count($userid);
@@ -180,6 +181,7 @@ $params['short'] = 1;
 if (ConfigHelper::checkConfig('phpui.timetable_hide_disabled_users')) {
     $params['userAccess'] = 1;
 }
+$params['withDeleted'] = 1;
 $userlist = $LMS->GetUserList($params);
 
 $SMARTY->assign('userlist', $userlist);

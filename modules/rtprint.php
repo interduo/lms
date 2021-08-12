@@ -48,7 +48,7 @@ switch ($type) {
         if ($days) {
             $where[] = 'rttickets.createtime > '.mktime(0, 0, 0, date('n'), date('j')-$days);
         }
-        $catids = (is_array($categories) ? array_keys($categories) : null);
+        $catids = is_array($categories) ? Utils::filterIntegers($categories) : null;
         if (!empty($catids)) {
             $where[] = 'tc.categoryid IN ('.implode(',', $catids).')';
         } else {
@@ -146,11 +146,31 @@ switch ($type) {
         if ($subject) {
             $where[] = 't.subject ?LIKE? '.$DB->Escape("%$subject%");
         }
-        $catids = (is_array($categories) ? array_keys($categories) : null);
-        if (!empty($catids)) {
-            $where[] = 'tc.categoryid IN ('.implode(',', $catids).')';
-        } else {
-            $where[] = 'tc.categoryid IS NULL';
+
+        // category id's
+        if (!empty($categories)) {
+            if (!is_array($categories)) {
+                $categories = array($categories);
+            }
+
+            if (in_array('all', $categories)) {
+                $filter['catids'] = null;
+            } else {
+                $filter['catids'] = Utils::filterIntegers($categories);
+                if (in_array(-1, $filter['catids'])) {
+                    if (count($filter['catids']) > 1) {
+                        $catidsfilter = '(';
+                    }
+                    $catidsfilter .= 'tc.categoryid IS NULL';
+                    $filter['catids'] = array_diff($filter['catids'], ["-1"]);
+                    if (!empty($filter['catids'])) {
+                        $catidsfilter .= ' OR tc.categoryid IN (' . implode(',', $filter['catids']) . '))';
+                    }
+                    $where[] = $catidsfilter;
+                } else {
+                    $where[] = 'tc.categoryid IN (' . implode(',', $filter['catids']) . ')';
+                }
+            }
         }
 
         if ($status != '') {

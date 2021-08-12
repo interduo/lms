@@ -104,6 +104,8 @@ interface LMSCustomerManagerInterface
 
     public function getCustomerSMSOptions();
 
+    public function GetCustomerAddressesWithEndPoints($customerid);
+
     public function GetCustomerAddressesWithoutEndPoints($customerid);
 
     public function checkCustomerTenExistence($customerid, $ten, $divisionid = null);
@@ -137,4 +139,20 @@ interface LMSCustomerManagerInterface
     public function getCustomerPin($id);
 
     public function changeCustomerType($id, $tyoe);
+
+    public function getCustomerCalls(array $params);
+
+    public function deleteCustomerCall($id, $callid);
+
+    public function getCustomerCallContent($callid);
+
+    public function isCustomerCallExists(array $params);
+
+    public function addCustomerCall(array $params);
+
+    public function updateCustomerCall($callid, array $params);
+
+    public function addCustomerCallAssignment($customerid, $callid);
+
+    public function getCustomerModificationInfo($customerid);
 }

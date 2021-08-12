@@ -13,12 +13,14 @@ CREATE TABLE users (
 	login varchar(32) 	DEFAULT '' NOT NULL,
 	firstname varchar(64)   DEFAULT '' NOT NULL,
 	lastname varchar(64) DEFAULT '' NOT NULL,
+	issuer varchar(100) DEFAULT NULL,
 	email varchar(255) 	DEFAULT '' NOT NULL,
 	phone varchar(32)   DEFAULT NULL,
 	position varchar(255) 	DEFAULT '' NOT NULL,
 	rights text 	DEFAULT '' NOT NULL,
 	hosts varchar(255) 	DEFAULT '' NOT NULL,
 	passwd varchar(255) 	DEFAULT '' NOT NULL,
+	netpasswd varchar(255) DEFAULT NULL,
 	passwdforcechange smallint NOT NULL DEFAULT 0,
 	ntype smallint      DEFAULT NULL,
 	lastlogindate integer 	DEFAULT 0  NOT NULL,
@@ -299,7 +301,9 @@ CREATE TABLE customers (
 	regon varchar(255) 	DEFAULT '' NOT NULL,
 	rbe varchar(255) 	DEFAULT '' NOT NULL, -- EDG/KRS
 	rbename varchar(255)	DEFAULT '' NOT NULL,
-	icn varchar(255) 	DEFAULT '' NOT NULL, -- dow.os.
+    ict smallint        DEFAULT 0 NOT NULL, -- typ dokumentu tożsamości
+	icn varchar(255) 	DEFAULT '' NOT NULL, -- numer dokumentu tożsamości
+    icexpires integer 	DEFAULT NULL, -- ważność dokumentu tożsamości
 	info text		DEFAULT '' NOT NULL,
 	notes text		DEFAULT '' NOT NULL,
 	creationdate integer 	DEFAULT 0 NOT NULL,
@@ -367,6 +371,45 @@ CREATE TABLE customerkarmalastchanges (
     PRIMARY KEY (id)
 );
 CREATE INDEX customerkarmalastchanges_timestamp_idx ON customerkarmalastchanges (timestamp);
+
+/* --------------------------------------------------------
+  Structure of table "customercalls"
+-------------------------------------------------------- */
+DROP SEQUENCE IF EXISTS customercalls_id_seq;
+CREATE SEQUENCE customercalls_id_seq;
+DROP TABLE IF EXISTS customercalls;
+CREATE TABLE customercalls (
+    id integer DEFAULT nextval('customercalls_id_seq'::text) NOT NULL,
+    userid integer DEFAULT NULL
+        CONSTRAINT customercalls_userid_fkey REFERENCES users (id) ON UPDATE CASCADE ON DELETE SET NULL,
+    dt integer DEFAULT 0 NOT NULL,
+    filename varchar(150) NOT NULL,
+    outgoing smallint DEFAULT 0 NOT NULL,
+    phone varchar(20) NOT NULL,
+    duration integer DEFAULT 0 NOT NULL,
+    notes text DEFAULT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX customercalls_dt_idx ON customercalls (dt);
+CREATE INDEX customercalls_filename_idx ON customercalls (filename);
+CREATE INDEX customercalls_phone_idx ON customercalls (phone);
+
+/* --------------------------------------------------------
+  Structure of table "customercallassignments"
+-------------------------------------------------------- */
+DROP SEQUENCE IF EXISTS customercallassignments_id_seq;
+CREATE SEQUENCE customercallassignments_id_seq;
+DROP TABLE IF EXISTS customercallassignments;
+CREATE TABLE customercallassignments (
+    id integer DEFAULT nextval('customercallassignments_id_seq'::text) NOT NULL,
+    customercallid integer NOT NULL
+        CONSTRAINT customercallassignments_customercallid_fkey REFERENCES customercalls (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    customerid integer NOT NULL
+        CONSTRAINT customercallassignments_customerid_fkey REFERENCES customers (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    PRIMARY KEY (id),
+    CONSTRAINT customercallassignments_customercallid_ukey
+        UNIQUE (customercallid, customerid)
+);
 
 /* --------------------------------------------------------
   Structure of table "numberplans"
@@ -460,7 +503,6 @@ CREATE TABLE documents (
 	ssn varchar(50)		DEFAULT '' NOT NULL,
 	paytime smallint	DEFAULT 0 NOT NULL,
 	paytype smallint	DEFAULT NULL,
-	splitpayment smallint NOT NULL DEFAULT 0,
 	closed smallint		DEFAULT 0 NOT NULL,
 	reference integer	DEFAULT NULL
 		CONSTRAINT documents_reference_fkey REFERENCES documents (id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -770,7 +812,6 @@ CREATE TABLE tariffs (
 	name varchar(255) 	DEFAULT '' NOT NULL,
 	type smallint		DEFAULT 1 NOT NULL,
 	value numeric(9,2) 	DEFAULT 0 NOT NULL,
-    splitpayment smallint NOT NULL DEFAULT 0,
     taxcategory smallint DEFAULT 0 NOT NULL,
 	period smallint 	DEFAULT NULL,
 	taxid integer 		NOT NULL
@@ -828,6 +869,7 @@ CREATE TABLE tariffs (
 	authtype smallint 	DEFAULT 0 NOT NULL,
     currency varchar(3),
     flags smallint DEFAULT 0 NOT NULL,
+    netvalue numeric(9,2) DEFAULT NULL,
 	PRIMARY KEY (id),
 	CONSTRAINT tariffs_name_key UNIQUE (name, value, currency, period)
 );
@@ -892,7 +934,6 @@ DROP TABLE IF EXISTS liabilities CASCADE;
 CREATE TABLE liabilities (
 	id integer DEFAULT nextval('liabilities_id_seq'::text) NOT NULL,
 	value numeric(9,2)  	DEFAULT 0 NOT NULL,
-    splitpayment smallint NOT NULL DEFAULT 0,
     taxcategory smallint DEFAULT 0 NOT NULL,
 	currency varchar(3),
 	name text           	DEFAULT '' NOT NULL,
@@ -900,7 +941,9 @@ CREATE TABLE liabilities (
 		CONSTRAINT liabilities_taxid_fkey REFERENCES taxes (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	prodid varchar(255) 	DEFAULT '' NOT NULL,
 	type smallint DEFAULT -1 NOT NULL,
-	PRIMARY KEY (id)
+    flags smallint DEFAULT 0 NOT NULL,
+    netvalue numeric(9,2) DEFAULT NULL,
+    PRIMARY KEY (id)
 );
 
 /* --------------------------------------------------------
@@ -1115,6 +1158,7 @@ CREATE TABLE cashimport (
 		REFERENCES cashsources (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	sourcefileid integer    DEFAULT NULL
 		REFERENCES sourcefiles (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	srcaccount varchar(60) DEFAULT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -1250,40 +1294,6 @@ CREATE TABLE hosts (
     UNIQUE (name)
 );
 
-/* --------------------------------------------------------
-  Structure of table "networks"
--------------------------------------------------------- */
-DROP SEQUENCE IF EXISTS networks_id_seq;
-CREATE SEQUENCE networks_id_seq;
-DROP TABLE IF EXISTS networks CASCADE;
-CREATE TABLE networks (
-	id integer DEFAULT nextval('networks_id_seq'::text) NOT NULL,
-	name varchar(255) 	DEFAULT '' NOT NULL,
-	address bigint 		DEFAULT 0 NOT NULL,
-	snat bigint 		DEFAULT NULL,
-	mask varchar(16) 	DEFAULT '' NOT NULL,
-	interface varchar(16) 	DEFAULT '' NOT NULL,
-	gateway varchar(16) 	DEFAULT '' NOT NULL,
-	dns varchar(16) 	DEFAULT '' NOT NULL,
-	dns2 varchar(16) 	DEFAULT '' NOT NULL,
-	domain varchar(64) 	DEFAULT '' NOT NULL,
-	wins varchar(16) 	DEFAULT '' NOT NULL,
-	dhcpstart varchar(16) 	DEFAULT '' NOT NULL,
-	dhcpend varchar(16) 	DEFAULT '' NOT NULL,
-	disabled smallint 	DEFAULT 0 NOT NULL,
-	notes text		DEFAULT '' NOT NULL,
-	vlanid smallint DEFAULT NULL,
-	hostid integer NULL
-		REFERENCES hosts (id) ON DELETE SET NULL ON UPDATE CASCADE,
-	authtype smallint 	DEFAULT 0 NOT NULL,
-	pubnetid integer DEFAULT NULL
-		CONSTRAINT networks_pubnetid_fkey REFERENCES networks (id) ON DELETE SET NULL ON UPDATE CASCADE,
-	PRIMARY KEY (id),
-	UNIQUE (name),
-	CONSTRAINT networks_address_key UNIQUE (address, hostid)
-);
-CREATE INDEX networks_hostid_idx ON networks (hostid);
-
 /* ---------------------------------------------------
  Structure of table "invprojects"
 ------------------------------------------------------*/
@@ -1294,8 +1304,8 @@ CREATE TABLE invprojects (
 	id integer DEFAULT nextval('invprojects_id_seq'::text) NOT NULL,
 	name varchar(255) NOT NULL,
 	type smallint DEFAULT 0,
-        divisionid integer DEFAULT NULL
-                REFERENCES divisions (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	divisionid integer DEFAULT NULL
+		REFERENCES divisions (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	PRIMARY KEY(id)
 );
 
@@ -1330,6 +1340,60 @@ CREATE TABLE netnodes (
 		CONSTRAINT netnodes_ownerid_fkey REFERENCES customers (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	PRIMARY KEY(id)
 );
+
+/* --------------------------------------------------------
+Structure of table "vlans"
+-------------------------------------------------------- */
+DROP SEQUENCE IF EXISTS vlans_id_seq;
+CREATE SEQUENCE vlans_id_seq;
+DROP TABLE IF EXISTS vlans CASCADE;
+CREATE TABLE vlans (
+    id smallint DEFAULT nextval('vlans_id_seq'::text) NOT NULL,
+    vlanid smallint NOT NULL,
+    description varchar(254) DEFAULT NULL,
+    customerid integer DEFAULT NULL
+        CONSTRAINT vlans_customerid_fkey REFERENCES customers (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    netnodeid integer DEFAULT NULL
+        CONSTRAINT vlans_netnodeid_fkey REFERENCES netnodes (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    PRIMARY KEY (id),
+    CONSTRAINT vlans_customerid_ukey UNIQUE (vlanid, customerid),
+    CONSTRAINT vlans_netnodeid_ukey UNIQUE (vlanid, netnodeid)
+);
+
+/* --------------------------------------------------------
+  Structure of table "networks"
+-------------------------------------------------------- */
+DROP SEQUENCE IF EXISTS networks_id_seq;
+CREATE SEQUENCE networks_id_seq;
+DROP TABLE IF EXISTS networks CASCADE;
+CREATE TABLE networks (
+	id integer DEFAULT nextval('networks_id_seq'::text) NOT NULL,
+	name varchar(255) 	DEFAULT '' NOT NULL,
+	address bigint 		DEFAULT 0 NOT NULL,
+	snat bigint 		DEFAULT NULL,
+	mask varchar(16) 	DEFAULT '' NOT NULL,
+	interface varchar(16) 	DEFAULT '' NOT NULL,
+	gateway varchar(16) 	DEFAULT '' NOT NULL,
+	dns varchar(16) 	DEFAULT '' NOT NULL,
+	dns2 varchar(16) 	DEFAULT '' NOT NULL,
+	domain varchar(64) 	DEFAULT '' NOT NULL,
+	wins varchar(16) 	DEFAULT '' NOT NULL,
+	dhcpstart varchar(16) 	DEFAULT '' NOT NULL,
+	dhcpend varchar(16) 	DEFAULT '' NOT NULL,
+	disabled smallint 	DEFAULT 0 NOT NULL,
+	notes text		DEFAULT '' NOT NULL,
+	vlanid smallint DEFAULT NULL
+	    CONSTRAINT networks_vlanid_fkey REFERENCES vlans (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	hostid integer NULL
+		REFERENCES hosts (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	authtype smallint 	DEFAULT 0 NOT NULL,
+	pubnetid integer DEFAULT NULL
+		CONSTRAINT networks_pubnetid_fkey REFERENCES networks (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	PRIMARY KEY (id),
+	UNIQUE (name),
+	CONSTRAINT networks_address_key UNIQUE (address, hostid)
+);
+CREATE INDEX networks_hostid_idx ON networks (hostid);
 
 /* ---------------------------------------------------
  Structure of table "netdeviceproducers"
@@ -1710,6 +1774,19 @@ CREATE TABLE numberplanassignments (
 CREATE INDEX numberplanassignments_divisionid_idx ON numberplanassignments (divisionid);
 
 /* --------------------------------------------------------
+  Structure of table "numberplanusers"
+-------------------------------------------------------- */
+DROP TABLE IF EXISTS numberplanusers CASCADE;
+CREATE TABLE numberplanusers (
+    planid integer NOT NULL
+       CONSTRAINT numberplanusers_planid_fkey REFERENCES numberplans (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    userid integer NOT NULL
+       CONSTRAINT numberplanusers_userid_fkey REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT numberplanusers_userid_ukey UNIQUE (planid, userid)
+);
+CREATE INDEX numberplanusers_userid_idx ON numberplanusers (userid);
+
+/* --------------------------------------------------------
   Structure of table "customergroups"
 -------------------------------------------------------- */
 DROP SEQUENCE IF EXISTS customergroups_id_seq;
@@ -1735,11 +1812,15 @@ CREATE TABLE customerassignments (
 	    REFERENCES customergroups (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	customerid integer NOT NULL
 	    CONSTRAINT customerassignments_customerid_fkey REFERENCES customers (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    startdate integer DEFAULT EXTRACT(EPOCH FROM CURRENT_TIMESTAMP(0))::integer NOT NULL,
+    enddate integer DEFAULT 0 NOT NULL,
 	PRIMARY KEY (id),
-	CONSTRAINT customerassignments_customergroupid_key UNIQUE (customergroupid, customerid)
+	CONSTRAINT customerassignments_customergroupid_ukey UNIQUE (customergroupid, customerid, enddate)
 );
 
 CREATE INDEX customerassignments_customerid_idx ON customerassignments (customerid);
+CREATE INDEX customerassignments_startdate_idx ON customerassignments (startdate);
+CREATE INDEX customerassignments_enddate_idx ON customerassignments (enddate);
 
 /* --------------------------------------------------------
   Structure of table "nodesessions"
@@ -1887,7 +1968,7 @@ CREATE TABLE rttickets (
   id integer default nextval('rttickets_id_seq'::text) NOT NULL,
   queueid integer 	NOT NULL
     REFERENCES rtqueues (id) ON DELETE CASCADE ON UPDATE CASCADE,
-  requestor varchar(255) DEFAULT '' NOT NULL,
+  requestor varchar(255) DEFAULT NULL,
   requestor_mail varchar(255) DEFAULT NULL,
   requestor_phone varchar(32) DEFAULT NULL,
   requestor_userid integer DEFAULT NULL
@@ -1905,7 +1986,7 @@ CREATE TABLE rttickets (
   resolvetime integer 	DEFAULT 0 NOT NULL,
   modtime integer NOT NULL DEFAULT 0,
   source smallint	DEFAULT 0 NOT NULL,
-  priority smallint	DEFAULT 0 NOT NULL,
+  priority smallint	DEFAULT NULL,
   deleted smallint	DEFAULT 0 NOT NULL,
   deltime integer	DEFAULT 0 NOT NULL,
   deluserid integer	DEFAULT NULL
@@ -2473,6 +2554,20 @@ CREATE INDEX customercontacts_customerid_idx ON customercontacts (customerid);
 CREATE INDEX customercontacts_contact_idx ON customercontacts (contact);
 
 /* ---------------------------------------------------
+ Structure of table "customercontactproperties"
+------------------------------------------------------*/
+DROP TABLE IF EXISTS customercontactproperties CASCADE;
+CREATE TABLE customercontactproperties (
+    contactid   integer         NOT NULL
+        CONSTRAINT customercontactproperties_contactid_fkey REFERENCES customercontacts (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    name        varchar(255)    NOT NULL,
+    value       varchar(255)    NOT NULL,
+    CONSTRAINT customercontactproperties_contactid_name_ukey UNIQUE (contactid, name)
+);
+CREATE INDEX customercontactproperties_name_idx ON customercontactproperties (name);
+CREATE INDEX customercontactproperties_value_idx ON customercontactproperties (value);
+
+/* ---------------------------------------------------
  Structure of table "excludedgroups"
 ------------------------------------------------------*/
 DROP SEQUENCE IF EXISTS excludedgroups_id_seq;
@@ -2870,6 +2965,11 @@ CASE
 END
 ' LANGUAGE SQL;
 
+CREATE VIEW vcustomerassignments AS
+    SELECT ca.*
+    FROM customerassignments ca
+    WHERE startdate <= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP(0))::integer AND enddate = 0;
+
 CREATE VIEW vaddresses AS
     SELECT a.*, c.ccode AS ccode, country_id AS countryid, city_id AS location_city, street_id AS location_street,
         house AS location_house, flat AS location_flat,
@@ -2950,7 +3050,7 @@ CREATE VIEW customerview AS
         LEFT JOIN vaddresses a2 ON ca2.address_id = a2.id
         LEFT JOIN customerconsentview cc ON cc.customerid = c.id
     WHERE NOT EXISTS (
-        SELECT 1 FROM customerassignments a
+        SELECT 1 FROM vcustomerassignments a
         JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
         WHERE e.userid = lms_current_user() AND a.customerid = c.id)
         AND (lms_current_user() = 0 OR c.divisionid IN (
@@ -3048,12 +3148,14 @@ CREATE VIEW vnodetariffs AS
         t.uprate, t.upceil,
         t.downrate_n, t.downceil_n,
         t.uprate_n, t.upceil_n,
+        net.mask, net.gateway, net.dns, net.dns2,
         m.mac,
         a.ccode,
         a.city_id as location_city, a.street_id as location_street,
         a.house as location_house, a.flat as location_flat,
         a.location
     FROM nodes n
+    JOIN networks net ON net.id = n.netid
     LEFT JOIN (SELECT nodeid, array_to_string(array_agg(mac), ',') AS mac FROM macs GROUP BY nodeid) m ON (n.id = m.nodeid)
     LEFT JOIN vaddresses a ON n.address_id = a.id
     JOIN (
@@ -3119,12 +3221,14 @@ CREATE VIEW vnodealltariffs AS
         COALESCE(t1.up_burst_time_n, t2.up_burst_time_n, 0) AS up_burst_time_n,
         COALESCE(t1.up_burst_threshold_n, t2.up_burst_threshold_n, 0) AS up_burst_threshold_n,
         COALESCE(t1.up_burst_limit_n, t2.up_burst_limit_n, 0) AS up_burst_limit_n,
+        net.mask, net.gateway, net.dns, net.dns2,
         m.mac,
         a.ccode,
         a.city_id as location_city, a.street_id as location_street,
         a.house as location_house, a.flat as location_flat,
         a.location
     FROM nodes n
+    JOIN networks net ON net.id = n.netid
     LEFT JOIN (
         SELECT nodeid, array_to_string(array_agg(mac), ',') AS mac
         FROM macs
@@ -3329,45 +3433,64 @@ SELECT *, (firstname || ' ' || lastname) AS name, (lastname || ' ' || firstname)
 FROM users;
 
 CREATE VIEW vinvoicecontents AS
-    SELECT ic.*,
-        (CASE WHEN (d.flags & 16) > 0 THEN 1 ELSE 0 END) AS netflag,
-        (CASE WHEN (d.flags & 16) > 0
-            THEN
-                ROUND(ic.value, 2)
-            ELSE
-                ROUND(ic.value / (1 + (t.value / 100)), 2)
-        END) AS netprice,
-        (CASE WHEN (d.flags & 16) > 0
-            THEN
-                ROUND(ic.value * (1 + (t.value / 100)), 2)
-            ELSE
-                ROUND(ic.value, 2)
-        END) AS grossprice,
-        (CASE WHEN (d.flags & 16) > 0
-            THEN
-                ROUND(ic.value * ABS(ic.count), 2)
-            ELSE
-                ROUND(ic.value * ABS(ic.count), 2)
-                    - ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)
-        END) AS netvalue,
-        (CASE WHEN (d.flags & 16) > 0
-            THEN
-                ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / 100, 2)
-            ELSE
-                ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)
-        END) AS taxvalue,
-        (CASE WHEN (d.flags & 16) > 0
-            THEN
-                ROUND(ROUND(ic.value * ABS(ic.count), 2) * (1 + (t.value / 100)), 2)
-            ELSE
-                ROUND(ic.value * ABS(ic.count), 2)
-        END) AS grossvalue,
-        (CASE WHEN t.reversecharge = 1 THEN -2 ELSE (
-            CASE WHEN t.taxed = 0 THEN -1 ELSE t.value END
-        ) END) AS taxrate
-    FROM invoicecontents ic
-    JOIN taxes t ON t.id = ic.taxid
-    JOIN documents d ON d.id = ic.docid;
+    (
+        SELECT ic.*,
+            1 AS netflag,
+            ROUND(ic.value, 2) AS netprice,
+            ROUND(ic.value * (1 + (t.value / 100)), 2) AS grossprice,
+            ROUND(ic.value * ABS(ic.count), 2) AS netvalue,
+            ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / 100, 2) AS taxvalue,
+            ROUND(ROUND(ic.value * ABS(ic.count), 2) * (1 + (t.value / 100)), 2) AS grossvalue,
+            (ic.count - ic2.count) AS diff_count,
+            (ic.pdiscount - ic2.pdiscount) AS diff_pdiscount,
+            (ic.vdiscount - ic2.vdiscount) AS diff_vdiscount,
+            (ROUND(ic.value, 2) - ROUND(ic2.value, 2)) AS diff_netprice,
+            (ROUND(ic.value * (1 + (t.value / 100)), 2) - ROUND(ic2.value * (1 + (t.value / 100)), 2)) AS diff_grossprice,
+            (ROUND(ic.value * ABS(ic.count), 2) - ROUND(ic2.value * ABS(ic2.count), 2)) AS diff_netvalue,
+            (ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / 100, 2)
+                - ROUND(ROUND(ic2.value * ABS(ic2.count), 2) * t.value / 100, 2)) AS diff_taxvalue,
+            (ROUND(ROUND(ic.value * ABS(ic.count), 2) * (1 + (t.value / 100)), 2)
+                - ROUND(ROUND(ic2.value * ABS(ic2.count), 2) * (1 + (t.value / 100)), 2)) AS diff_grossvalue,
+            (CASE WHEN t.reversecharge = 1 THEN -2 ELSE (
+                CASE WHEN t.taxed = 0 THEN -1 ELSE t.value END
+            ) END) AS taxrate
+        FROM invoicecontents ic
+        JOIN taxes t ON t.id = ic.taxid
+        JOIN documents d ON d.id = ic.docid
+        LEFT JOIN documents d2 ON d2.id = d.reference
+        LEFT JOIN invoicecontents ic2 ON ic2.docid = d2.id AND ic2.itemid = ic.itemid
+        WHERE (d.flags & 16) > 0
+    ) UNION (
+        SELECT ic.*,
+            0 AS netflag,
+            ROUND(ic.value / (1 + (t.value / 100)), 2) AS netprice,
+            ROUND(ic.value, 2) AS grossprice,
+            (ROUND(ic.value * ABS(ic.count), 2)
+                - ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)) AS netvalue,
+            ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2) AS taxvalue,
+            ROUND(ic.value * ABS(ic.count), 2) AS grossvalue,
+            (ic.count - ic2.count) AS diff_count,
+            (ic.pdiscount - ic2.pdiscount) AS diff_pdiscount,
+            (ic.vdiscount - ic2.vdiscount) AS diff_vdiscount,
+            (ROUND(ic.value / (1 + (t.value / 100)), 2) - ROUND(ic2.value / (1 + (t.value / 100)), 2)) AS diff_netprice,
+            (ROUND(ic.value, 2) - ROUND(ic2.value, 2)) AS diff_grossprice,
+            (ROUND(ic.value * ABS(ic.count), 2)
+                - ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)
+                - ROUND(ic2.value * ABS(ic2.count), 2)
+                + ROUND(ROUND(ic2.value * ABS(ic2.count), 2) * t.value / (100 + t.value), 2)) AS diff_netvalue,
+            (ROUND(ROUND(ic.value * ABS(ic.count), 2) * t.value / (100 + t.value), 2)
+                - ROUND(ROUND(ic2.value * ABS(ic2.count), 2) * t.value / (100 + t.value), 2)) AS diff_taxvalue,
+            (ROUND(ic.value * ABS(ic.count), 2) - ROUND(ic2.value * ABS(ic2.count), 2)) AS diff_grossvalue,
+            (CASE WHEN t.reversecharge = 1 THEN -2 ELSE (
+                CASE WHEN t.taxed = 0 THEN -1 ELSE t.value END
+            ) END) AS taxrate
+        FROM invoicecontents ic
+        JOIN taxes t ON t.id = ic.taxid
+        JOIN documents d ON d.id = ic.docid
+        LEFT JOIN documents d2 ON d2.id = d.reference
+        LEFT JOIN invoicecontents ic2 ON ic2.docid = d2.id AND ic2.itemid = ic.itemid
+        WHERE (d.flags & 16) = 0
+    );
 
 CREATE OR REPLACE FUNCTION customerbalances_update()
     RETURNS trigger
@@ -3518,8 +3641,8 @@ INSERT INTO uiconfig (section, var, value, description, disabled) VALUES
 ('phpui', 'smarty_debug', 'false', '', 0),
 ('phpui', 'force_ssl', 'false', '', 0),
 ('phpui', 'allow_mac_sharing', 'false', '', 0),
-('phpui', 'big_networks', 'false', '', 0),
-('phpui', 'short_pagescroller', 'false', '', 0),
+('phpui', 'big_networks', 'true', '', 0),
+('phpui', 'short_pagescroller', 'true', '', 0),
 ('phpui', 'helpdesk_stats', 'true', '', 0),
 ('phpui', 'helpdesk_customerinfo', 'true', '', 0),
 ('phpui', 'helpdesk_customerinfo_mail_body', '--
@@ -3542,7 +3665,7 @@ URL: %url
 ('phpui', 'ticket_template_file', 'rtticketprint.html', '', 0),
 ('phpui', 'use_current_payday', 'false', '', 0),
 ('phpui', 'default_monthly_payday', '', '', 0),
-('phpui', 'newticket_notify', 'false', '', 0),
+('phpui', 'newticket_notify', 'true', '', 0),
 ('phpui', 'to_words_short_version', 'false', '', 0),
 ('phpui', 'ticketlist_status', '', '', 0),
 ('phpui', 'ewx_support', 'false', '', 0),
@@ -3571,7 +3694,7 @@ URL: %url
 ('invoices', 'cnote_template_file', 'invoice.html', '', 0),
 ('invoices', 'print_balance_history', 'false', '', 0),
 ('invoices', 'print_balance_history_limit', '10', '', 0),
-('invoices', 'default_printpage', 'original,copy', '', 0),
+('invoices', 'default_printpage', 'original', '', 0),
 ('invoices', 'type', 'html', '', 0),
 ('invoices', 'attachment_name', '', '', 0),
 ('invoices', 'paytime', '14', '', 0),
@@ -3602,6 +3725,8 @@ URL: %url
 ('zones', 'default_webserver_ip', '127.0.0.1', '', 0),
 ('zones', 'default_mailserver_ip', '127.0.0.1', '', 0),
 ('zones', 'default_mx', 'localhost', '', 0),
+('userpanel', 'hint', '', '', 0),
+('userpanel', 'style', 'bclean', '', 0),
 ('userpanel', 'data_consent_text', '', '', 0),
 ('userpanel', 'disable_transferform', '0', '', 0),
 ('userpanel', 'disable_invoices', '0', '', 0),
@@ -3609,6 +3734,9 @@ URL: %url
 ('userpanel', 'show_tariffname', '1', '', 0),
 ('userpanel', 'show_speeds', '1', '', 0),
 ('userpanel', 'show_period', '1', '', 0),
+('userpanel', 'show_discount', '1', '', 0),
+('userpanel', 'show_discounted_value', '0', '', 0),
+('userpanel', 'show_invoice_flag', '1', '', 0),
 ('userpanel', 'queues', '1', '', 0),
 ('userpanel', 'tickets_from_selected_queues', '0', '', 0),
 ('userpanel', 'allow_message_add_to_closed_tickets', '1', '', 0),
@@ -3672,6 +3800,8 @@ URL: %url
 ('userpanel', 'mail_credential_reminders', 'true', '', 0),
 ('userpanel', 'startup_module', 'info', '', 0),
 ('userpanel', 'pin_validation', 'true', '', 0),
+('userpanel', 'show_all_assignments', 'false', '', 0),
+('userpanel', 'allowed_document_types', '', '', 0),
 ('directories', 'userpanel_dir', 'userpanel', '', 0);
 
 INSERT INTO invprojects (name, type) VALUES ('inherited', 1);
@@ -4016,6 +4146,6 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2020121418');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2021072900');
 
 COMMIT;

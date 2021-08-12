@@ -111,10 +111,10 @@ switch ($action) {
                     'pdiscount' => str_replace(',', '.', $item['pdiscount']),
                     'vdiscount' => str_replace(',', '.', $item['vdiscount']),
                     'jm' => str_replace(',', '.', $item['content']),
-                    'valuenetto' => str_replace(',', '.', $item['basevalue']),
-                    'valuebrutto' => str_replace(',', '.', $item['value']),
-                    's_valuenetto' => str_replace(',', '.', $item['totalbase']),
-                    's_valuebrutto' => str_replace(',', '.', $item['total']),
+                    'valuenetto' => str_replace(',', '.', $item['netprice']),
+                    'valuebrutto' => str_replace(',', '.', $item['grossprice']),
+                    's_valuenetto' => str_replace(',', '.', $item['netvalue']),
+                    's_valuebrutto' => str_replace(',', '.', $item['grossvalue']),
                     'tax' => isset($taxeslist[$item['taxid']]) ? $taxeslist[$item['taxid']]['label'] : '',
                     'taxid' => $item['taxid'],
                     'taxcategory' => $item['taxcategory'],
@@ -138,6 +138,7 @@ switch ($action) {
                 $invoice['customerid'] = $_GET['customerid'];
             }
             $invoice['currency'] = Localisation::getDefaultCurrency();
+            $invoice['netflag'] = ConfigHelper::checkConfig('invoices.default_net_account');
         }
         $invoice['number'] = '';
         $invoice['numberplanid'] = null;
@@ -165,19 +166,10 @@ switch ($action) {
             $invoice['deadline'] = $currtime + $paytime * 86400;
         }
 
-        if (isset($customer)) {
-            $invoice['numberplanid'] = $DB->GetOne(
-                'SELECT n.id FROM numberplans n
-				JOIN numberplanassignments a ON (n.id = a.planid)
-				WHERE n.doctype = ? AND n.isdefault = 1 AND a.divisionid = ?',
-                array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, $customer['divisionid'])
-            );
-        }
-
-        if (empty($invoice['numberplanid'])) {
-            $invoice['numberplanid'] = $DB->GetOne('SELECT id FROM numberplans
-				WHERE doctype = ? AND isdefault = 1', array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE));
-        }
+        $invoice['numberplanid'] = $LMS->getDefaultNumberPlanID(
+            $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+            empty($customer) ? null : $customer['divisionid']
+        );
 
         $hook_data = array(
             'invoice' => $invoice,
@@ -259,21 +251,25 @@ switch ($action) {
 
         if ($itemdata['count'] > 0 && $itemdata['name'] != '') {
             $taxvalue = isset($itemdata['taxid']) ? $taxeslist[$itemdata['taxid']]['value'] : 0;
-            if ($itemdata['valuenetto'] != 0 && $itemdata['valuebrutto'] == 0) {
-                $itemdata['valuenetto'] = f_round(($itemdata['valuenetto'] - $itemdata['valuenetto'] * $itemdata['pdiscount'] / 100)
-                    - ((100 * $itemdata['vdiscount']) / (100 + $taxvalue)));
-                $itemdata['valuebrutto'] = $itemdata['valuenetto'] * ($taxvalue / 100 + 1);
-                $itemdata['s_valuebrutto'] = f_round(($itemdata['valuenetto'] * $itemdata['count']) * ($taxvalue / 100 + 1));
-            } elseif ($itemdata['valuebrutto'] != 0) {
-                $itemdata['valuebrutto'] = f_round(($itemdata['valuebrutto'] - $itemdata['valuebrutto'] * $itemdata['pdiscount'] / 100) - $itemdata['vdiscount']);
-                $itemdata['valuenetto'] = round($itemdata['valuebrutto'] / ($taxvalue / 100 + 1), 2);
+            $itemdata['count'] = f_round($itemdata['count'], 3);
+
+            if ($invoice['netflag']) {
+                $itemdata['valuenetto'] = f_round(($itemdata['valuenetto'] - $itemdata['valuenetto'] * f_round($itemdata['pdiscount']) / 100)
+                    - $itemdata['vdiscount']);
+                $itemdata['s_valuenetto'] = f_round($itemdata['valuenetto'] * $itemdata['count']);
+                $itemdata['tax_from_s_valuenetto'] = f_round($itemdata['s_valuenetto'] * ($taxvalue / 100));
+                $itemdata['s_valuebrutto'] = f_round($itemdata['s_valuenetto'] + $itemdata['tax_from_s_valuenetto']);
+                $itemdata['valuebrutto'] = f_round($itemdata['valuenetto'] * ($taxvalue / 100 + 1));
+            } else {
+                $itemdata['valuebrutto'] = f_round(($itemdata['valuebrutto'] - $itemdata['valuebrutto'] * f_round($itemdata['pdiscount']) / 100)
+                    - $itemdata['vdiscount']);
                 $itemdata['s_valuebrutto'] = f_round($itemdata['valuebrutto'] * $itemdata['count']);
+                $itemdata['tax_from_s_valuebrutto'] = f_round(($itemdata['s_valuebrutto'] * $taxvalue)
+                    / (100 + $taxvalue));
+                $itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] - $itemdata['tax_from_s_valuebrutto']);
+                $itemdata['valuenetto'] = f_round($itemdata['valuebrutto'] / ($taxvalue / 100 + 1));
             }
 
-            // str_replace->f_round here is needed because of bug in some PHP versions
-            $itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] /  ($taxvalue / 100 + 1));
-            $itemdata['valuenetto'] = f_round($itemdata['valuenetto']);
-            $itemdata['count'] = f_round($itemdata['count'], 3);
             $itemdata['discount'] = f_round($itemdata['discount']);
             $itemdata['pdiscount'] = f_round($itemdata['pdiscount']);
             $itemdata['vdiscount'] = f_round($itemdata['vdiscount']);
@@ -313,8 +309,7 @@ switch ($action) {
     case 'additemlist':
         if ($marks = $_POST['marks']) {
             foreach ($marks as $id) {
-                $cash = $DB->GetRow('SELECT value, comment, taxid 
-						    FROM cash WHERE id = ?', array($id));
+                $cash = $DB->GetRow('SELECT value, comment, taxid FROM cash WHERE id = ?', array($id));
 
                 $itemdata['cashid'] = $id;
                 $itemdata['name'] = $cash['comment'];
@@ -328,8 +323,9 @@ switch ($action) {
                 $itemdata['count'] = f_round($_POST['l_count'][$id], 3);
                 $itemdata['valuebrutto'] = f_round((-$cash['value'])/$itemdata['count']);
                 $itemdata['s_valuebrutto'] = f_round(-$cash['value']);
-                $itemdata['valuenetto'] = round($itemdata['valuebrutto'] / ((isset($taxeslist[$itemdata['taxid']]) ? $taxeslist[$itemdata['taxid']]['value'] : 0) / 100 + 1), 2);
-                $itemdata['s_valuenetto'] = round($itemdata['s_valuebrutto'] / ((isset($taxeslist[$itemdata['taxid']]) ? $taxeslist[$itemdata['taxid']]['value'] : 0) / 100 + 1), 2);
+                $itemdata['tax_from_s_valuebrutto'] = f_round(($itemdata['s_valuebrutto'] * $taxeslist[$itemdata['taxid']]['value']) / (100 + $taxeslist[$itemdata['taxid']]['value']));
+                $itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] - $itemdata['tax_from_s_valuebrutto']);
+                $itemdata['valuenetto'] = f_round($itemdata['valuebrutto'] / ($taxeslist[$itemdata['taxid']]['value'] / 100 + 1));
                 $itemdata['prodid'] = $_POST['l_prodid'][$id];
                 $itemdata['jm'] = $_POST['l_jm'][$id];
                 $itemdata['tariffid'] = 0;
@@ -387,10 +383,17 @@ switch ($action) {
         }
 
         if (ConfigHelper::checkPrivilege('invoice_consent_date') && $invoice['cdate'] && !isset($invoice['cdatewarning'])) {
-            $maxdate = $DB->GetOne(
-                'SELECT MAX(cdate) FROM documents WHERE type = ? AND numberplanid = ?',
-                array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, $invoice['numberplanid'])
-            );
+            if (empty($invoice['numberplanid'])) {
+                $maxdate = $DB->GetOne(
+                    'SELECT MAX(cdate) FROM documents WHERE type = ? AND numberplanid IS NULL',
+                    array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE)
+                );
+            } else {
+                $maxdate = $DB->GetOne(
+                    'SELECT MAX(cdate) FROM documents WHERE type = ? AND numberplanid = ?',
+                    array($invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE, $invoice['numberplanid'])
+                );
+            }
 
             if ($invoice['cdate'] < $maxdate) {
                 $error['cdate'] = trans(
@@ -470,14 +473,24 @@ switch ($action) {
             $customer = $LMS->GetCustomer($cid, true);
         }
 
-        if (!isset($error)) {
+        if (empty($error)) {
             // finally check if selected customer can use selected numberplan
-            if ($invoice['numberplanid'] && isset($customer)) {
-                if (!$DB->GetOne('SELECT 1 FROM numberplanassignments
-					WHERE planid = ? AND divisionid = ?', array($invoice['numberplanid'], $customer['divisionid']))) {
-                    $error['number'] = trans('Selected numbering plan doesn\'t match customer\'s division!');
-                    unset($customer);
-                }
+            $args = array(
+                'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+                'customerid' => $customer['id'],
+                'division' => $customer['divisionid'],
+                'next' => false,
+            );
+            $numberplans = $LMS->GetNumberPlans($args);
+
+            if ($invoice['numberplanid'] && isset($customer)
+                && !isset($numberplans[$invoice['numberplanid']])) {
+                $error['number'] = trans('Selected numbering plan doesn\'t match customer\'s division!');
+                unset($customer);
+            }
+
+            if (count($numberplans) && empty($invoice['numberplanid'])) {
+                $error['numberplanid'] = trans('Select numbering plan');
             }
         }
         break;
@@ -531,6 +544,22 @@ switch ($action) {
 
         if (!isset($CURRENCIES[$invoice['currency']])) {
             $error['currency'] = trans('Invalid currency selection!');
+        }
+
+        if (!empty($invoice['numberplanid']) && !$LMS->checkNumberPlanAccess($invoice['numberplanid'])) {
+            $error['numberplanid'] = trans('Permission denied!');
+        }
+
+        $args = array(
+            'doctype' => $invoice['proforma'] ? DOC_INVOICE_PRO : DOC_INVOICE,
+            'customerid' => $customer['id'],
+            'division' => $customer['divisionid'],
+            'next' => false,
+        );
+        $numberplans = $LMS->GetNumberPlans($args);
+
+        if (count($numberplans) && empty($invoice['numberplanid'])) {
+            $error['numberplanid'] = trans('Select numbering plan');
         }
 
         $hook_data = array(

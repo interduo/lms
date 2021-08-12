@@ -45,17 +45,17 @@
                 {$v.vlanid}
             </td>
             <td {tip text=$v.description}>
-                {$v.descriptione|truncate:40:" ...":true|escape}
+                {$v.description|trunescape:40}
             </td>
             <td {tip text=$v.customername}>
-                <a href="?m=customerinfo&id={$v.customerid}">{$v.customername|truncate:20:" ...":true}</a>
+                <a href="?m=customerinfo&id={$v.customerid}">{$v.customername|truncate:20:"&hellip;":true}</a>
             </td>
             <td {tip text=$v.netnodename}>
-                <a href="?m=netnodeinfo&id={$v.netnodeid}">{$v.netnodename|truncate:20:" ...":true}</a>
+                <a href="?m=netnodeinfo&id={$v.netnodeid}">{$v.netnodename|truncate:20:"&hellip;":true}</a>
             </td>
             <td class="buttons">
                 {button type="link" icon="edit" href="?m=vlanlist&action=modify&id={$v.id}" tip="Edit"}
-                {button type="link" icon="delete" href="?m=vlanlist&action=delete&id={$v.id}" tip="Delete"}
+                {button type="link" icon="delete" href="?m=vlanlist&action=delete&id={$v.id}" tip="Delete" class="delete-vlan"}
             </td>
         </tr>
         {/foreach}
@@ -63,6 +63,17 @@
 </table>
 
 {include file="vlan/vlanmodify-dialog.html"}
+
+<script>
+    $(function() {
+        $( '.delete-vlan' ).click(function() {
+            confirmDialog( $t("Are you sure, you want to delete that VLAN?") , this).done(function() {
+                location.href = $(this).attr('href');
+            });
+            return false;
+        });
+    });
+</script>
 
 {/block}
 

@@ -100,6 +100,13 @@ if (!isset($_POST['fk'])) {
 }
 $SESSION->save('cslfk', $flagsqlskey);
 
+if (!isset($_POST['consents'])) {
+    $SESSION->restore('csconsents', $consents);
+} else {
+    $consents = $_POST['consents'];
+}
+$SESSION->save('csconsents', $consents);
+
 if (!isset($_POST['karma'])) {
     $SESSION->restore('cslkarma', $karma);
 } else {
@@ -126,6 +133,13 @@ if (!isset($_POST['g'])) {
     }
 }
 $SESSION->save('cslg', $customergroup);
+
+if (!isset($_POST['cgk'])) {
+    $SESSION->restore('cslcgk', $customergroupsqlskey);
+} else {
+    $customergroupsqlskey = $_POST['cgk'];
+}
+$SESSION->save('cslcgk', $customergroupsqlskey);
 
 if (!isset($_POST['k'])) {
     $SESSION->restore('cslk', $sqlskey);
@@ -154,8 +168,10 @@ if (isset($_GET['search'])) {
         "order",
         "state",
         "statesqlskey",
+        "customergroupsqlskey",
         "flags",
         "flagsqlskey",
+        "consents",
         "karma",
         "network",
         "customergroup",
@@ -249,6 +265,7 @@ if (isset($_GET['search'])) {
     $SMARTY->assign('divisions', $LMS->GetDivisions());
     $SMARTY->assign('k', $sqlskey);
     $SMARTY->assign('sk', $statesqlskey);
+    $SMARTY->assign('cgk', $customergroupsqlskey);
     $SMARTY->assign('fk', $flagsqlskey);
     $SMARTY->assign('karma', $karma);
     $SMARTY->display('customer/customersearch.html');

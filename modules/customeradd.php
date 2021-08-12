@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2017 LMS Developers
+ *  (C) Copyright 2001-2021 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -151,6 +151,24 @@ if (isset($_POST['customeradd'])) {
         Localisation::setSystemLanguage($billingCountryCode);
     }
 
+    $ic_expires = $customeradd['icexpires'] && $customeradd['icexpires'] < time();
+    if ($ic_expires) {
+        $identity_card_expiration_check = ConfigHelper::getConfig(
+            'phpui.customer_identity_card_expiration_check',
+            'none'
+        );
+        switch ($identity_card_expiration_check) {
+            case 'warning':
+                if (!isset($warnings['customeradd-icexpires-'])) {
+                    $warning['customeradd[icexpires]'] = trans('Customer identity card expired or expires soon!');
+                }
+                break;
+            case 'error':
+                $error['icexpires'] = trans('Customer identity card expired or expires soon!');
+                break;
+        }
+    }
+
     if ($customeradd['ten'] !='') {
         if (!isset($customeradd['tenwarning']) && !check_ten($customeradd['ten'])) {
             $warning['ten'] = trans('Incorrect Tax Exempt Number! If you are sure you want to accept it, then click "Submit" again.');
@@ -211,7 +229,7 @@ if (isset($_POST['customeradd'])) {
         }
     }
 
-    if ($customeradd['icn'] != '' && !isset($customeradd['icnwarning']) && !check_icn($customeradd['icn'])) {
+    if ($customeradd['icn'] != '' && $customeradd['ict'] == 0 && !isset($customeradd['icnwarning']) && !check_icn($customeradd['icn'])) {
         $warning['icn'] = trans('Incorrect Identity Card Number! If you are sure you want to accept, then click "Submit" again.');
         $icnwarning = 1;
     }

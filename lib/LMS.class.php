@@ -30,8 +30,8 @@
 class LMS
 {
     const SOFTWARE_NAME = 'LMS';
-    const SOFTWARE_VERSION = '26.35';
-    const SOFTWARE_URL = 'https://lms-plus.org';
+    const SOFTWARE_VERSION = '27-git';
+    const SOFTWARE_URL = 'https://lms.org.pl';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
 
     public $DB;   // database object
@@ -378,10 +378,10 @@ class LMS
      * Users
      */
 
-    public function SetUserPassword($id, $passwd)
+    public function SetUserPassword($id, $passwd, $net = false)
     {
         $manager = $this->getUserManager();
-        return $manager->setUserPassword($id, $passwd);
+        return $manager->setUserPassword($id, $passwd, $net);
     }
 
     public function forcePasswordChange($id)
@@ -402,10 +402,10 @@ class LMS
         return $manager->getUserName($id);
     }
 
-    public function GetUserNames()
+    public function GetUserNames($params = array())
     {
         $manager = $this->getUserManager();
-        return $manager->getUserNames();
+        return $manager->getUserNames($params);
     }
 
     public function getUserNamesIndexedById()
@@ -486,10 +486,16 @@ class LMS
         return $manager->PasswdExistsInHistory($id, $passwd);
     }
 
-    public function checkPassword($password)
+    public function checkPassword($password, $net = false)
     {
         $manager = $this->getUserManager();
-        return $manager->checkPassword($password);
+        return $manager->checkPassword($password, $net);
+    }
+
+    public function isUserNetworkPasswordSet($id)
+    {
+        $manager = $this->getUserManager();
+        return $manager->isUserNetworkPasswordSet($id);
     }
 
     /*
@@ -556,10 +562,10 @@ class LMS
         return $manager->GetCashByID($id);
     }
 
-    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true, $filemtime = null)
+    public function CashImportParseFile($filename, $contents, $patterns, $quiet = true, $filemtime = null, $config_section = 'cashimport')
     {
         $manager = $this->getCashManager();
-        return $manager->CashImportParseFile($filename, $contents, $patterns, $quiet, $filemtime);
+        return $manager->CashImportParseFile($filename, $contents, $patterns, $quiet, $filemtime, $config_section);
     }
 
     public function CashImportCommit()
@@ -742,6 +748,12 @@ class LMS
         return $manager->getCustomerSMSOptions();
     }
 
+    public function GetCustomerAddressesWithEndPoints($customerid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->GetCustomerAddressesWithEndPoints($customerid);
+    }
+
     public function GetCustomerAddressesWithoutEndPoints($customerid)
     {
         $manager = $this->getCustomerManager();
@@ -842,6 +854,54 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->changeCustomerType($id, $type);
+    }
+
+    public function getCustomerCalls(array $params)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerCalls($params);
+    }
+
+    public function deleteCustomerCall($customerid, $callid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->deleteCustomerCall($customerid, $callid);
+    }
+
+    public function getCustomerCallContent($callid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerCallContent($callid);
+    }
+
+    public function isCustomerCallExists(array $params)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->isCustomerCallExists($params);
+    }
+
+    public function addCustomerCall(array $params)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->addCustomerCall($params);
+    }
+
+    public function updateCustomerCall($callid, array $params)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->updateCustomerCall($callid, $params);
+    }
+
+    public function addCustomerCallAssignment($customerid, $callid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->addCustomerCallAssignment($customerid, $callid);
+    }
+
+    public function getCustomerModificationInfo($customerid)
+    {
+        $manager = $this->getCustomerManager();
+        return $manager->getCustomerModificationInfo($customerid);
     }
 
     /*
@@ -1175,10 +1235,28 @@ class LMS
         return $manager->NetDevLinkNode($id, $devid, $link);
     }
 
-    public function SetNetDevLinkType($dev1, $dev2, $link)
+    public function ValidateNetDevLink($dev1, $dev2, $link = null)
+    {
+        $manager = $this->getNetDevManager();
+        return $manager->ValidateNetDevLink($dev1, $dev2, $link);
+    }
+
+    public function SetNetDevLinkType($dev1, $dev2, $link = null)
     {
         $manager = $this->getNetDevManager();
         return $manager->SetNetDevLinkType($dev1, $dev2, $link);
+    }
+
+    public function GetNodeLinkType($devid, $nodeid)
+    {
+        $manager = $this->getNodeManager();
+        return $manager->GetNodeLinkType($devid, $nodeid);
+    }
+
+    public function ValidateNodeLink($node, $link)
+    {
+        $manager = $this->getNodeManager();
+        return $manager->ValidateNodeLink($node, $link);
     }
 
     public function SetNodeLinkType($node, $link)
@@ -1672,6 +1750,36 @@ class LMS
         return $manager->getFirstFreeAddress($netid);
     }
 
+    public function GetVlanList($params = array())
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->GetVlanList($params);
+    }
+
+    public function GetVlanInfo($id)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->GetVlanInfo($id);
+    }
+
+    public function AddVlan($args)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->AddVlan($args);
+    }
+
+    public function DeleteVlan($id)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->DeleteVlan($id);
+    }
+
+    public function UpdateVlan($args)
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->UpdateVlan($args);
+    }
+
     /*
      *   Network Devices
      */
@@ -1704,6 +1812,12 @@ class LMS
     {
         $manager = $this->getNetDevManager();
         return $manager->GetNetDevConnectedNames($id);
+    }
+
+    public function getNetDevOwner($id)
+    {
+        $manager = $this->getNetDevManager();
+        return $manager->getNetDevOwner($id);
     }
 
     public function GetNetDevList($order = 'name,asc', $search = array())
@@ -2591,10 +2705,9 @@ class LMS
     public function SendMail($recipients, $headers, $body, $files = null, $persist = null, $smtp_options = null)
     {
         $persist = is_null($persist) ? ConfigHelper::getConfig('mail.smtp_persist', true) : $persist;
-        $debug_level = intval(ConfigHelper::getConfig('mail.debug_level', 2));
-        if (!$debug_level) {
-            $debug_level = 2;
-        }
+
+        $debug_email = ConfigHelper::getConfig('mail.debug_email');
+        $debug_level = intval(ConfigHelper::getConfig('mail.debug_level', empty($debug_email) ? 0 : 2));
 
         if (ConfigHelper::getConfig('mail.backend') == 'pear') {
             if (!is_object($this->mail_object) || !$persist) {
@@ -2770,10 +2883,10 @@ class LMS
             $this->mail_object->CharSet = 'UTF-8';
             $this->mail_object->Subject = $headers['Subject'];
 
-            $debug_email = ConfigHelper::getConfig('mail.debug_email');
+            $this->mail_object->SMTPDebug = $debug_level;
+
             if (!empty($debug_email)) {
-                $this->mail_object->SMTPDebug = $debug_level;
-                $recipients = ConfigHelper::getConfig('mail.debug_email');
+                $recipients = $debug_email;
             } else {
                 if (isset($headers['Cc'])) {
                     foreach (explode(',', $headers['Cc']) as $cc) {
@@ -3051,10 +3164,10 @@ class LMS
         return $manager->GetDocumentList($params);
     }
 
-    public function GetTaxes($from = null, $to = null)
+    public function GetTaxes($from = null, $to = null, $default = null)
     {
         $manager = $this->getFinanceManager();
-        return $manager->GetTaxes($from, $to);
+        return $manager->GetTaxes($from, $to, $default);
     }
 
     public function EventAdd($event)
@@ -3133,6 +3246,54 @@ class LMS
     {
         $manager = $this->getDocumentManager();
         return $manager->GetNumberPlans($properties);
+    }
+
+    public function getDefaultNumberPlanID($doctype, $divisionid = null)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->getDefaultNumberPlanID($doctype, $divisionid);
+    }
+
+    public function checkNumberPlanAccess($id)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->checkNumberPlanAccess($id);
+    }
+
+    public function getNumberPlan($id)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->getNumberPlan($id);
+    }
+
+    public function getNumberPlanList($params)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->getNumberPlanList($params);
+    }
+
+    public function validateNumberPlan(array $numberplan)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->validateNumberPlan($numberplan);
+    }
+
+    public function addNumberPlan(array $numberplan)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->addNumberPlan($numberplan);
+    }
+
+    public function updateNumberPlan(array $numberplan)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->updateNumberPlan($numberplan);
+    }
+
+    public function deleteNumberPlan($id)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->deleteNumberPlan($id);
     }
 
     public function GetNewDocumentNumber($properties)
@@ -4198,6 +4359,12 @@ class LMS
         return $manager->UsergroupGetList();
     }
 
+    public function UsergroupGetActiveUserid($groupid)
+    {
+        $manager = $this->getUserGroupManager();
+        return $manager->UsergroupGetActiveUserid($groupid);
+    }
+
     public function UsergroupGet($id)
     {
         $manager = $this->getUserGroupManager();
@@ -4680,6 +4847,7 @@ class LMS
                 $headers = array(
                     'From' => empty($dsn_email) ? $from : $dsn_email,
                     'To' => $mailto_qp_encoded,
+                    'Recipient-Name' => $doc['name'],
                     'Subject' => $subject,
                     'Reply-To' => empty($reply_email) ? $sender_email : $reply_email,
                 );
@@ -4716,45 +4884,84 @@ class LMS
                 $body = $data['body'];
                 $headers = $data['headers'];
 
-                if ($add_message) {
-                    $this->DB->Execute(
-                        'INSERT INTO messages (subject, body, cdate, type, userid, contenttype)
-						VALUES (?, ?, ?NOW?, ?, ?, ?)',
-                        array($subject, $body, MSG_MAIL, Auth::GetCurrentUser(), $content_type)
-                    );
-                    $msgid = $this->DB->GetLastInsertID('messages');
-
-                    if ($message_attachments) {
-                        if (!empty($files)) {
-                            foreach ($files as &$file) {
-                                $file['name'] = $file['filename'];
-                                $file['type'] = $file['content_type'];
-                            }
-                            unset($file);
-                            $this->AddFileContainer(array(
-                                'description' => 'message-' . $msgid,
-                                'files' => $files,
-                                'type' => 'messageid',
-                                'resourceid' => $msgid,
-                            ));
-                        }
-                    }
-
-                    foreach (explode(',', $custemail) as $email) {
-                        $this->DB->Execute(
-                            'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
-							VALUES (?, ?, ?, ?NOW?, ?)',
-                            array($msgid, $doc['customerid'], $email, MSG_NEW)
-                        );
-                        $msgitemid = $this->DB->GetLastInsertID('messageitems');
-                        if (!isset($msgitems[$doc['customerid']])) {
-                            $msgitems[$doc['customerid']] = array();
-                        }
-                        $msgitems[$doc['customerid']][$email] = $msgitemid;
-                    }
-                }
-
+                $messages = array();
                 foreach (explode(',', $custemail) as $email) {
+                    $mailSubject = $subject;
+                    $headers['Subject'] = $mailSubject;
+
+                    // get email properties
+                    $emailProperties = $this->DB->GetAllByKey(
+                        'SELECT ccp.name AS name, ccp.value AS value
+                        FROM customercontacts cc
+                        LEFT JOIN customercontactproperties ccp ON cc.id = ccp.contactid
+                        WHERE cc.contact = ?',
+                        'name',
+                        array($email)
+                    );
+
+                    if ($emailProperties && isset($emailProperties['email-subject'])) {
+                        $customSubject = $emailProperties['email-subject']['value'];
+                        $customSubject = preg_replace('/%original/', $subject, $customSubject);
+                        $customSubject = preg_replace('/%invoice/', $invoice_number, $customSubject);
+                        $mailSubject = $customSubject;
+                        $headers['Subject'] = $mailSubject;
+                    }
+
+                    if ($add_message) {
+                        if (!isset($messages[$mailSubject])) {
+                            $this->DB->Execute(
+                                'INSERT INTO messages (subject, body, cdate, type, userid, contenttype)
+                                VALUES (?, ?, ?NOW?, ?, ?, ?)',
+                                array($mailSubject, $body, MSG_MAIL, Auth::GetCurrentUser(), $content_type)
+                            );
+                            $msgid = $this->DB->GetLastInsertID('messages');
+
+                            $messages[$mailSubject]['msgid'] = $msgid;
+
+                            if ($message_attachments) {
+                                if (!empty($files)) {
+                                    foreach ($files as &$file) {
+                                        $file['name'] = $file['filename'];
+                                        $file['type'] = $file['content_type'];
+                                    }
+                                    unset($file);
+                                    $this->AddFileContainer(array(
+                                        'description' => 'message-' . $msgid,
+                                        'files' => $files,
+                                        'type' => 'messageid',
+                                        'resourceid' => $msgid,
+                                    ));
+                                }
+                            }
+
+                            $this->DB->Execute(
+                                'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
+                                VALUES (?, ?, ?, ?NOW?, ?)',
+                                array($msgid, $doc['customerid'], $email, MSG_NEW)
+                            );
+
+                            $msgitemid = $this->DB->GetLastInsertID('messageitems');
+                            if (!isset($msgitems[$doc['customerid']])) {
+                                $msgitems[$doc['customerid']] = array();
+                            }
+                            $msgitems[$doc['customerid']][$email] = $msgitemid;
+                        } else {
+                            $msgid = $messages[$mailSubject]['msgid'];
+
+                            $this->DB->Execute(
+                                'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
+                                VALUES (?, ?, ?, ?NOW?, ?)',
+                                array($msgid, $doc['customerid'], $email, MSG_NEW)
+                            );
+
+                            $msgitemid = $this->DB->GetLastInsertID('messageitems');
+                            if (!isset($msgitems[$doc['customerid']])) {
+                                $msgitems[$doc['customerid']] = array();
+                            }
+                            $msgitems[$doc['customerid']][$email] = $msgitemid;
+                        }
+                    }
+
                     if ($add_message && (!empty($dsn_email) || !empty($mdn_email))) {
                         $headers['X-LMS-Message-Item-Id'] = $msgitems[$doc['customerid']][$email];
                         $headers['Message-ID'] = '<messageitem-' . $headers['X-LMS-Message-Item-Id'] . '@rtsystem.' . gethostname() . '>';

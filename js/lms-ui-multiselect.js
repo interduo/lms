@@ -305,7 +305,7 @@ function multiselect(options) {
 			} else {
 				text = text.trim();
 			}
-			list += '<span '+ (crossed === '' ? ' class="crossed"' : '')+'>' + text + '</span>';
+			list += '<span '+ (crossed === '' ? ' class="lms-ui-crossed"' : '')+'>' + text + '</span>';
 
 			list += '</li>';
 		});

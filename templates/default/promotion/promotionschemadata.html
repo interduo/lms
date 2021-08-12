@@ -42,6 +42,11 @@
 		width: auto;
 	}
 
+	.reward-flags {
+		margin-block-start: 0.5em;
+		margin-block-end: 0.5em;
+		padding-inline-start: 1.5em;
+	}
 
 </style>
 
@@ -57,7 +62,7 @@
 	{/if}
 	<TR>
 		<TD style="width: 100%;" class="hand text-left bold nobr" onClick="showOrHide('promotionschemadata');">
-			{icon name="money" class="fa-fw"}
+			{icon name="money"}
 			{t a=$tariffcnt}Schema's Tariffs ($a):{/t}
 		</TD>
 	</TR>
@@ -68,35 +73,68 @@
 		<TD style="width: 100%;">
 			<FORM method="post" name="tariffs" action="?m=promotionschemaedit&id={$schema.id}&action=tariff">
 			<TABLE class="lmsbox-inner lms-ui-background-cycle" id="schematariffs">
+				<colgroup>
+					<col style="width: {math equation="94-x" x=$periodcnt}%;">
+					<col style="width: 1%;">
+					<col style="width: 1%;">
+					<col style="width: 1%;">
+					<col style="width: 1%;">
+					{foreach $schema.periods as $period}
+						<col style="width: 1%;">
+					{/foreach}
+					<col style="width: 1%;">
+				</colgroup>
 				<THEAD>
 				<TR>
-					<TD style="width: {math equation="95-x" x=$periodcnt}%;" class="bold nobr">
+					<TD class="bold nobr">
 						<INPUT type="submit" class="hiddenbtn">
 						{trans("Name:")}
 					</TD>
-					<TD style="width: 1%;" class="text-right bold nobr">{trans("Value")}:</TD>
-					<TD style="width: 1%;" class="text-right nobr">{trans("<!assignment>Backward:")}</TD>
-					<TD style="width: 1%;" class="text-right nobr">{trans("Optional")}:</TD>
-					<TD style="width: 1%;" class="text-right nobr">{trans("<!promotionassignment>Label")}:</TD>
-					{foreach from=$schema.periods item=period}
-					<TD style="width: 1%;" class="text-right nobr">{$period}:</TD>
+					<TD class="nobr">
+						{trans("Type")}
+					</TD>
+					<TD class="text-right bold nobr">{trans("Value")}:</TD>
+					<TD class="text-right nobr">{trans("<!assignment>Backward:")}</TD>
+					<TD class="text-right nobr">{trans("Optional")}:</TD>
+					<TD class="text-right nobr">{trans("<!promotionassignment>Label")}:</TD>
+					{foreach $schema.periods as $period}
+						<TD class="text-right nobr">{$period}:</TD>
 					{/foreach}
-					<TD style="width: 1%;">&nbsp;</TD>
+					<TD>&nbsp;</TD>
 				</TR>
 				</THEAD>
 				<TBODY>
 				{foreach $schema.tariffs as $tariff}
 				<TR class="highlight schematariff" data-assignment="{$tariff.id}">
 					<TD class="valign-top">
-						{icon name="money" class="drag-icon fa-fw"}
+						{icon name="money" class="drag-icon"}
 						<A href="?m=tariffinfo&id={$tariff.tariffid}" class="bold">{$tariff.name}</A>
-						{if $tariff.flags & $smarty.const.TARIFF_FLAG_REWARD_PENALTY}
+						{if ($tariff.flags & $smarty.const.TARIFF_FLAG_ALL_REWARD_PENALTY_FLAGS) > 0}
+							{capture assign="reward_flags"}
+								{if $tariff.value < 0}
+									{trans("reward for")}
+								{else}
+									{trans("penalty for")}
+								{/if}
+								<ul class='reward-flags'>
+									{foreach $_TARIFF_FLAGS as $flag => $label}
+										{if intval($tariff.flags) & intval($flag)}
+											<li>
+												<strong>{$label}</strong>
+											</li>
+										{/if}
+									{/foreach}
+								</ul>
+							{/capture}
 							{if $tariff.value < 0}
-								{icon name="reward" tip="reward"}
+								{icon name="reward" tip=$reward_flags}
 							{else}
-								{icon name="penalty" tip="penalty"}
+								{icon name="penalty" tip=$reward_flags}
 							{/if}
 						{/if}
+					</TD>
+					<TD class="nobr valign-top">
+						{$_SERVICETYPES[$tariff.type]}
 					</TD>
 					<TD class="text-right valign-top bold nobr">
 						{$tariff.value|string_format:"%.2f"}
@@ -104,7 +142,7 @@
 					<td class="text-right valign-top nobr">
 						<span class="tariff-view"{if $error && $formdata.aid == $tariff.id} style="display: none;"{/if}
 								data-backwardperiod="{$tariff.backwardperiod}">
-							{if $tariff.backwardperiod}{trans("yes")}{else}{trans("no")}{/if}
+							{if $tariff.backwardperiod}{icon name="checked" tip="yes"}{/if}
 						</span>
 						<input class="tariff-edit" type="checkbox" name="form[{$tariff.id}][backwardperiod]" value="1"
 							   {tip text="Check if tariff should be accounted backward"}
@@ -114,7 +152,7 @@
 					<TD class="text-right valign-top nobr">
 						<SPAN class="tariff-view" {if $error && $formdata.aid == $tariff.id} style="display:none"{/if}
 								data-optional="{$tariff.optional}">
-							{if $tariff.optional}{trans("yes")}{else}{trans("no")}{/if}
+							{if $tariff.optional}{icon name="checked" tip="yes"}{/if}
 						</SPAN>
 						<INPUT type="checkbox" class="tariff-edit optional-edit" name="form[{$tariff.id}][optional]" value="1"
 								{tip text="Check if tariff should be optional"}
@@ -201,17 +239,17 @@
 					</TD>
 				</TR>
 				{foreachelse}
-				<TR>
-					<TD colspan="{$periodcnt+6}" class="empty-table">
-						<p>{trans("This schema has no assigned tariffs.")}</p>
-					</TD>
-				</TR>
+				<tr>
+					<td colspan="{$periodcnt+7}" class="empty-table">
+						{trans("This schema has no assigned tariffs.")}
+					</td>
+				</tr>
 				{/foreach}
 				</TBODY>
 				{if $tariffs}
 				<TFOOT>
 				<TR>
-					<TD colspan="2" class="ftop valign-top">
+					<TD colspan="3" class="ftop valign-top">
 						<div class="promoschema-tariff-selection-header">
 							<div class="promoschema-tariff-selection-header-row">
 								<div class="promoschema-tariff-selection-header-cell">
@@ -255,7 +293,7 @@
 													data-tarifftags="{$tariff.tags}" data-valid="{$tariff.valid}"
 													{if !$tariff.valid} class="blend"{if !$formdata.alltariffs} style="display: none;"{/if}{/if}
 											>
-												{$tariff.name|truncate:40:"...":true} ({moneyf($tariff.value, $tariff.currency)}{if $tariff.upceil || $tariff.downceil}, {convert_to_units($tariff.downceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/{convert_to_units($tariff.upceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}{/if})
+												{$tariff.name|truncate:40:"&hellip;":true} ({moneyf($tariff.value, $tariff.currency)}{if $tariff.upceil || $tariff.downceil}, {convert_to_units($tariff.downceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}/{convert_to_units($tariff.upceil * $speed_unit_type, $speed_unit_aggregation_threshold, $speed_unit_type)}{/if})
 											</OPTION>
 										{/foreach}
 									</SELECT>
@@ -410,7 +448,7 @@
 
 		$('#schematariffs').sortable({
 			items: 'tbody > tr.schematariff',
-			handle: 'img.drag-icon',
+			handle: 'i.drag-icon',
 			opacity: 0.9,
 			axis: 'y',
 			placeholder: 'light',

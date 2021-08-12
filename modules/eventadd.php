@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2018 LMS Developers
+ *  (C) Copyright 2001-2021 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -41,13 +41,26 @@ if (isset($_POST['event']['helpdesk']) && isset($_POST['ticket'])) {
 }
 
 $userlist = $LMS->GetUserNames();
-unset($userlist['total']);
+
+if ($SESSION->is_set('backto', true)) {
+    $backto = $SESSION->get('backto', true);
+} elseif ($SESSION->is_set('backto')) {
+    $backto = $SESSION->get('backto');
+} else {
+    $backto = 'm=eventlist';
+}
+if (preg_match('/m=rtticketview/', $backto)) {
+    $backid = '';
+} else {
+    $backid = $SESSION->get('backid');
+}
+$backurl = '?' . $backto . (empty($backid) ? '' : '#' . $backid);
 
 if (isset($_POST['event'])) {
     $event = $_POST['event'];
 
     if (!isset($event['usergroup'])) {
-        $event['usergroup'] = 0;
+        $event['usergroup'] = -2;
     }
 //  $SESSION->save('eventgid', $event['usergroup']);
 
@@ -74,6 +87,13 @@ if (isset($_POST['event'])) {
                 $error['begin'] = trans('Incorrect date format! Enter date in YYYY/MM/DD HH:MM format!');
             } else {
                 $begintime = datetime_to_timestamp($event['begin']) - $date;
+            }
+        }
+
+        if (!empty($date)) {
+            $allow_past_events = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.timetable_allow_past_events', 'true'));
+            if (!$allow_past_events && $date + $begintime < time()) {
+                $error['begin'] = trans('Events which begin in the past are not allowed!');
             }
         }
     }
@@ -364,13 +384,7 @@ if (isset($_POST['event'])) {
         $ticket = $hook_data['ticket'];
 
         if (!isset($event['reuse'])) {
-            $backto = $SESSION->get('backto');
-            if (isset($backto) && preg_match('/m=rtticketview/', $backto)) {
-                $SESSION->redirect('?' . $backto);
-            } else {
-                $SESSION->redirect('?m=eventlist'
-                    . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
-            }
+            $SESSION->redirect($backurl);
         }
 
         unset($event['title']);
@@ -414,6 +428,8 @@ if (isset($_POST['event'])) {
     if (!isset($eventticketid)) {
         $event['helpdesk'] = ConfigHelper::checkConfig('phpui.default_event_ticket_assignment') ? 'new' : 'none';
     }
+
+    $SMARTY->assign('backurl', $backurl);
 }
 
 $netnodelist = $LMS->GetNetNodeList(array(), 'name');
@@ -501,7 +517,7 @@ if (isset($eventticketid)) {
     $event['ticket'] = $LMS->getTickets($eventticketid);
     $event['customerid'] = $event['ticket']['customerid'];
     $event['customername'] = $event['ticket']['customername'];
-    if (ConfigHelper::checkConfig('phpui.copy_ticket_summary_to_assigned_event', 'false')) {
+    if (ConfigHelper::checkConfig('phpui.copy_ticket_summary_to_assigned_event')) {
         $event['title'] = $event['ticket']['name'];
         $message = $LMS->GetFirstMessage($event['ticketid']);
         $event['description'] = $message['body'];

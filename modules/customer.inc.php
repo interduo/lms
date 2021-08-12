@@ -58,14 +58,19 @@ if (!isset($resource_tabs['customernotes']) || $resource_tabs['customernotes']) 
 }
 
 if (!isset($resource_tabs['customerassignments']) || $resource_tabs['customerassignments']) {
-    $commited             = !empty($_GET['commited']) ? true : false;
+    $commited = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.default_show_approved_assignments_only', true));
+    $expired = ConfigHelper::checkConfig('phpui.default_show_expired_assignments');
+    if (ConfigHelper::variableExists('phpui.default_show_period_assignments')) {
+        $period = $PERIODS[intval(ConfigHelper::getConfig('phpui.default_show_period_assignments'))];
+    }
     $assignments = $LMS->GetCustomerAssignments($customerid, true, false);
 }
 if (!isset($resource_tabs['customergroups']) || $resource_tabs['customergroups']) {
     $customergroups = $LMS->CustomergroupGetForCustomer($customerid);
     $othercustomergroups = $LMS->GetGroupNamesWithoutCustomer($customerid);
 }
-if (!isset($resource_tabs['customerbalancebox']) || $resource_tabs['customerbalancebox']) {
+if ((ConfigHelper::checkPrivilege('read_only') || ConfigHelper::checkPrivilege('finances_view') || ConfigHelper::checkPrivilege('financial_operations') || ConfigHelper::checkPrivilege('finances_management'))
+    && (!isset($resource_tabs['customerbalancebox']) || $resource_tabs['customerbalancebox'])) {
     if (isset($_GET['aggregate_documents'])) {
         $aggregate_documents = !empty($_GET['aggregate_documents']);
     } else {
@@ -104,11 +109,22 @@ if (!isset($resource_tabs['customerevents']) || $resource_tabs['customerevents']
         $params['datefrom'] = date_to_timestamp($_GET['events-from-date']);
         $SMARTY->assign('events_from_date', $_GET['events-from-date']);
     }
-    $allevents = isset($_GET['allevents']) && !empty($_GET['allevents']);
+    $allevents = (isset($_GET['allevents']) && !empty($_GET['allevents']))
+        || ((!isset($_GET['allevents']) && ConfigHelper::checkConfig('phpui.default_show_closed_events')));
+
     if ($allevents) {
         $params['closed'] = '';
     }
     $eventlist = $LMS->EventSearch($params, 'date,desc', true);
+}
+if (!isset($resource_tabs['customertickets']) || $resource_tabs['customertickets']) {
+    $aet = ConfigHelper::getConfig('rt.allow_modify_resolved_tickets_newer_than', 86400);
+    $params = array(
+        'cid' => $customerid,
+        'short' => true,
+    );
+
+    $ticketlist = $LMS->GetQueueContents($params);
 }
 if (!isset($resource_tabs['customernodesbox']) || $resource_tabs['customernodesbox']) {
     $customernodes = $LMS->GetCustomerNodes($customerid);
@@ -149,6 +165,16 @@ $customerstats = array(
     'accounts' => $DB->GetOne('SELECT COUNT(*) FROM passwd WHERE ownerid = ?', array($customerid))
 );
 
+if ((ConfigHelper::checkPrivilege('read_only')
+    || ConfigHelper::checkPrivilege('customer_call_view')
+    || ConfigHelper::checkPrivilege('customer_call_management'))
+    && (!isset($resource_tabs['customercallbox']) || $resource_tabs['customercallbox'])) {
+    $customercalls = $LMS->getCustomerCalls(array(
+        'customerid' => $customerid,
+        'limit' => -1,
+    ));
+}
+
 if (!isset($resource_tabs['customerdevices']) || $resource_tabs['customerdevices']) {
     $customerdevices = $LMS->GetNetDevList('name,asc', array('ownerid' => intval($customerid)));
     unset($customerdevices['total']);
@@ -187,6 +213,8 @@ $SMARTY->assign(array(
     'objectid' => $customerinfo['id'],
     'aggregate_documents' => $aggregate_documents,
     'commited' => $commited,
+    'expired' => $expired,
+    'period' => $period,
     'allevents' => $allevents,
     'time' => $SESSION->get('addbt'),
     'taxid' => $SESSION->get('addbtax'),
@@ -212,3 +240,6 @@ $SMARTY->assignByRef('taxeslist', $taxeslist);
 $SMARTY->assignByRef('allnodegroups', $allnodegroups);
 $SMARTY->assignByRef('messagelist', $messagelist);
 $SMARTY->assignByRef('eventlist', $eventlist);
+$SMARTY->assignByRef('customercalls', $customercalls);
+$SMARTY->assignByRef('ticketlist', $ticketlist);
+$SMARTY->assignByRef('aet', $aet);

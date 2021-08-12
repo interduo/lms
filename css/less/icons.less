@@ -36,6 +36,25 @@
   text-align: center;
 }
 
+.lms-ui-icon-spacer {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-circle;
+    color: transparent;
+  }
+}
+
+.lms-ui-icon-tariff-limit {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-hourglass-half;
+  }
+}
+
 .lms-ui-icon-map-pin {
   .fa-icon;
   .fas;
@@ -165,7 +184,8 @@
   }
 }
 
-.lms-ui-icon-settle {
+.lms-ui-icon-settle,
+.lms-ui-icon-value {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -386,6 +406,15 @@
   }
 }
 
+.lms-ui-icon-expired {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-exclamation-circle;
+  }
+}
+
 .lms-ui-icon-add,
 .lms-ui-icon-new,
 .lms-ui-icon-append {
@@ -415,6 +444,15 @@
   }
 }
 
+.lms-ui-icon-sorting {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-sort;
+  }
+}
+
 .lms-ui-icon-ascending {
   .fa-icon;
   .fas;
@@ -434,7 +472,15 @@
   }
 }
 
-.lms-ui-icon-mail,
+.lms-ui-icon-mail {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-at;
+  }
+}
+
 .lms-ui-icon-send {
   .fa-icon;
   .fas;
@@ -694,6 +740,7 @@
     content: @fa-var-toggle-on;
   }
 }
+
 .lms-ui-icon-plug {
   .fa-icon;
   .fas;
@@ -736,6 +783,36 @@
   }
 }
 
+.lms-ui-icon-vlan {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-project-diagram;
+  }
+}
+
+.lms-ui-icon-id,
+.lms-ui-icon-sn,
+.lms-ui-icon-serialnumber,
+.lms-ui-icon-serial {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-list-ol;
+  }
+}
+
+.lms-ui-icon-window-close {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-window-close;
+  }
+}
+
 .lms-ui-icon-node {
   .fa-icon;
   .fas;
@@ -772,6 +849,7 @@
   }
 }
 
+.lms-ui-icon-time,
 .lms-ui-icon-uptime {
   .fa-icon;
   .fas;
@@ -779,11 +857,6 @@
   &:before {
     content: @fa-var-clock;
   }
-}
-
-.lms-ui-icon-content {
-  width: 2em;
-  text-align: center;
 }
 
 .lms-ui-icon-categories {
@@ -795,7 +868,8 @@
   }
 }
 
-.lms-ui-icon-checked {
+.lms-ui-icon-checked,
+.lms-ui-icon-check {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1045,6 +1119,15 @@
   }
 }
 
+.lms-ui-icon-dropdown2 {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-ellipsis-h;
+  }
+}
+
 .lms-ui-icon-reload {
   .fa-icon;
   .fas;
@@ -1069,6 +1152,29 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-arrow-circle-down;
+  }
+}
+
+.lms-ui-icon-net-to-gross {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    color: gold;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    content: @fa-var-arrow-alt-circle-right;
+  }
+}
+
+.lms-ui-icon-gross-to-net {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-arrow-alt-circle-left;
   }
 }
 
@@ -1198,7 +1304,8 @@
   }
 }
 
-.lms-ui-icon-wired {
+.lms-ui-icon-wired,
+.lms-ui-icon-port {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1207,21 +1314,25 @@
   }
 }
 
-.lms-ui-icon-hosting {
+.lms-ui-icon-port-connected,
+.lms-ui-icon-port-taken {
+  .lms-ui-icon-port;
+  &:before {
+    color: gold !important;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+  }
+}
+
+.lms-ui-icon-hosting,
+.lms-ui-icon-radius {
   .fa-icon;
   .fas;
   .lms-ui-icon;
   &:before {
     content: @fa-var-server;
-  }
-}
-
-.lms-ui-icon-add {
-  .fa-icon;
-  .fas;
-  .lms-ui-icon;
-  &:before {
-    content: @fa-var-plus-square;
   }
 }
 
@@ -1352,7 +1463,8 @@
 }
 
 .lms-ui-icon-trust,
-.lms-ui-icon-handshake {
+.lms-ui-icon-handshake,
+.lms-ui-icon-warranty {
   .fa-icon;
   .fas;
   .lms-ui-icon;
@@ -1494,6 +1606,17 @@
   .lms-ui-icon;
   &:before {
     content: @fa-var-id-card;
+  }
+}
+
+.lms-ui-icon-total,
+.lms-ui-icon-summary,
+.lms-ui-icon-sum {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-calculator;
   }
 }
 
@@ -1680,6 +1803,70 @@
   }
 }
 
+.lms-ui-icon-period,
+.lms-ui-icon-accounting {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-clock;
+  }
+}
+
+.lms-ui-icon-recipient {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-id-badge;
+  }
+}
+
+.lms-ui-icon-discount {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-percent;
+  }
+}
+
+.lms-ui-icon-quantity {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-grip-horizontal;
+  }
+}
+
+.lms-ui-icon-template {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-stamp;
+  }
+}
+
+.lms-ui-icon-permissions {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-user-lock;
+  }
+}
+
+.lms-ui-icon-filter {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-filter;
+  }
+}
+
 .lms-ui-icon-fiber,
 .lms-ui-icon-fibre {
   .fa-icon;
@@ -1709,4 +1896,108 @@
   &:before {
     content: @fa-var-terminal;
   }
+}
+
+.lms-ui-icon-area {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-square;
+  }
+}
+
+.lms-ui-icon-antenna {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-broadcast-tower;
+  }
+}
+
+.lms-ui-icon-share {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-share-alt;
+  }
+}
+
+.lms-ui-icon-map {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-map-marked-alt;
+  }
+}
+
+.lms-ui-icon-microphone,
+.lms-ui-icon-mic {
+  .fa-icon;
+  .fas;
+  .lms-ui-icon;
+  &:before {
+    content: @fa-var-microphone;
+  }
+}
+
+@keyframes fa-beat {
+  0% {
+    transform: scale(1);
+  }
+  5% {
+    transform: scale(1.25);
+  }
+  10% {
+    transform: scale(1.5);
+  }
+  15% {
+    transform: scale(1.25);
+  }
+  20% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+  }
+  35% {
+    transform: scale(1.5);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  45% {
+    transform: scale(1);
+  }
+  55% {
+    transform: scale(1.25);
+  }
+  60% {
+    transform: scale(1.5);
+  }
+  65% {
+    transform: scale(1.25);
+  }
+  70% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.25);
+  }
+  80% {
+    transform: scale(1.5);
+  }
+  85% {
+    transform: scale(1.25);
+  }
+  90% {
+    transform: scale(1);
+  }
+}
+
+.fa-beat {
+  animation:fa-beat 5s ease infinite;
 }

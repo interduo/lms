@@ -28,7 +28,7 @@
 			{else}
 				{$icon = "mail"}
 			{/if}
-			{icon name=$icon class="fa-fw"}
+			{icon name=$icon}
 		</TD>
 		<TD class="bold nobr">
 			{trans("Subject:")}
@@ -41,7 +41,7 @@
     <TBODY>
 	<TR>
 		<TD>
-			{icon name="user" class="fa-fw"}
+			{icon name="user"}
 		</TD>
 		<TD class="bold">
 			{trans("User:")}
@@ -54,7 +54,7 @@
 	</TR>
 	<TR>
 		<TD>
-			{icon name="calendar" class="fa-fw"}
+			{icon name="calendar"}
 		</TD>
 		<TD class="bold">
 			{trans("Creation date:")}
@@ -66,7 +66,7 @@
 {if $message.sender}
 	<TR>
 		<TD>
-			{icon name="mail" class="fa-fw"}
+			{icon name="mail"}
 		</TD>
 		<TD class="bold">
 			{trans("Sender:")}
@@ -78,7 +78,7 @@
 {/if}
 	<TR>
 		<TD>
-			{icon name="edit" class="fa-fw"}
+			{icon name="edit"}
 		</TD>
 		<TD class="bold nobr">
 			{trans("Message body:")}
@@ -102,7 +102,7 @@
 	{if $filecontainers}
 		<TR>
 			<TD class="valign-top">
-				{icon name="attachment" class="fa-fw"}
+				{icon name="attachment"}
 			</TD>
 			<TD class="bold valign-top">
 				{trans("Attachments:")}
@@ -200,7 +200,7 @@
 	<TR class="{if $item.body}showitem{/if} {if $item.status==$smarty.const.MSG_ERROR} lms-ui-alert{elseif $item.status==$smarty.const.MSG_SENT} blend{elseif $item.status==$smarty.const.MSG_DELIVERED} green{/if}" onmouseover="addClass(this, 'highlight')" onmouseout="removeClass(this, 'highlight')" data-itemid="{$item.id}">
 		<TD class="nobr valign-top">
 			{if $item.customerid}
-				<A href="?m=customerinfo&id={$item.customerid}">{$item.customer|truncate:45:"...":true} ({$item.customerid|string_format:"%04d"})</A>
+				<A href="?m=customerinfo&id={$item.customerid}">{$item.customer|truncate:45:"&hellip;":true} ({$item.customerid|string_format:"%04d"})</A>
 			{else}
 				{trans("none")}
 			{/if}
@@ -243,11 +243,11 @@
 		</TD>
 	</TR>
 	{sectionelse}
-	<TR>
-		<TD COLSPAN="6" class="empty-table">
-			<p>{trans("No such recipients in database.")}</p>
-		</TD>
-	</TR>
+	<tr>
+		<td colspan="6" class="empty-table">
+			{trans("No such recipients in database.")}
+		</td>
+	</tr>
 	{/section}
     </TBODY>
     <TFOOT>

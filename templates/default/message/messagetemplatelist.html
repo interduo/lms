@@ -71,7 +71,7 @@
 				{$template.subject|escape}
 			</TD>
 			<TD>
-				{$template.message|truncate:5000:"..."|replace:"\n":"<BR>"}
+				{$template.message|truncate:5000:"&hellip;"|replace:"\n":"<BR>"}
 				<div style="display: none;" class="data-template-message">{$template.message}</div>
 			</TD>
 			<TD data-template-helpdesk-queues="{$template.queues}">
@@ -96,11 +96,11 @@
 			</TD>
 		</TR>
 		{foreachelse}
-		<TR>
-			<TD colspan="7" class="empty-table">
-				<p>{trans("No message templates in database.")}</p>
-			</TD>
-		</TR>
+		<tr>
+			<td colspan="7" class="empty-table">
+				{trans("No message templates in database.")}
+			</td>
+		</tr>
 		{/foreach}
 	</TBODY>
 	<TFOOT>

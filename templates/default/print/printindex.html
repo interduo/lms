@@ -24,7 +24,7 @@
 <H1>{$layout.pagetitle}</H1>
 {$default_printpage = ConfigHelper::getConfig('invoices.default_printpage')}
 {if $printmenu=="customer"}
-<FORM method="POST" name="printcustomerlist" id="printcustomerlist" action="?m=customerprint&amp;type=customerlist">
+<form method="POST" name="printcustomerlist" id="printcustomerlist" action="?m=customerprint&type=customerlist">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
     <COLGROUP>
@@ -64,6 +64,8 @@
 										<OPTION value="52">{trans("in debt")}</OPTION>
 										<OPTION value="57">{trans("in debt above 100%")}</OPTION>
 										<OPTION value="58">{trans("in debt above 200%")}</OPTION>
+										<option value="79">{trans("with active tariffless liabilities")}</option>
+										<option value="80">{trans("with tariffless liabilities")}</option>
 										<OPTION value="59">{trans("without contracts")}</OPTION>
 										<OPTION value="76">{trans("without active contracts")}</OPTION>
 										<OPTION value="60">{trans("with expired contracts")}</OPTION>
@@ -138,7 +140,7 @@
 									<SELECT size="1" name="network" {tip text="Select network"}>
 										<OPTION value="0" selected>{trans("- all networks -")}</OPTION>
 										{section name="networks" loop=$networks}
-										<OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"...":true}</OPTION>
+										<OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"&hellip;":true}</OPTION>
 										{/section}
 									</SELECT>
 								</TD>
@@ -150,7 +152,7 @@
 									<SELECT size="1" name="customergroup" {tip text="Select group"}>
 										<OPTION value="0" selected>{trans("- all groups -")}</OPTION>
 										{section name="customergroups" loop=$customergroups}
-										<OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"...":true}</OPTION>
+										<OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"&hellip;":true}</OPTION>
 										{/section}
 									</SELECT>
 								</TD>
@@ -162,7 +164,7 @@
 									<SELECT size="1" name="nodegroup" {tip text="Select group"}>
 										<OPTION value="" selected>{trans("- all groups -")}</OPTION>
 										{foreach from=$nodegroups item=nodegroup}
-										<OPTION value="{$nodegroup.id}">{$nodegroup.name|truncate:30:"...":true}</OPTION>
+										<OPTION value="{$nodegroup.id}">{$nodegroup.name|truncate:30:"&hellip;":true}</OPTION>
 										{/foreach}
 									</SELECT>
 								</TD>
@@ -266,7 +268,7 @@
 	</TR>
 	</TBODY>
 </TABLE>
-</FORM>
+</form>
 {/if}
 {if $printmenu=="finances"}
 <FORM method="post" name="printbalancelist" id="printbalancelist" action="?m=print&type=balancelist">
@@ -304,7 +306,7 @@
 						        <SELECT size="1" name="user" {tip text="You can select user to limit results"}>
 						    	    <OPTION value="">{trans("- all users -")}</OPTION>
 							    {section name="users" loop=$users}
-							    <OPTION value="{$users[users].id}">{$users[users].name|truncate:40:"...":true}</OPTION>
+							    <OPTION value="{$users[users].id}">{$users[users].name|truncate:40:"&hellip;":true}</OPTION>
 							    {/section}
 					    	    </SELECT>
 						</TR>
@@ -319,7 +321,7 @@
 							<SELECT size="1" name="network" {tip text="Select network"}>
 							    <OPTION value="0" SELECTED>{trans("- all networks -")}</OPTION>
 							    {section name="networks" loop=$networks}
-							    <OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"...":true}</OPTION>
+							    <OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"&hellip;":true}</OPTION>
 							    {/section}
 							</SELECT>
 						    </TD>
@@ -351,7 +353,7 @@
 							<SELECT size="1" name="customergroup" {tip text="Select group"}>
 							    <OPTION value="0" SELECTED>{trans("- all groups -")}</OPTION>
 							    {section name="customergroups" loop=$customergroups}
-							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"...":true}</OPTION>
+							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"&hellip;":true}</OPTION>
 							    {/section}
 							</SELECT>
 						    </TD>
@@ -412,11 +414,19 @@
 					<TD style="width: 1%;">
 						<IMG src="img/calendar.gif" alt="">
 					</TD>
-					<TD style="width: 95%;" class="nobr">
-						<span class="bold nobr">{trans("Period:")}</span>
-						{date_period_preset from="#printbalancelist [name=\"balancefrom\"]" to="#printbalancelist [name=\"balanceto\"]"}
-						{trans("From")}&nbsp;<INPUT type="text" name="balancefrom" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
-						{trans("To")}&nbsp;<INPUT type="text" name="balanceto" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					<TD style="width: 95%;">
+						<span class="lms-ui-date-period-container">
+							<strong>{trans("Period:")}</strong>
+							{date_period_preset from="#printbalancelist [name=\"balancefrom\"]" to="#printbalancelist [name=\"balanceto\"]"}
+							<span>{trans("From")}</span>
+							<input type="text" name="balancefrom" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
+							<span>{trans("To")}</span>
+							<input type="text" name="balanceto" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+						</span>
 					</TD>
 				</TR>
 			</TABLE>
@@ -432,7 +442,7 @@
 </FORM>
 {/if}
 {if ($printmenu=="customer" || $printmenu=="finances") && (ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances'))}
-<FORM method="post" name="printcustomerbalance" id="printcustomerbalance" action="?m=print&amp;type=customerbalance">
+<form method="post" name="printcustomerbalance" id="printcustomerbalance" action="?m=print&type=customerbalance">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
     <COLGROUP>
@@ -467,11 +477,19 @@
 					<TD style="width: 1%;">
 						<IMG src="img/calendar.gif" alt="">
 					</TD>
-					<TD style="width: 96%;" class="nobr">
-						<span class="bold nobr">{trans("Period:")}</span>&nbsp;
-						{date_period_preset from="#printcustomerbalance [name=\"from\"]" to="#printcustomerbalance [name=\"to\"]"}
-						{trans("From")}&nbsp;<INPUT type="text" name="from" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means 1970/01/01) or click to choose it from calendar"}>
-						{trans("To")}&nbsp;<INPUT type="text" name="to" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					<TD style="width: 96%;">
+						<span class="lms-ui-date-period-container">
+							<strong>{trans("Period:")}</strong>&nbsp;
+							{date_period_preset from="#printcustomerbalance [name=\"from\"]" to="#printcustomerbalance [name=\"to\"]"}
+							<span>{trans("From")}</span>
+							<input type="text" name="from" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means 1970/01/01) or click to choose it from calendar"}>
+							<span>{trans("To")}</span>
+							<input type="text" name="to" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+						</span>
 					</TD>
 				</TR>
 			</TABLE>
@@ -501,7 +519,7 @@
 	</TR>
 	</TBODY>
 </TABLE>
-</FORM>
+</form>
 {/if}
 {if $printmenu=="finances"}
 <FORM method="post" name="invoicereport" id="invoicereport" action="?m=invoicereport">
@@ -572,7 +590,7 @@
 											multiple {tip text="Select group"}
 											data-default-value="{trans("- all groups -")}">
 										{foreach $customergroups as $customergroup}
-											<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"...":true}</OPTION>
+											<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"&hellip;":true}</OPTION>
 										{/foreach}
 									</SELECT>
 								</TD>
@@ -655,10 +673,18 @@
 					            <TD style="width: 1%;" class="bold nobr">
 						            {trans("Period:")}
 					            </TD>
-					            <TD style="width: 98%;" colspan="2" class="nobr">
-									{date_period_preset from="#invoicereport [name=\"from\"]" to="#invoicereport [name=\"to\"]"}
-									{trans("From")}&nbsp;<INPUT type="text" name="from" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
-						            {trans("To")}&nbsp;<INPUT type="text" name="to" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					            <TD style="width: 98%;" colspan="2">
+									<span class="lms-ui-date-period-container">
+										{date_period_preset from="#invoicereport [name=\"from\"]" to="#invoicereport [name=\"to\"]"}
+										<span>{trans("From")}</span>
+										<input type="text" name="from" size="10" maxlength="10"
+											placeholder="{trans("yyyy/mm/dd")}"
+											{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+										<span>{trans("To")}</span>
+										<input type="text" name="to" size="10" maxlength="10"
+											placeholder="{trans("yyyy/mm/dd")}"
+											{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+									</span>
 					            </TD>
 					        </TR>
 						    <TR>
@@ -742,7 +768,7 @@
 							<SELECT SIZE="1" name="registry" {tip text="Select cash registry"}>
 					    		    <OPTION value="0">{trans("- all -")}</OPTION>
 						    	    {foreach from=$cashreglist item=c}
-							    <OPTION value="{$c.id}">{$c.name|truncate:40:"...":true} ({$c.id|string_format:"%04d"})</OPTION>
+							    <OPTION value="{$c.id}">{$c.name|truncate:40:"&hellip;":true} ({$c.id|string_format:"%04d"})</OPTION>
 						    	    {/foreach}
 							</SELECT>
 						    </TD>
@@ -758,7 +784,7 @@
 							<SELECT size="1" name="group">
 							    <OPTION value="0" SELECTED>{trans("- all groups -")}</OPTION>
 			    				    {section name="customergroups" loop=$customergroups}
-							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:30:"...":true}</OPTION>
+							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:30:"&hellip;":true}</OPTION>
 							    {/section}
 							</SELECT>
     							<INPUT type="checkbox" name="groupexclude" id="receiptlist-groupexclude" {if $listdata.groupexclude} CHECKED{/if}><label for="receiptlist-groupexclude">{trans("exclude group")}</label>
@@ -775,7 +801,7 @@
 							<SELECT size="1" name="user" {tip text="You can select user to limit results"}>
 							    <OPTION value="">{trans("- all users -")}</OPTION>
 							    {section name="users" loop=$users}
-							    <OPTION value="{$users[users].id}">{$users[users].name|truncate:40:"...":true}</OPTION>
+							    <OPTION value="{$users[users].id}">{$users[users].name|truncate:40:"&hellip;":true}</OPTION>
 							    {/section}
 							</SELECT>
 						    </TD>
@@ -784,11 +810,19 @@
 					<TD style="width: 1%;">
 						<IMG src="img/calendar.gif" alt="">
 					</TD>
-					<TD style="width: 1%;" class="nobr">
-						<span class="bold nobr">{trans("Period:")}</span>&nbsp;
-						{date_period_preset from="#printreceiptlist [name=\"from\"]" to="#printreceiptlist [name=\"to\"]"}
-						{trans("From")}&nbsp;<INPUT type="text" name="from" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
-						{trans("To")}&nbsp;<INPUT type="text" name="to" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					<TD style="width: 1%;">
+						<span class="lms-ui-date-period-container">
+							<strong>{trans("Period:")}</strong>&nbsp;
+							{date_period_preset from="#printreceiptlist [name=\"from\"]" to="#printreceiptlist [name=\"to\"]"}
+							<span>{trans("From")}</span>
+							<input type="text" name="from" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+							<span>{trans("To")}</span>
+							<input type="text" name="to" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+						</span>
 					</TD>
 					<TD style="width: 97%;" class="nobr">
 						<input type="checkbox" name="extended" value="1" id="receiptlist-extended"><label for="receiptlist-extended">{trans("extended format")}</label>
@@ -807,7 +841,7 @@
 </FORM>
 {/if}
 {if $printmenu=="finances"}
-<FORM method="post" name="printinvoices" id="printinvoices" action="?m=print&type=invoices">
+<form method="post" name="printinvoices" id="printinvoices" action="?m=print&type=invoices">
 <INPUT type="submit" class="hiddenbtn">
 <SCRIPT type="text/javascript">
 <!--
@@ -893,8 +927,9 @@
 							<td>
 								<select name="customer_type">
 									<option value="-1">{trans("- all customers -")}</option>
-									<option value="{$smarty.const.CTYPES_PRIVATE}">{trans("private person")}</option>
-									<option value="{$smarty.const.CTYPES_COMPANY}">{trans("legal entity")}</option>
+									{foreach from=$_CTYPES key=key item=item}
+									<option value="{$key}">{$item}</option>
+									{/foreach}
 								</select>
 							</td>
 						</tr>
@@ -909,7 +944,7 @@
 								<input type="hidden" name="group" value="all">
 								<SELECT size="1" name="group[]" class="lms-ui-multiselect" data-default-value="{trans("- all groups -")}" multiple>
 									{foreach $customergroups as $customergroup}
-									<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"...":true}</OPTION>
+									<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"&hellip;":true}</OPTION>
 									{/foreach}
 								</SELECT>
 								<INPUT type="checkbox" name="groupexclude" id="invoices-groupexclude" {if $listdata.groupexclude} CHECKED{/if}><label for="invoices-groupexclude">{trans("exclude group")}</label>
@@ -940,11 +975,19 @@
 								<TD style="width: 1%;">
 									<IMG src="img/calendar.gif" alt="">
 								</TD>
-								<TD style="width: 1%;" class="nobr">
-									<span class="bold nobr">{trans("Period:")}</span>
-									{date_period_preset from="#printinvoices [name=\"invoicefrom\"]" to="#printinvoices [name=\"invoiceto\"]"}
-									{trans("From")}&nbsp;<INPUT type="text" name="invoicefrom" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
-									{trans("To")}&nbsp;<INPUT type="text" name="invoiceto" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+								<TD style="width: 1%;">
+									<span class="lms-ui-date-period-container">
+										<strong>{trans("Period:")}</strong>
+										{date_period_preset from="#printinvoices [name=\"invoicefrom\"]" to="#printinvoices [name=\"invoiceto\"]"}
+										<span>{trans("From")}</span>
+										<input type="text" name="invoicefrom" size="10" maxlength="10"
+											placeholder="{trans("yyyy/mm/dd")}"
+											{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+										<span>{trans("To")}</span>
+										<input type="text" name="invoiceto" size="10" maxlength="10"
+											placeholder="{trans("yyyy/mm/dd")}"
+											{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+									</span>
 								</TD>
 								<TD style="width: 1%;">
 									<IMG src="img/info.gif" alt="">
@@ -1003,10 +1046,10 @@
 	</TR>
     </TBODY>
 </TABLE>
-</FORM>
+</form>
 {/if}
 {if $printmenu=="finances"}
-<FORM method="post" name="printforms" id="printforms" action="?m=print&type=transferforms&kind=2">
+<form method="post" name="printforms" id="printforms" action="?m=print&type=transferforms&kind=2">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
     <COLGROUP>
@@ -1055,7 +1098,7 @@
 							<SELECT size="1" name="customergroup">
 							    <OPTION value="0" SELECTED>{trans("- all groups -")}</OPTION>
 			    				    {section name="customergroups" loop=$customergroups}
-							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:30:"...":true}</OPTION>
+							    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:30:"&hellip;":true}</OPTION>
 							    {/section}
 							</SELECT>
     							<INPUT type="checkbox" name="groupexclude" id="printforms-groupexclude" {if $listdata.groupexclude} CHECKED{/if}><label for="printforms-groupexclude">{trans("exclude group")}</label>
@@ -1080,7 +1123,7 @@
 	</TR>
     </TBODY>
 </TABLE>
-</FORM>
+</>
 {/if}
 {if $printmenu=="incomereport" || $printmenu=="finances"}
 <FORM method="post" name="printincomereport" id="printincomereport" action="?m=print&type=incomereport">
@@ -1108,11 +1151,19 @@
 					<TD style="width: 1%;">
 						<IMG src="img/calendar.gif" alt="">
 					</TD>
-					<TD style="width: 99%;" class="nobr">
-						<span class="bold nobr">{trans("Period:")}</span>&nbsp;
-						{date_period_preset from="#printincomereport [name=\"from\"]" to="#printincomereport [name=\"to\"]"}
-						{trans("From")}&nbsp;<INPUT type="text" name="from" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
-						{trans("To")}&nbsp;<INPUT type="text" name="to" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					<TD style="width: 99%;">
+						<span class="lms-ui-date-period-container">
+							<strong>{trans("Period:")}</strong>&nbsp;
+							{date_period_preset from="#printincomereport [name=\"from\"]" to="#printincomereport [name=\"to\"]"}
+							<span>{trans("From")}</span>
+							<input type="text" name="from" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
+							<span>{trans("To")}</span>
+							<input type="text" name="to" SIZE="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+						</span>
 					</TD>
 				</TR>
 			</TABLE>
@@ -1128,7 +1179,7 @@
 </FORM>
 {/if}
 {if ($printmenu=="customer" || $printmenu=="finances") && (ConfigHelper::checkConfig('privileges.superuser') || !ConfigHelper::checkConfig('privileges.hide_finances'))}
-<FORM method="post" name="liabilityreport" id="liabilityreport" action="?m=print&amp;type=liabilityreport">
+<form method="post" name="liabilityreport" id="liabilityreport" action="?m=print&type=liabilityreport">
 <p style="display: none;">
 <INPUT type="submit" class="hiddenbtn">
 </p>
@@ -1247,7 +1298,7 @@
 	</TR>
 	</TBODY>
 </TABLE>
-</FORM>
+</form>
 {/if}
 {if $printmenu=="finances"}
 <FORM method="post" name="printimportlist" id="printimportlist" action="?m=print&type=importlist">
@@ -1289,11 +1340,19 @@
 					<TD style="width: 1%;">
 						<IMG src="img/calendar.gif" alt="">
 					</TD>
-					<TD style="width: 96%;" class="nobr">
-						<span class="bold nobr">{trans("Period:")}</span>
-						{date_period_preset from="#printimportlist [name=\"importfrom\"]" to="#printimportlist [name=\"importto\"]"}
-						{trans("From")}&nbsp;<INPUT type="text" name="importfrom" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
-						{trans("To")}&nbsp;<INPUT type="text" name="importto" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}" {tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+					<TD style="width: 96%;">
+						<span class="lms-ui-date-period-container">
+							<strong>{trans("Period:")}</strong>
+							{date_period_preset from="#printimportlist [name=\"importfrom\"]" to="#printimportlist [name=\"importto\"]"}
+							<span>{trans("From")}</span>
+							<input type="text" name="importfrom" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
+							<span>{trans("To")}</span>
+							<input type="text" name="importto" size="10" maxlength="10"
+								placeholder="{trans("yyyy/mm/dd")}"
+								{tip class="lms-ui-date" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+						</span>
 					</TD>
 				</TR>
 			</TABLE>
@@ -1350,7 +1409,7 @@
 						<SELECT size="1" name="network" {tip text="Select network"}>
 						    <OPTION value="0" SELECTED>{trans("- all networks -")}</OPTION>
 						    {section name="networks" loop=$networks}
-						    <OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"...":true}</OPTION>
+						    <OPTION value="{$networks[networks].id}">{$networks[networks].name|truncate:40:"&hellip;":true}</OPTION>
 						    {/section}
 						</SELECT>
 					</TD>
@@ -1363,7 +1422,7 @@
 					    <SELECT size="1" name="customergroup" {tip text="Select group"}>
 						    <OPTION value="0" SELECTED>{trans("- all groups -")}</OPTION>
 						    {section name="customergroups" loop=$customergroups}
-						    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"...":true}</OPTION>
+						    <OPTION value="{$customergroups[customergroups].id}">{$customergroups[customergroups].name|truncate:40:"&hellip;":true}</OPTION>
 						    {/section}
 					    </SELECT>
 					</TD>
@@ -1401,7 +1460,7 @@
 </FORM>
 {/if}
 {if $printmenu=="traffic" || $printmenu=="customer"}
-<FORM method="post" name="printcustomertraffic" id="printcustomertraffic"  action="?m=trafficprint&amp;type=customertraffic">
+<form method="post" name="printcustomertraffic" id="printcustomertraffic"  action="?m=trafficprint&type=customertraffic">
 <INPUT type="submit" class="hiddenbtn">
 <TABLE class="lmsbox">
     <COLGROUP>
@@ -1480,7 +1539,7 @@
 	</TR>
 	</TBODY>
 </TABLE>
-</FORM>
+</form>
 {/if}
 
 {if $printmenu == "customer"}
@@ -1534,7 +1593,7 @@
 										multiple {tip text="Select group"}
 										data-default-value="{trans("- all groups -")}">
 									{foreach $customergroups as $customergroup}
-										<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"...":true}</OPTION>
+										<OPTION value="{$customergroup.id}">{$customergroup.name|truncate:30:"&hellip;":true}</OPTION>
 									{/foreach}
 								</SELECT>
 							</TD>
@@ -1712,6 +1771,15 @@
 {/if}
 
 {if $printmenu == "netdev" || $printmenu == "finances"}
+<style>
+
+	#uke-income-customergroup-selection {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+	}
+
+</style>
 <form method="post" name="uke-income" id="uke-income" action="?m=netdevprint&type=uke-income&module-filter=print" target="_blank">
 	<input type="submit" class="hiddenbtn">
 	<table class="lmsbox">
@@ -1764,20 +1832,58 @@
 			</td>
 		</tr>
 		<tr>
+			<td class="valign-top">
+				{icon name="customergroup" class="fa-fw"}
+			</td>
+			<td class="nobr valign-top">
+				<strong>{trans("Customer groups")}</strong>
+			</td>
+			<td>
+				<div id="uke-income-customergroup-selection">
+					<select name="customergroup">
+						<option value="">{trans("- any -")}</option>
+						{foreach $customergroups as $group}
+							<option value="{$group.id}"{if isset($filter['uke-income']['customergroup']) && $filter['uke-income']['customergroup'] == $group.id} selected{/if}
+								>{$group.name|escape}</option>
+						{/foreach}
+					</select>
+					<span>
+						<label {tip text="current customer group assignments"}>
+							<input type="radio" name="customergroup-intersection" value="current"
+								{if !isset($filter['uke-income']['customergroup-intersection']) || $filter['uke-income']['customergroup-intersection'] == 'current'} checked{/if}>
+							{trans("<!uke>current")}
+						</label>
+						<label {tip text="customer group assignment full time intersection with selected period"}>
+							<input type="radio" name="customergroup-intersection" value="fully"
+								{if isset($filter['uke-income']['customergroup-intersection']) && $filter['uke-income']['customergroup-intersection'] == 'fully'} checked{/if}>
+							{trans("<!uke>fully")}
+						</label>
+						<label {tip text="customer group assignment partial time intersection with selected period"}>
+							<input type="radio" name="customergroup-intersection-type" value="partially"
+								{if isset($filter['uke-income']['customergroup-intersection']) && $filter['uke-income']['customergroup-intersection'] == 'partially'} checked{/if}>
+							{trans("<!uke>partially")}
+						</label>
+					</span>
+				</div>
+			</td>
+		</tr>
+		<tr>
 			<TD>
 				<IMG src="img/calendar.gif" alt="">
 			</TD>
 			<TD class="bold nobr">
 				{trans("Period:")}
 			</TD>
-			<TD class="nobr">
-				{date_period_preset from="#uke-income [name=\"from\"]" to="#uke-income [name=\"to\"]" periods="previous-year,previous-month,current-year,current-month,next-month,next-year"}
-				{trans("From")}
-				<INPUT type="text" name="from" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
-					{tip class="lms-ui-date no-persistent-filter-field" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
-				{trans("To")}
-				<INPUT type="text" name="to" SIZE="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
-					{tip class="lms-ui-date no-persistent-filter-field" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+			<TD>
+				<span class="lms-ui-date-period-container">
+					{date_period_preset from="#uke-income [name=\"from\"]" to="#uke-income [name=\"to\"]" periods="previous-year,previous-month,current-year,current-month,next-month,next-year"}
+					<span>{trans("From")}</span>
+					<input type="text" name="from" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
+						{tip class="lms-ui-date no-persistent-filter-field" text="Enter date in 'yyyy/mm/dd' format or click to choose it from calendar"}>
+					<span>{trans("To")}</span>
+					<input type="text" name="to" size="10" maxlength="10" placeholder="{trans("yyyy/mm/dd")}"
+						{tip class="lms-ui-date no-persistent-filter-field" text="Enter date in 'yyyy/mm/dd' format (empty field means current date) or click to choose it from calendar"}>
+				</span>
 			</TD>
 		</tr>
 		<tr>

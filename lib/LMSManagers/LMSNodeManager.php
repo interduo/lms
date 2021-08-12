@@ -3,7 +3,7 @@
 /*
  *  LMS version 1.11-git
  *
- *  Copyright (C) 2001-2017 LMS Developers
+ *  Copyright (C) 2001-2021 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -300,9 +300,10 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
      *          7 = with warning,
      *          8 = without gps coords,
      *          9 = without radio sector (if wireless link)
+     *          10 = with locks
      *      network - network id (default: null = any), single integer value
      *      customergroup - customer group id (default: null = any), single integer value
-     *      nodegroup - node group id (default: null = any), single integer value
+     *      nodegroup - node group id (default: null = any), single integer value, -1 means nodes without any group
      *      search - additional attributes (default: null = none), associative array with some well-known
      *          properties:
      *              ipaddr - ip address or public ip address (default: null = any), text value,
@@ -474,6 +475,8 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         if ($count) {
             $sql .= 'SELECT COUNT(n.id) ';
         } else {
+            $daysecond = time() - strtotime('today');
+            $weekday = 1 << (date('N') - 1);
             $sql .= 'SELECT n.id AS id, n.ipaddr, inet_ntoa(n.ipaddr) AS ip, ipaddr_pub,
 				inet_ntoa(n.ipaddr_pub) AS ip_pub, n.mac, n.name, n.ownerid, n.access, n.warning,
 				n.netdev, n.lastonline, n.info, n.longitude, n.latitude, n.linktype, n.linktechnology, n.linkspeed,
@@ -490,7 +493,12 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 				(CASE WHEN lst.ident IS NULL
 					THEN (CASE WHEN c.street = \'\' THEN \'99999\' ELSE \'99998\' END)
 					ELSE lst.ident END) AS street_ident,
-				n.location_house, n.location_flat ';
+				n.location_house, n.location_flat,
+				(CASE WHEN EXISTS (
+                    SELECT 1 FROM nodelocks
+                    WHERE disabled = 0 AND (days & ' . $weekday . ') > 0 AND ' . $daysecond . ' >= fromsec
+                        AND ' . $daysecond . ' <= tosec AND nodeid = n.id
+                ) THEN 1 ELSE 0 END) AS locked ';
         }
         $sql .= 'FROM vnodes n 
 				JOIN customerview c ON (n.ownerid = c.id)
@@ -505,8 +513,8 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
 				LEFT JOIN location_boroughs lb ON lb.id = lc.boroughid
 				LEFT JOIN location_districts ld ON ld.id = lb.districtid
 				LEFT JOIN location_states ls ON ls.id = ld.stateid '
-                . ($customergroup ? 'JOIN customerassignments ON (customerid = c.id) ' : '')
-                . ($nodegroup ? 'JOIN nodegroupassignments ON (nodeid = n.id) ' : '')
+                . ($customergroup ? 'JOIN vcustomerassignments ON (customerid = c.id) ' : '')
+                . ($nodegroup ? ($nodegroup > 0 ? '' : 'LEFT ') . 'JOIN nodegroupassignments ON (nodeid = n.id) ' : '')
                 . ' WHERE 1=1 '
                 . ($network ? ' AND (n.netid = ' . $network . ' OR (n.ipaddr_pub > ' . $net['address'] . ' AND n.ipaddr_pub < ' . $net['broadcast'] . '))' : '')
                 . ($status == 1 ? ' AND n.access = 1' : '') //connected
@@ -523,8 +531,10 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
                 . ($status == 7 ? ' AND n.warning = 1' : '')
                 . ($status == 8 ? ' AND (n.latitude IS NULL OR n.longitude IS NULL)' : '')
                 . ($status == 9 ? ' AND (n.linktype = ' . LINKTYPE_WIRELESS . ' AND n.linkradiosector IS NULL)' : '')
+                . ($status == 10 ? ' AND EXISTS (SELECT 1 FROM nodelocks WHERE disabled = 0 AND nodeid = n.id)' : '')
                 . ($customergroup ? ' AND customergroupid = ' . intval($customergroup) : '')
-                . ($nodegroup ? ' AND nodegroupid = ' . intval($nodegroup) : '')
+                . ($nodegroup > 0 ? ' AND nodegroupid = ' . intval($nodegroup)
+                    : ($nodegroup == -1 ? ' AND NOT EXISTS (SELECT 1 FROM nodegroupassignments nga WHERE nga.nodeid = n.id)' : ''))
                 . (!empty($searchargs) ? $searchargs : '')
                 . ($sqlord != '' && !$count ? $sqlord . ' ' . $direction : '')
                 . ($limit !== null && !$count ? ' LIMIT ' . $limit : '')
@@ -822,7 +832,7 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         return ($this->db->GetOne(
             'SELECT n.id FROM vnodes n
 			WHERE n.id = ? AND n.ownerid IS NOT NULL AND NOT EXISTS (
-		        	SELECT 1 FROM customerassignments a
+		        	SELECT 1 FROM vcustomerassignments a
 			        JOIN excludedgroups e ON (a.customergroupid = e.customergroupid)
 				WHERE e.userid = lms_current_user() AND a.customerid = n.ownerid)',
             array($id)
@@ -845,6 +855,56 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
         return $result;
     }
 
+    public function GetNodeLinkType($devid, $nodeid)
+    {
+        $link = $this->db->GetRow(
+            'SELECT linktype AS type, linktechnology AS technology,
+            linkspeed AS speed, linkradiosector AS radiosector, port FROM nodes
+            WHERE netdev = ? AND id = ?',
+            array($devid, $nodeid)
+        );
+        if (empty($link)) {
+            $link = array();
+        } else {
+            $link['radiosectors'] = $this->db->GetAll(
+                'SELECT id, name FROM netradiosectors WHERE netdev = ?'
+                . ($link['technology'] ? ' AND (technology = ' . $link['technology'] . ' OR technology = 0)' : '')
+                . ' ORDER BY name',
+                array($devid)
+            );
+        }
+
+        return $link;
+    }
+
+    public function ValidateNodeLink($node, $link)
+    {
+        $netdev = $this->db->GetOne('SELECT netdev FROM nodes WHERE id  = ?', array($node));
+        if (!$netdev) {
+            return trans('Unknown error!');
+        }
+
+        if ($this->db->GetOne(
+            'SELECT id
+            FROM netlinks
+            WHERE (src = ? AND srcport = ?) OR (dst = ? AND dstport = ?)',
+            array($netdev, $link['port'], $netdev, $link['port'])
+        ) || $this->db->GetOne(
+            'SELECT id
+            FROM nodes
+            WHERE port = ? AND id <> ?',
+            array($link['port'], $node)
+        )) {
+            return trans('Selected port number is taken by other device or node!');
+        }
+
+        if ($this->db->GetOne('SELECT ports FROM netdevices WHERE id = ?', array($netdev)) < intval($link['port'])) {
+            return trans('Incorrect port number!');
+        }
+
+        return true;
+    }
+
     public function SetNodeLinkType($node, $link = null)
     {
         if (empty($link)) {
@@ -862,10 +922,16 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             $speed = isset($link['speed']) ? intval($link['speed']) : 100000;
         }
 
-        $res = $this->db->Execute(
-            'UPDATE nodes SET linktype=?, linkradiosector = ?, linktechnology=?, linkspeed=? WHERE id=?',
-            array($type, $radiosector, $technology, $speed, $node)
-        );
+        $query = 'UPDATE nodes SET linktype = ?, linkradiosector = ?, linktechnology = ?, linkspeed = ?';
+        $args = array($type, $radiosector, $technology, $speed);
+        if (isset($link['port'])) {
+            $query .= ', port = ?';
+            $args[] = intval($link['port']);
+        }
+        $query .= ' WHERE id=?';
+        $args[] = $node;
+        $res = $this->db->Execute($query, $args);
+
         if ($this->syslog && $res) {
             $nodedata = $this->db->GetRow('SELECT ownerid, netdev FROM vnodes WHERE id=?', array($node));
             $args = array(

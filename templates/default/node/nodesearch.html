@@ -49,7 +49,7 @@
 	</TR>
 	<TR>
 		<TD class="bold nobr">
-			{icon name="login" class="fa-fw"} {trans("<!node>Login")}
+			{icon name="login"} {trans("<!node>Login")}
 		</TD>
 		<TD>
 			<INPUT TYPE="text" NAME="search[login]" value="{$nodesearch.login}" {tip text="Enter node login or it's fragment"}>
@@ -95,6 +95,7 @@
 				<option value="6"{if $nodesearch.status == 6} selected{/if}>{trans("Net Device not specified")}</option>
 				<option value="9"{if $nodesearch.status == 9} selected{/if}>{trans("without radio sector")}</option>
 				<option value="7"{if $nodesearch.status == 7} selected{/if}>{trans("with warning")}</option>
+				<option value="10"{if $nodesearch.status == 10} selected{/if}>{trans("with locks")}</option>
 				<option value="8"{if $nodesearch.status == 8} selected{/if}>{trans("without gps coords")}</option>
 			</select>
 		</td>

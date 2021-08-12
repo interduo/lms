@@ -26,7 +26,7 @@
 			{trans("Subject:")}
 		</TD>
 		<TD class="bold nobr">
-			{$ticket.subject|truncate:50:"..."|escape}
+			{$ticket.subject|trunescape:50}
 		</TD>
 	</TR>
 	<TR>
@@ -121,7 +121,7 @@
 	</COLGROUP>
 	<TR CLASS="dark">
 		<TD class="bold nobr">
-			{trans("Requests causes (last year):")}
+			{trans("Requests causes (last year)")}
 		</TD>
 		<TD>
 			{trans("company's side")}: <B>{$stats.2.num|default:0}</B>,
@@ -151,7 +151,7 @@
 			{$message.createtime|date_format:"%Y/%m/%d %H:%M"}
 		</TD>
 		<TD class="HEAD text-right bold">
-			{trans("From:")}{if $message.type == $smarty.const.RTMESSAGE_REGULAR}<BR>{trans("Subject:")}{/if}
+			{trans("From:")}{if $message.type == $smarty.const.RTMESSAGE_REGULAR}<BR>{trans("Subject")}{/if}
 		</TD>
 		<TD class="HEAD nobr">
 			{if $message.type == $smarty.const.RTMESSAGE_REGULAR}
@@ -176,7 +176,7 @@
 		<TD class="HEAD text-right">
 			{if $message.attachments}
 				{foreach $message.attachments as $attachment}
-					{$attachment.filename} <IMG src="img/attach.gif" alt=""><br>
+					{$attachment.filename} {icon name="attachement"}<br>
 				{/foreach}
 			{/if}
 		</TD>
@@ -196,7 +196,7 @@
 				{$message.createtime|date_format:"%Y/%m/%d %H:%M"}
 			</td>
 			<td class="fbt text-right bold nobr valign-top">
-				{trans("From:")}
+				{trans("From")}
 			</td>
 			<td colspan="2" class="fbt">
 				{$message.username|escape}<BR>
@@ -212,7 +212,7 @@
 <TABLE width="100%" cellpadding="3" align="CENTER">
 	<TR>
 		<TD width="100%" class="HEAD">
-		{trans("Notes:")}
+		{trans("Notes")}
 		</TD>
 	</TR>
 	<TR>

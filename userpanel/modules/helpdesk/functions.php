@@ -195,14 +195,13 @@ function module_main()
                 'queue' => $ticket['queue'],
                 'subject' => $ticket['subject'],
                 'customerid' => $SESSION->id,
-                'requestor' => $LMS->GetCustomerName($SESSION->id),
                 'createtime' => time(),
                 'body' => $ticket['body'],
                 'categories' => array_flip(explode(',', $ticket['categories'])),
                 'mailfrom' => $ticket['mailfrom'],
                 'source' => RT_SOURCE_USERPANEL), $files);
 
-            if (ConfigHelper::checkConfig('phpui.newticket_notify')) {
+            if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.newticket_notify', true))) {
                 $user = $LMS->GetUserInfo(ConfigHelper::getConfig('userpanel.default_userid'));
 
                 if ($mailfname = ConfigHelper::getConfig('phpui.helpdesk_sender_name')) {
@@ -229,9 +228,13 @@ function module_main()
                 $emails = array_map(function ($contact) {
                         return $contact['fullname'];
                 }, $LMS->GetCustomerContacts($SESSION->id, CONTACT_EMAIL));
+                $all_phones = $LMS->GetCustomerContacts($SESSION->id, CONTACT_LANDLINE | CONTACT_MOBILE);
                 $phones = array_map(function ($contact) {
                         return $contact['fullname'];
-                }, $LMS->GetCustomerContacts($SESSION->id, CONTACT_LANDLINE | CONTACT_MOBILE));
+                }, $all_phones);
+                $mobile_phones = array_filter($all_phones, function ($contact) {
+                    return ($contact['type'] & (CONTACT_MOBILE | CONTACT_DISABLED)) == CONTACT_MOBILE;
+                });
 
                 if (ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
                     $params = array(
@@ -249,7 +252,6 @@ function module_main()
 
                 if (!empty($queuedata['newticketsubject']) && !empty($queuedata['newticketbody'])
                     && !empty($emails)) {
-                    $ticketid = sprintf("%06d", $id);
                     $custmail_subject = $queuedata['newticketsubject'];
                     $custmail_subject = preg_replace_callback(
                         '/%(\\d*)tid/',
@@ -278,6 +280,25 @@ function module_main()
                         'Subject' => $custmail_subject,
                     );
                     $LMS->SendMail(implode(',', $emails), $custmail_headers, $custmail_body, null, null, $LMS->GetRTSmtpOptions());
+                }
+
+                if (!empty($queuedata['newticketsmsbody']) && !empty($mobile_phones)) {
+                    $custsms_body = $queuedata['newticketsmsbody'];
+                    $custsms_body = preg_replace_callback(
+                        '/%(\\d*)tid/',
+                        function ($m) use ($id) {
+                            return sprintf('%0' . $m[1] . 'd', $id);
+                        },
+                        $custsms_body
+                    );
+                    $custsms_body = str_replace('%cid', $SESSION->id, $custsms_body);
+                    $custsms_body = str_replace('%pin', $info['pin'], $custsms_body);
+                    $custsms_body = str_replace('%customername', $info['customername'], $custsms_body);
+                    $custsms_body = str_replace('%title', $ticket['subject'], $custsms_body);
+
+                    foreach ($mobile_phones as $phone) {
+                        $LMS->SendSMS($phone['contact'], $custsms_body);
+                    }
                 }
 
                 $params = array(
@@ -626,12 +647,10 @@ function module_attachment()
     if (empty($attach)) {
         die;
     }
-    $file = ConfigHelper::getConfig('rt.mail_dir') . sprintf(
-        "/%06d/%06d/%s",
-        $attach['ticketid'],
-        $_GET['msgid'],
-        $attach['filename']
-    );
+
+    $rt_dir = ConfigHelper::getConfig('rt.mail_dir', STORAGE_DIR . DIRECTORY_SEPARATOR . 'rt');
+
+    $file = $rt_dir . sprintf("/%06d/%06d/%s", $attach['ticketid'], $_GET['msgid'], $attach['filename']);
     if (file_exists($file)) {
         header('Content-Type: '. $attach['contenttype']);
         header('Cache-Control: private');

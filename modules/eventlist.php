@@ -222,6 +222,8 @@ for ($i = 1; $i < $daysnum + 1; $i++) {
 }
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
+$SESSION->save('backto', $_SERVER['QUERY_STRING'], true);
+
 $SESSION->remove('backid');
 
 $today = mktime(0, 0, 0, date('n'), date('j'), date('Y'));
@@ -235,7 +237,7 @@ $SMARTY->assign('days', $days);
 $SMARTY->assign('daylist', $daylist);
 $SMARTY->assign('date', $date);
 $SMARTY->assign('error', $error);
-$SMARTY->assign('userlist', $LMS->GetUserNames());
+$SMARTY->assign('userlist', $LMS->GetUserNames(array('withDeleted' => 1)));
 $SMARTY->assign('overdue_events_only', $overdue_events_only);
 if (!ConfigHelper::checkConfig('phpui.big_networks')) {
     $SMARTY->assign('customerlist', $LMS->GetCustomerNames());

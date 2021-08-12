@@ -3,7 +3,7 @@
 /*
  * LMS version 1.11-git
  *
- *  (C) Copyright 2001-2020 LMS Developers
+ *  (C) Copyright 2001-2021 LMS Developers
  *
  *  Please, see the doc/AUTHORS for more information about authors!
  *
@@ -78,10 +78,10 @@ if (isset($_GET['id']) && ($action == 'edit' || $action == 'init')) {
             'pdiscount' => str_replace(',', '.', $item['pdiscount']),
             'vdiscount' => str_replace(',', '.', $item['vdiscount']),
             'jm' => str_replace(',', '.', $item['content']),
-            'valuenetto' => str_replace(',', '.', $item['basevalue']),
-            'valuebrutto' => str_replace(',', '.', $item['value']),
-            's_valuenetto' => str_replace(',', '.', $item['totalbase']),
-            's_valuebrutto' => str_replace(',', '.', $item['total']),
+            'valuenetto' => str_replace(',', '.', $item['netprice']),
+            'valuebrutto' => str_replace(',', '.', $item['grossprice']),
+            's_valuenetto' => str_replace(',', '.', $item['netvalue']),
+            's_valuebrutto' => str_replace(',', '.', $item['grossvalue']),
             'tax' => isset($taxeslist[$item['taxid']]) ? $taxeslist[$item['taxid']]['label'] : '',
             'taxid' => $item['taxid'],
             'taxcategory' => $item['taxcategory'],
@@ -223,23 +223,25 @@ switch ($action) {
 
         if ($itemdata['count'] > 0 && $itemdata['name'] != '') {
             $taxvalue = $taxeslist[$itemdata['taxid']]['value'];
-            if ($itemdata['valuenetto'] != 0 && $itemdata['valuebrutto'] == 0) {
-                $itemdata['valuenetto'] = f_round(($itemdata['valuenetto'] - $itemdata['valuenetto']
-                    * f_round($itemdata['pdiscount']) / 100)
-                    - ((100 * $itemdata['vdiscount']) / (100 + $taxvalue)));
-                $itemdata['valuebrutto'] = $itemdata['valuenetto'] * ($taxvalue / 100 + 1);
-                $itemdata['s_valuebrutto'] = f_round(($itemdata['valuenetto'] * $itemdata['count']) * ($taxvalue / 100 + 1));
-            } elseif ($itemdata['valuebrutto'] != 0) {
-                $itemdata['valuebrutto'] = f_round(($itemdata['valuebrutto'] - $itemdata['valuebrutto'] * $itemdata['pdiscount'] / 100)
+            $itemdata['count'] = f_round($itemdata['count'], 3);
+
+            if ($invoice['netflag']) {
+                $itemdata['valuenetto'] = f_round(($itemdata['valuenetto'] - $itemdata['valuenetto'] * f_round($itemdata['pdiscount']) / 100)
                     - $itemdata['vdiscount']);
-                $itemdata['valuenetto'] = round($itemdata['valuebrutto'] / ($taxvalue / 100 + 1), 2);
+                $itemdata['s_valuenetto'] = f_round($itemdata['valuenetto'] * $itemdata['count']);
+                $itemdata['tax_from_s_valuenetto'] = f_round($itemdata['s_valuenetto'] * ($taxvalue / 100));
+                $itemdata['s_valuebrutto'] = f_round($itemdata['s_valuenetto'] + $itemdata['tax_from_s_valuenetto']);
+                $itemdata['valuebrutto'] = f_round($itemdata['valuenetto'] * ($taxvalue / 100 + 1));
+            } else {
+                $itemdata['valuebrutto'] = f_round(($itemdata['valuebrutto'] - $itemdata['valuebrutto'] * f_round($itemdata['pdiscount']) / 100)
+                    - $itemdata['vdiscount']);
                 $itemdata['s_valuebrutto'] = f_round($itemdata['valuebrutto'] * $itemdata['count']);
+                $itemdata['tax_from_s_valuebrutto'] = f_round(($itemdata['s_valuebrutto'] * $taxvalue)
+                    / (100 + $taxvalue));
+                $itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] - $itemdata['tax_from_s_valuebrutto']);
+                $itemdata['valuenetto'] = f_round($itemdata['valuebrutto'] / ($taxvalue / 100 + 1));
             }
 
-            // str_replace here is needed because of bug in some PHP versions (4.3.10)
-            $itemdata['s_valuenetto'] = f_round($itemdata['s_valuebrutto'] / ($taxvalue / 100 + 1));
-            $itemdata['valuenetto'] = f_round($itemdata['valuenetto']);
-            $itemdata['count'] = f_round($itemdata['count'], 3);
             $itemdata['discount'] = f_round($itemdata['discount']);
             $itemdata['pdiscount'] = f_round($itemdata['pdiscount']);
             $itemdata['vdiscount'] = f_round($itemdata['vdiscount']);
@@ -417,6 +419,24 @@ switch ($action) {
         $invoice['customerid'] = $_POST['customerid'];
         $invoice['closed']     = $closed;
 
+        if (($invoice['numberplanid'] && !$LMS->checkNumberPlanAccess($invoice['numberplanid']))
+            || ($invoice['oldnumberplanid'] && !$LMS->checkNumberPlanAccess($invoice['oldnumberplanid']))) {
+            $invoice['numberplanid'] = $invoice['oldnumberplanid'];
+            $error['numberplanid'] = trans('Persmission denied!');
+        }
+
+        $args = array(
+            'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+            'customerid' => $invoice['customerid'],
+            'division' => $invoice['divisionid'],
+            'next' => false,
+        );
+        $numberplans = $LMS->GetNumberPlans($args);
+
+        if (count($numberplans) && empty($invoice['numberplanid'])) {
+            $error['numberplanid'] = trans('Select numbering plan');
+        }
+
         if ($invoice['number']) {
             if (!preg_match('/^[0-9]+$/', $invoice['number'])) {
                 $error['number'] = trans('Invoice number must be integer!');
@@ -470,6 +490,25 @@ switch ($action) {
             $error['currency'] = trans('Invalid currency selection!');
         }
 
+        $use_current_customer_data = isset($invoice['use_current_customer_data']) || $invoice['customerid'] != $customerid;
+
+        if ($use_current_customer_data) {
+            $customer = $LMS->GetCustomer($invoice['customerid'], true);
+        }
+
+        $args = array(
+            'doctype' => $invoice['proforma'] === 'edit' ? DOC_INVOICE_PRO : DOC_INVOICE,
+            'customerid' => $invoice['customerid'],
+            'division' => $use_current_customer_data ? (empty($customer['divisionid']) ? null : $customer['divisionid'])
+                : (empty($invoice['divisionid']) ? null : $invoice['divisionid']),
+            'next' => false,
+        );
+        $numberplans = $LMS->GetNumberPlans($args);
+
+        if (count($numberplans) && empty($invoice['numberplanid'])) {
+            $error['numberplanid'] = trans('Select numbering plan');
+        }
+
         $hook_data = array(
             'contents' => $contents,
             'invoice' => $invoice,
@@ -498,14 +537,12 @@ switch ($action) {
                 $DB->Execute(
                     'UPDATE documents SET recipient_address_id = ? WHERE id = ?',
                     array(
-                                $LMS->CopyAddress($invoice['recipient_address_id']),
-                                $invoice['id']
-                            )
+                        $LMS->CopyAddress($invoice['recipient_address_id']),
+                        $invoice['id']
+                    )
                 );
             }
         }
-
-        $use_current_customer_data = isset($invoice['use_current_customer_data']) || $invoice['customerid'] != $customerid;
 
         // updates customer post address stored in document
         if ($use_current_customer_data) {
@@ -538,10 +575,6 @@ switch ($action) {
             $tables = array_merge($tables, array('customers cv', 'customer_addresses ca'));
         }
         $DB->LockTables($tables);
-
-        if ($use_current_customer_data) {
-            $customer = $LMS->GetCustomer($invoice['customerid'], true);
-        }
 
         $division = $LMS->GetDivision($use_current_customer_data ? $customer['divisionid'] : $invoice['divisionid']);
 
@@ -591,13 +624,14 @@ switch ($action) {
             'sdate' => $sdate,
             'paytime' => $paytime,
             'paytype' => $invoice['paytype'],
-            'splitpayment' => empty($invoice['splitpayment']) ? 0 : 1,
             'flags' => (empty($invoice['flags'][DOC_FLAG_RECEIPT]) ? 0 : DOC_FLAG_RECEIPT)
                 + (empty($invoice['flags'][DOC_FLAG_TELECOM_SERVICE]) || $customer['type'] == CTYPES_COMPANY ? 0 : DOC_FLAG_TELECOM_SERVICE)
                 + ($use_current_customer_data
                     ? (isset($customer['flags'][CUSTOMER_FLAG_RELATED_ENTITY]) ? DOC_FLAG_RELATED_ENTITY : 0)
                     : (!empty($invoice['oldflags'][DOC_FLAG_RELATED_ENTITY]) ? DOC_FLAG_RELATED_ENTITY : 0)
-                ),
+                )
+                + (empty($invoice['splitpayment']) ? 0 : DOC_FLAG_SPLIT_PAYMENT)
+                + (empty($invoice['netflag']) ? 0 : DOC_FLAG_NET_ACCOUNT),
             SYSLOG::RES_CUST => $invoice['customerid'],
             'name' => $use_current_customer_data ? $customer['customername'] : $invoice['name'],
             'address' => $use_current_customer_data ? (($customer['postoffice'] && $customer['postoffice'] != $customer['city'] && $customer['street']
@@ -644,7 +678,7 @@ switch ($action) {
         $args[SYSLOG::RES_NUMPLAN] = $invoice['numberplanid'] ?: null;
         //$args['recipient_address_id'] = $invoice
         $args[SYSLOG::RES_DOC] = $iid;
-        $DB->Execute('UPDATE documents SET cdate = ?, sdate = ?, paytime = ?, paytype = ?, splitpayment = ?, flags = ?, customerid = ?,
+        $DB->Execute('UPDATE documents SET cdate = ?, sdate = ?, paytime = ?, paytype = ?, flags = ?, customerid = ?,
 				name = ?, address = ?, ten = ?, ssn = ?, zip = ?, city = ?, countryid = ?, divisionid = ?,
 				div_name = ?, div_shortname = ?, div_address = ?, div_city = ?, div_zip = ?, div_countryid = ?,
 				div_ten = ?, div_regon = ?, div_bank = ?, div_account = ?, div_inv_header = ?, div_inv_footer = ?,
@@ -693,7 +727,8 @@ switch ($action) {
                 $args = array(
                     SYSLOG::RES_DOC => $iid,
                     'itemid' => $itemid,
-                    'value' => str_replace(',', '.', $item['valuebrutto']),
+                    'value' => empty($invoice['netflag']) ? str_replace(',', '.', $item['valuebrutto'])
+                        : str_replace(',', '.', $item['valuenetto']),
                     SYSLOG::RES_TAX => $item['taxid'],
                     'taxcategory' => $item['taxcategory'],
                     'prodid' => $item['prodid'],
@@ -715,7 +750,7 @@ switch ($action) {
                 if ($invoice['doctype'] == DOC_INVOICE || ConfigHelper::checkConfig('phpui.proforma_invoice_generates_commitment')) {
                     $LMS->AddBalance(array(
                         'time' => $cdate,
-                        'value' => $item['valuebrutto']*$item['count']*-1,
+                        'value' => str_replace(',', '.', $item['s_valuebrutto']) * -1,
                         'currency' => $invoice['currency'],
                         'currencyvalue' => $invoice['currencyvalue'],
                         'taxid' => $item['taxid'],

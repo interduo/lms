@@ -119,6 +119,12 @@ a.lms-ui-link-button {
   }
 }
 
+a.lms-ui-button {
+  i + .lms-ui-label {
+    padding-left: 0.5em;
+  }
+}
+
 a.lms-ui-button:not(.lms-ui-link-button) {
   > i:before {
     color: black;
@@ -210,4 +216,16 @@ i.lms-ui-button-clipboard:hover {
   &:not(.lms-ui-static) {
     .lms-ui-icon-copy;
   }
+}
+
+a.lms-ui-button:not(.lms-ui-link-button).lms-ui-button-speech-recognition.active {
+  .fa-beat;
+  > i:before {
+    color: red;
+  }
+}
+
+.lms-ui-util-buttons {
+  display: flex;
+  flex-direction: column;
 }
