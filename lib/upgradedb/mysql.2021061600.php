@@ -23,6 +23,10 @@
 
 $this->BeginTrans();
 
+if (!$this->ResourceExists('vinvoicecontents', LMSDB::RESOURCE_TYPE_VIEW)) {
+    $this->Execute("ALTER TABLE invoicecontents ALTER COLUMN pdiscount TYPE numeric(5,2)");
+}
+
 $this->Execute("ALTER TABLE invoicecontents MODIFY COLUMN pdiscount decimal(5,2) NOT NULL DEFAULT 0");
 
 $this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2021061600', 'dbversion'));
