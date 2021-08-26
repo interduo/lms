@@ -26,10 +26,14 @@
 
 function format_customer_phone($contact)
 {
+    $call_phone_url = ConfigHelper::getConfig('phpui.call_phone_url', '');
+    if (!empty($call_phone_url)) {
+        $call_phone_url = str_replace('%phone', $contact['contact'], $call_phone_url);
+    }
     return '<a href="?m=messageadd&customerid='  . $contact['customerid'] . '&type=' . MSG_SMS . '&contactid=' . $contact['id'] . '">'
         . '<i class="lms-ui-icon-quick-send"></i></a>'
         . '&nbsp;<a class="phone_number" href="tel:' . htmlspecialchars($contact['contact']) . '">' . htmlspecialchars($contact['contact']) . '</a>&nbsp;'
-        . Utils::createCallPhoneUrl($contact['contact']);
+        . (isset($call_phone_url) ? '<a href="' . $call_phone_url . '"><i class="fas fa-phone"></i></a>' : '');
 }
 
 function format_customer_email($contact)
