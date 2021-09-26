@@ -324,7 +324,6 @@ if (isset($_POST['ticket'])) {
                     ? ($ticket['contenttype'] == 'text/html' ? str_replace("\n", '<br>', $mail_customerinfo) : $mail_customerinfo)
                     : null;
                 $params['contenttype'] = $ticket['contenttype'];
-                $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
 
                 if ($ticket['contenttype'] == 'text/html') {
                     $params['body'] = trans('(HTML content has been omitted)');
@@ -333,14 +332,13 @@ if (isset($_POST['ticket'])) {
 
                 $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
                 $params['contenttype'] = 'text/plain';
-                $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
                 $LMS->NotifyUsers(array(
                     'queue' => $queue,
                     'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
-                    'mail_body' => $body,
-                    'sms_body' => $sms_body,
+                    'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                    'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                     'contenttype' => $ticket['contenttype'],
                     'attachments' => &$attachments,
                 ));

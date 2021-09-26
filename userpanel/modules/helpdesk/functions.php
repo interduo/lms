@@ -319,15 +319,13 @@ function module_main()
 
                 $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
                 $params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
-                $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
                 $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-                $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
                 $LMS->NotifyUsers(array(
                     'queue' => $ticket['queue'],
                     'mail_headers' => $headers,
-                    'mail_body' => $body,
-                    'sms_body' => $sms_body,
+                    'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                    'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                     'attachments' => $attachments,
                 ));
             }
@@ -476,15 +474,13 @@ function module_main()
 
             $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
             $params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
-            $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
             $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-            $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
             $LMS->NotifyUsers(array(
                 'queue' => $ticket['queue']['id'],
                 'mail_headers' => $headers,
-                'mail_body' => $body,
-                'sms_body' => $sms_body,
+                'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                 'attachments' => &$attachments,
             ));
 

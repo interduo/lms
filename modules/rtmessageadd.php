@@ -449,7 +449,6 @@ if (isset($_POST['message'])) {
                         ? ($message['contenttype'] == 'text/html' ? str_replace("\n", '<br>', $mail_customerinfo) : $mail_customerinfo)
                         : null;
                     $params['contenttype'] = $message['contenttype'];
-                    $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
 
                     if ($message['contenttype'] == 'text/html') {
                         $params['body'] = trans('(HTML content has been omitted)');
@@ -458,14 +457,13 @@ if (isset($_POST['message'])) {
 
                     $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
                     $params['contenttype'] = 'text/plain';
-                    $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
                     $LMS->NotifyUsers(array(
                         'queue' => $queue['id'],
                         'verifierid' => empty($message['verifierid']) ? null : $message['verifierid'],
                         'mail_headers' => $headers,
-                        'mail_body' => $body,
-                        'sms_body' => $sms_body,
+                        'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                        'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                         'contenttype' => $message['contenttype'],
                         'attachments' => &$attachments,
                         'recipients' => ($message['notify'] ? RT_NOTIFICATION_USER : 0)

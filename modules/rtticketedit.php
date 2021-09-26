@@ -112,8 +112,6 @@ if ($id && !isset($_POST['ticket'])) {
                     'type' => $ticket['type'],
                 );
                 $headers['Subject'] = $LMS->ReplaceNotificationSymbols($queue['verifierticketsubject'], $params);
-                $body = $LMS->ReplaceNotificationSymbols($queue['verifierticketbody'], $params);
-                $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
                 $LMS->NotifyUsers(array(
                     // don't notify regular users when ticket has been sent to verification
@@ -121,8 +119,8 @@ if ($id && !isset($_POST['ticket'])) {
                     'queue' => null,
                     'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
-                    'mail_body' => $body,
-                    'sms_body' => $sms_body,
+                    'mail_body' => $LMS->ReplaceNotificationSymbols($queue['verifierticketbody'], $params),
+                    'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                 ));
 
                 if ($SESSION->is_set('backto')) {
@@ -315,15 +313,13 @@ if ($id && !isset($_POST['ticket'])) {
                     );
                     $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
                     $params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
-                    $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
                     $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-                    $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
                     $LMS->NotifyUsers(array(
                         'queue' => $ticket['queue'],
                         'mail_headers' => $headers,
-                        'mail_body' => $body,
-                        'sms_body' => $sms_body,
+                        'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                        'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                     ));
                 }
 
@@ -599,17 +595,16 @@ if (isset($_POST['ticket'])) {
             );
             $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
             $params['customerinfo'] =  isset($mail_customerinfo) ? $mail_customerinfo : null;
-            $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params);
             $params['customerinfo'] =  isset($sms_customerinfo) ? $sms_customerinfo : null;
-            $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params);
 
             $LMS->NotifyUsers(array(
-                'queue' => $ticketedit['queue'],
+                'id' => $ticket['ticketid'],
+                'ticketid' => $ticketedit['queue'],
                 'oldqueue' => $ticket['queueid'] == $ticketedit['queue'] ? null : $ticket['queueid'],
                 'verifierid' => $verifierid == $ticketedit['verifierid'] ? null : $ticketedit['verifierid'],
                 'mail_headers' => $headers,
-                'mail_body' => $body,
-                'sms_body' => $sms_body,
+                'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
+                'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
             ));
         }
 
