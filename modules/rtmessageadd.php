@@ -460,6 +460,7 @@ if (isset($_POST['message'])) {
 
                     $LMS->NotifyUsers(array(
                         'ticketid' => $ticketid,
+                        'oldqueue' => $ticket['queueid'],
                         'verifierid' => empty($message['verifierid']) ? null : $message['verifierid'],
                         'mail_headers' => $headers,
                         'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
