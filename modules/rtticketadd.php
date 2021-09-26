@@ -334,7 +334,7 @@ if (isset($_POST['ticket'])) {
                 $params['contenttype'] = 'text/plain';
 
                 $LMS->NotifyUsers(array(
-                    'queue' => $queue,
+                    'ticketid' => $id,
                     'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
                     'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),

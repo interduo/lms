@@ -2066,18 +2066,22 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         $userid = Auth::GetCurrentUser();
         $sms_service = ConfigHelper::getConfig('sms.service');
 
-        $args = array(
-            'queue' => $params['queue'],
-        );
         if (!$notify_author && $userid) {
             $args['user'] = $userid;
         }
+
+        if (empty($params['queue'])) {
+            $params['queue'] = $this->db->GetOne('SELECT queueid FROM rttickets WHERE id = ?', array($params['ticketid']));
+        }
+
+        $args = array(
+            'queue' => $params['queue'],
+        );
 
         // send email
         $args['type'] = MSG_MAIL;
 
         $smtp_options = $this->GetRTSmtpOptions();
-
         if ($params['verifierid'] && (!isset($params['recipients']) || ($params['recipients'] & RT_NOTIFICATION_VERIFIER))) {
             $verifier_email = $this->db->GetOne(
                 'SELECT email FROM users WHERE email <> \'\' AND deleted = 0 AND access = 1 AND users.id = ?

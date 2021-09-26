@@ -114,9 +114,7 @@ if ($id && !isset($_POST['ticket'])) {
                 $headers['Subject'] = $LMS->ReplaceNotificationSymbols($queue['verifierticketsubject'], $params);
 
                 $LMS->NotifyUsers(array(
-                    // don't notify regular users when ticket has been sent to verification
-                    //'queue' => $ticket['queue'],
-                    'queue' => null,
+                    'ticketid' => $id,
                     'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
                     'mail_body' => $LMS->ReplaceNotificationSymbols($queue['verifierticketbody'], $params),
@@ -316,7 +314,7 @@ if ($id && !isset($_POST['ticket'])) {
                     $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
 
                     $LMS->NotifyUsers(array(
-                        'queue' => $ticket['queue'],
+                        'ticketid' => $id,
                         'mail_headers' => $headers,
                         'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
                         'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
@@ -598,8 +596,7 @@ if (isset($_POST['ticket'])) {
             $params['customerinfo'] =  isset($sms_customerinfo) ? $sms_customerinfo : null;
 
             $LMS->NotifyUsers(array(
-                'id' => $ticket['ticketid'],
-                'ticketid' => $ticketedit['queue'],
+                'ticketid' => $ticket['ticketid'],
                 'oldqueue' => $ticket['queueid'] == $ticketedit['queue'] ? null : $ticket['queueid'],
                 'verifierid' => $verifierid == $ticketedit['verifierid'] ? null : $ticketedit['verifierid'],
                 'mail_headers' => $headers,

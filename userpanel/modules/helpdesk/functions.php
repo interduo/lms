@@ -322,7 +322,7 @@ function module_main()
                 $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
 
                 $LMS->NotifyUsers(array(
-                    'queue' => $ticket['queue'],
+                    'ticketid' => $id,
                     'mail_headers' => $headers,
                     'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
                     'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
@@ -477,7 +477,7 @@ function module_main()
             $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
 
             $LMS->NotifyUsers(array(
-                'queue' => $ticket['queue']['id'],
+                'ticketid' => $ticket['id'],
                 'mail_headers' => $headers,
                 'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
                 'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),

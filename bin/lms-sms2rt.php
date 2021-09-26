@@ -475,7 +475,7 @@ if (($fh = fopen($message_file, "r")) != null) {
         $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
 
         $LMS->NotifyUsers(array(
-            'queue' => $queueid,
+            'ticketid' => $tid,
             'mail_headers' => $headers,
             'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
             'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),

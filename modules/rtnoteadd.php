@@ -231,7 +231,7 @@ if (isset($_GET['ticketid'])) {
             $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
 
             $LMS->NotifyUsers(array(
-                'queue' => $queue['id'],
+                'ticketid' => $note['ticketid'],
                 'verifierid' => empty($note['verifierid']) ? null : $note['verifierid'],
                 'mail_headers' => $headers,
                 'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
