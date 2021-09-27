@@ -286,61 +286,12 @@ if (isset($_POST['ticket'])) {
             }
 
             if (isset($ticket['notify'])) {
-                $params = array(
-                    'id' => $id,
-                    'queue' => $queuedata['name'],
-                    'customerid' => $ticket['customerid'],
-                    'status' => $ticketdata['status'],
-                    'categories' => $ticketdata['categorynames'],
-                    'subject' => $ticket['subject'],
-                    'body' => $ticket['body'],
-                    'priority' => $RT_PRIORITIES[$ticketdata['priority']],
-                    'deadline' => $ticketdata['deadline'],
-                    'service' => $ticketdata['service'],
-                    'type' => $ticketdata['type'],
-                    'invproject' => $ticketdata['invproject_name'],
-                    'invprojectid' => $ticketdata['invprojectid'],
-                    'requestor' => $ticketdata['requestor'],
-                    'requestor_mail' => $ticketdata['requestor_mail'],
-                    'requestor_phone' => $ticketdata['requestor_phone'],
-                    'requestor_userid' => $ticketdata['requestor_userid'],
-                    'parentid' => $ticketdata['parentid'],
-                    'node' => $ticketdata['node_name'],
-                    'nodeid' => $ticketdata['nodeid'],
-                    'netnode' => $ticketdata['netnode_name'],
-                    'netnodeid' => $ticketdata['netnodeid'],
-                    'netdev' => $ticketdata['netdev_name'],
-                    'netdevid' => $ticketdata['netdevid'],
-                    'owner' => $ticketdata['ownername'],
-                    'ownerid' => $ticketdata['owner'],
-                    'verifier' => $ticketdata['verifier_username'],
-                    'verifierid' => $ticketdata['verifierid'],
-                    'attachments' => &$attachments,
-                );
-                $headers['X-Priority'] = $RT_MAIL_PRIORITIES[$ticketdata['priority']];
-                $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
-
-                $params['customerinfo'] = isset($mail_customerinfo)
-                    ? ($ticket['contenttype'] == 'text/html' ? str_replace("\n", '<br>', $mail_customerinfo) : $mail_customerinfo)
-                    : null;
-                $params['contenttype'] = $ticket['contenttype'];
-
-                if ($ticket['contenttype'] == 'text/html') {
-                    $params['body'] = trans('(HTML content has been omitted)');
-                    $headers['X-LMS-Format'] = 'html';
-                }
-
-                $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-                $params['contenttype'] = 'text/plain';
-
                 $LMS->NotifyUsers(array(
                     'ticketid' => $id,
-                    'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
-                    'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
-                    'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                     'contenttype' => $ticket['contenttype'],
                     'attachments' => &$attachments,
+                    'usersnotify' => ($ticket['notify'] ? true : false),
                 ));
             }
         }

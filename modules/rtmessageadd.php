@@ -372,7 +372,7 @@ if (isset($_POST['message'])) {
             }
 
             // User notifications
-            if (isset($message['notify']) || isset($message['customernotify']) || !empty($message['verifierid'])) {
+            if (isset($message['notify']) || isset($message['customernotify'])) {
                 $mailfname = '';
 
                 $helpdesk_sender_name = ConfigHelper::getConfig('phpui.helpdesk_sender_name');
@@ -397,22 +397,18 @@ if (isset($_POST['message'])) {
 
                 if ($ticketdata['customerid']) {
                     $info = $LMS->GetCustomer($ticketdata['customerid'], true);
-
                     $emails = array_map(function ($contact) {
                         return $contact['fullname'];
                     }, $LMS->GetCustomerContacts($ticketdata['customerid'], CONTACT_EMAIL));
-
                     $all_phones = $LMS->GetCustomerContacts($ticketdata['customerid'], CONTACT_LANDLINE | CONTACT_MOBILE);
-
                     $phones = array_map(function ($contact) {
                         return $contact['fullname'];
                     }, $all_phones);
-
                     $mobile_phones = array_filter($all_phones, function ($contact) {
                         return ($contact['type'] & (CONTACT_MOBILE | CONTACT_DISABLED)) == CONTACT_MOBILE;
                     });
 
-                    if ((isset($message['notify']) || !empty($message['verifierid'])) && ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
+                    if (isset($message['notify'])) {
                         $params = array(
                             'id' => $ticketid,
                             'customerid' => $ticketdata['customerid'],
@@ -423,53 +419,32 @@ if (isset($_POST['message'])) {
                         $mail_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_mail_body'), $params);
                         $sms_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body'), $params);
                     }
-                } elseif ((isset($message['notify']) || !empty($message['verifierid'])) && ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
+                } elseif (isset($message['notify'])) {
                     $mail_customerinfo = "\n\n-- \n" . trans('Customer:') . ' ' . $ticketdata['requestor'];
                     $sms_customerinfo = "\n" . trans('Customer:') . ' ' . $ticketdata['requestor'];
                 }
 
-                if (isset($message['notify']) || !empty($message['verifierid'])) {
-                    $params = array(
-                        'id' => $ticketid,
-                        'queue' => $queue['name'],
-                        'messageid' => isset($msgid) ? $msgid : null,
-                        'customerid' => empty($message['customerid']) ? $ticketdata['customerid'] : $message['customerid'],
-                        'status' => $ticketdata['status'],
-                        'categories' => $ticketdata['categorynames'],
-                        'priority' => $RT_PRIORITIES[$ticketdata['priority']],
-                        'deadline' => $ticketdata['deadline'],
-                        'subject' => $message['subject'],
-                        'body' => $message['body'],
-                        'attachments' => &$attachments,
-                    );
-                    $headers['X-Priority'] = $RT_MAIL_PRIORITIES[$ticketdata['priority']];
-                    $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
+                $params['customerinfo'] = isset($mail_customerinfo)
+                    ? ($message['contenttype'] == 'text/html' ? str_replace("\n", '<br>', $mail_customerinfo) : $mail_customerinfo)
+                    : null;
+                $params['contenttype'] = $message['contenttype'];
 
-                    $params['customerinfo'] = isset($mail_customerinfo)
-                        ? ($message['contenttype'] == 'text/html' ? str_replace("\n", '<br>', $mail_customerinfo) : $mail_customerinfo)
-                        : null;
-                    $params['contenttype'] = $message['contenttype'];
+                if ($message['contenttype'] == 'text/html') {
+                    $params['body'] = trans('(HTML content has been omitted)');
+                    $headers['X-LMS-Format'] = 'html';
+                }
 
-                    if ($message['contenttype'] == 'text/html') {
-                        $params['body'] = trans('(HTML content has been omitted)');
-                        $headers['X-LMS-Format'] = 'html';
-                    }
+                $params['contenttype'] = 'text/plain';
 
-                    $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-                    $params['contenttype'] = 'text/plain';
-
-                    $LMS->NotifyUsers(array(
-                        'ticketid' => $ticketid,
-                        'oldqueue' => $ticket['queueid'],
-                        'verifierid' => empty($message['verifierid']) ? null : $message['verifierid'],
-                        'mail_headers' => $headers,
-                        'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
-                        'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
-                        'contenttype' => $message['contenttype'],
-                        'attachments' => &$attachments,
-                        'recipients' => ($message['notify'] ? RT_NOTIFICATION_USER : 0)
-                            | (empty($message['verifierid']) ? 0 : RT_NOTIFICATION_VERIFIER),
-                    ));
+                $LMS->NotifyUsers(array(
+                    'ticketid' => $ticketid,
+                    'oldqueue' => $ticket['queueid'],
+                    'mail_headers' => $headers,
+                    'contenttype' => $message['contenttype'],
+                    'attachments' => &$attachments,
+                    'usersnotify' => ($message['notify'] ? true : false),
+                    'references' => ($message['references']) ? $message['references'] : null),
+                ));
                 }
             }
 
@@ -546,7 +521,6 @@ if (isset($_POST['message'])) {
         } else {
             $SESSION->redirect('?' . $backto);
         }
-    }
 
     if (!empty($message['categories'])) {
         $message['categories'] = array_flip($message['categories']);
@@ -652,11 +626,6 @@ if (isset($_POST['message'])) {
                     $message['destination'] = implode(',', $message['destination']);
                 }
             }
-
-            $message['subject'] = 'Re: ' . $LMS->cleanupTicketSubject($reply['subject']);
-            $message['inreplyto'] = $reply['id'];
-            $message['references'] = implode(' ', $reply['references']);
-            $message['cc'] = $reply['cc'];
 
             if (ConfigHelper::checkConfig('phpui.helpdesk_reply_body') || isset($_GET['citing'])) {
                 $body = explode("\n", textwrap(strip_tags($reply['body']), 74));

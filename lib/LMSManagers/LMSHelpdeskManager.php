@@ -2061,139 +2061,359 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         global $LMS;
 
         $notification_attachments = ConfigHelper::checkConfig('phpui.helpdesk_notification_attachments');
-
         $notify_author = ConfigHelper::checkConfig('phpui.helpdesk_author_notify');
-        $userid = Auth::GetCurrentUser();
         $sms_service = ConfigHelper::getConfig('sms.service');
+        $notification_mail_subject = ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject');
+        $notification_mail_body = ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body');
+        $notification_sms_body = ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body');
+        $cleanup_re = ConfigHelper::checkConfig('rt.note_send_re_in_subject');
+        $helpdesk_sender_name = ConfigHelper::getConfig('phpui.helpdesk_sender_name');
 
-        if (!$notify_author && $userid) {
-            $args['user'] = $userid;
-        }
+        $userid = Auth::GetCurrentUser();
+        $user = $LMS->GetUserInfo($userid);
+        $ticket = $this->GetTicketContents($params['ticketid']);
 
-        if (empty($params['queue'])) {
-            $params['queue'] = $this->db->GetOne('SELECT queueid FROM rttickets WHERE id = ?', array($params['ticketid']));
-        }
-
+        // Replace notification symbols
         $args = array(
-            'queue' => $params['queue'],
+            'id' => $ticket['id'],
+            'queue' => $ticket['queuename'],
+            'customerid' => $ticket['customerid'],
+            'customerinfo' => $LMS->GetCustomer($ticket['customerid'], true),
+            'status' => $ticket['status'],
+            'categories' => $ticket['categorynames'],
+            'subject' => $ticket['subject'],
+            'body' => $ticket['body'],
+            'priority' => $RT_PRIORITIES[$ticket['priority']],
+            'deadline' => $ticket['deadline'],
+            'service' => $ticket['service'],
+            'type' => $ticket['type'],
+            'invproject' => $ticket['invproject_name'],
+            'invprojectid' => $ticket['invprojectid'],
+            'requestor' => $ticket['requestor'],
+            'requestor_mail' => $ticket['requestor_mail'],
+            'requestor_phone' => $ticket['requestor_phone'],
+            'requestor_userid' => $ticket['requestor_userid'],
+            'parentid' => $ticket['parentid'],
+            'node' => $ticket['node_name'],
+            'nodeid' => $ticket['nodeid'],
+            'netnode' => $ticket['netnode_name'],
+            'netnodeid' => $ticket['netnodeid'],
+            'netdev' => $ticket['netdev_name'],
+            'netdevid' => $ticket['netdevid'],
+            'owner' => $ticket['ownername'],
+            'ownerid' => $ticket['owner'],
+            'verifier' => $ticket['verifier_username'],
+            'verifierid' => $ticket['verifierid'],
+            'attachments' => &$attachments,
         );
 
-        // send email
-        $args['type'] = MSG_MAIL;
+        // Subject modification
+        if ($cleanup_re && count($ticket['messages']) > 1) {
+            $headers['Subject'] = 'Re: ' . $LMS->cleanupTicketSubject($ticket['subject']);
+        }
 
-        $smtp_options = $this->GetRTSmtpOptions();
-        if ($params['verifierid'] && (!isset($params['recipients']) || ($params['recipients'] & RT_NOTIFICATION_VERIFIER))) {
-            $verifier_email = $this->db->GetOne(
-                'SELECT email FROM users WHERE email <> \'\' AND deleted = 0 AND access = 1 AND users.id = ?
-                AND (ntype & ?) > 0',
-                array($params['verifierid'], MSG_MAIL)
+        // Determine sender name/email
+        unset($mailfname);
+
+        if (!empty($helpdesk_sender_name)) {
+            $mailfname = $helpdesk_sender_name;
+
+            if ($mailfname == 'queue') {
+                $mailfname = $ticket['queuename'];
+            } elseif ($mailfname == 'user') {
+                $mailfname = $user['name'];
+            }
+        }
+        $mailfrom = $this->DetermineSenderEmail($user['email'], $queue['email'], $ticket['requestor_mail']);
+        $headers['From'] = '"' . $mailfname . '" <' . $mailfrom . '>';
+        $headers['Reply-To'] = $headers['From'];
+
+        $headers['Subject'] = $LMS->ReplaceNotificationSymbols($notification_mail_subject, $args);
+        $headers['X-Priority'] = $RT_MAIL_PRIORITIES[$ticket['priority']];
+
+        if (!empty($params['references'])) {
+            $reply = $this->GetMessage($params['references']);
+            $headers['References'] = explode(' ', $reply['id']);
+            $headers['In-Reply-To'] = array_pop(explode(' ', $reply['id']));
+            if (!empty($reply['cc'])) {
+                $headers['cc'] = $reply['cc'];
+            }
+        } else {
+            $reply = $this->GetFirstMessage($ticket['id']);
+            $headers['References'] = implode(' ', $reply);
+            $headers['In-Reply-To'] = $reply['id'];
+            if (!empty($reply['cc'])) {
+                $headers['cc'] = $reply['cc'];
+            }
+        }
+
+        // mailbody modifications
+        $mail_body = $LMS->ReplaceNotificationSymbols($notification_mail_body, $args);
+
+        if (!empty($mail_body) && $headers['contenttype'] == 'text/html') {
+            $mail_body = str_replace("\n", '<br>', $mail_body);
+        }
+
+        $sms_body = $LMS->ReplaceNotificationSymbols($notification_sms_body, $args);
+
+        /// send email
+        // add verifier mail for notification if queue properties has got 'notify verificator'
+        if ($ticket['verifierid']) {
+            $verifier_mail = $this->db->GetOne(
+                'SELECT email 
+                    FROM users, rtrights 
+                    WHERE email <> \'\'
+                    AND deleted = 0
+                    AND access = 1
+                    AND users.id = ?
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($ticket['verifierid'], MSG_MAIL, RT_RIGHT_VERIFIERNOTICE)
             );
-            if (!empty($verifier_email)) {
-                $params['mail_headers']['To'] = '<' . $verifier_email . '>';
+            if (!empty($verifier_mail)) {
+                $recipients[] = $verifier_mail;
+            }
+        }
+
+        // add owner mail for notification if queue properties has got 'notify owner'
+       if ($ticket['owner']) {
+           $owner_mail = $this->db->GetOne(
+               'SELECT email 
+                    FROM users, rtrights
+                    WHERE email <> \'\'
+                    AND deleted = 0
+                    AND access = 1
+                    AND users.id = ?
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($ticket['owner'], MSG_MAIL, RT_RIGHT_OWNERNOTICE)
+            );
+           if (!empty($owner_mail)) {
+               $recipients[] = $owner_mail;
+           }
+       }
+
+        // add queue users mails for notification
+        if ($notify_users) {
+            $queueusers = $this->db->GetCol(
+                'SELECT DISTINCT email
+                    FROM users, rtrights
+                    WHERE users.id = userid 
+                    AND queueid = ?
+                    AND email != \'\'
+                    AND deleted = 0 
+                    AND access = 1
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($ticket['queueid'], MSG_MAIL, RT_RIGHT_NOTICE)
+            );
+            if (!empty($queueusers)) {
+                foreach ($queueusers as $qumail) {
+                    $recipients[] = $qumail;
+                }
+            }
+
+            // add user mails from oldqueue for notification when transfering ticket to another queue
+            if (isset($params['oldqueue']) && $params['oldqueue'] != $ticket['queueid']) {
+                $oldqueueusers = $this->db->GetCol(
+                    'SELECT DISTINCT email
+                        FROM users, rtrights
+                        WHERE users.id = userid
+                        AND queueid = ?
+                        AND email != \'\'
+                        AND deleted = 0
+                        AND access = 1
+                        AND (ntype & ?) > 0
+                        AND (rtrights.rights & ?) > 0',
+                    array($params['oldqueue'], MSG_MAIL, RT_RIGHT_NOTICE)
+                );
+                if (!empty($oldqueueusers)) {
+                    foreach ($oldqueueusers as $oqumail) {
+                        $recipients[] = $oqumail;
+                    }
+                }
+            }
+        }
+
+        // add ticket watching users mails for notification
+        $ticketwatchers = $this->db->GetCol(
+            'SELECT DISTINCT u.email
+                FROM rtticketwatchers rtw
+                LEFT JOIN users u ON (rtw.userid = u.id)
+                WHERE rtw.userid = u.id
+                AND u.email != \'\'
+                AND u.deleted = 0
+                AND u.access = 1
+                AND (u.ntype & ?) > 0
+                AND u.id <> ?',
+            array(MSG_MAIL, $userid)
+        );
+        if (!empty($ticketwatchers)) {
+            foreach ($ticketwatchers as $twmail) {
+                $recipients[] = $twmail;
+            }
+        }
+
+        if (isset($params['attachments']) && !empty($params['attachments'])) {
+            if ($notification_attachments) {
+                $attachments = $params['attachments'];
+            } elseif ($params['contenttype'] == 'text/html') {
+                $attachments = array_filter($params['attachments'], function ($attachment) {
+                    return isset($attachment['content-id']);
+                });
+            }
+        }
+
+        if (!empty($recipients)) {
+            $recipients = (is_array($recipients) ? array_unique($recipients) : $recipients);
+
+            // remove logged user actions from notifications
+            if (!$notify_author && !empty($userid)) {
+                $author_mail = $this->db->GetOne(
+                    'SELECT email FROM users WHERE id = ?', array($userid)
+                );
+                if (!empty($author_mail)) {
+                    $recipients = array_diff($recipients, array($author_mail));
+                }
+            }
+        }
+
+        if (!empty($recipients)) {
+            $smtp_options = $this->GetRTSmtpOptions();
+            foreach ($recipients as $email) {
+                $params['mail_headers']['To'] = '<' . $email . '>';
                 $LMS->SendMail(
-                    $verifier_email,
+                    $email,
                     $params['mail_headers'],
-                    $params['mail_body'],
-                    $notification_attachments && isset($params['attachments']) && !empty($params['attachments']) ? $params['attachments'] : null,
+                    $mail_body,
+                    isset($attachments) && !empty($attachments) ? $attachments : null,
                     null,
                     $smtp_options
                 );
             }
         }
+        unset($recipients);
 
-        if ($params['queue'] && (!isset($params['recipients']) || ($params['recipients'] & RT_NOTIFICATION_USER))) {
-            if ($recipients = $this->db->GetCol(
-                'SELECT DISTINCT email
-			FROM users, rtrights
-			WHERE users.id=userid AND queueid = ? AND email != \'\'
-				AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1'
-                . (!isset($args['user']) || $notify_author ? '' : ' AND users.id <> ?')
-                . ($params['verifierid'] ? ' AND users.id <> ' . intval($params['verifierid']) : '')
-                . ' AND (ntype & ?) > 0',
-                array_values($args)
-            )) {
-                if (isset($params['oldqueue'])) {
-                    $oldrecipients = $this->db->GetCol(
-                        'SELECT DISTINCT email
-					FROM users, rtrights
-					WHERE users.id=userid AND queueid = ? AND email != \'\'
-						AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1
-						AND (ntype & ?) > 0',
-                        array($params['oldqueue'], MSG_MAIL)
-                    );
-                    if (!empty($oldrecipients)) {
-                        $recipients = array_diff($recipients, $oldrecipients);
-                    }
-                }
-
-                if (isset($params['attachments']) && !empty($params['attachments'])) {
-                    if ($notification_attachments) {
-                        $attachments = $params['attachments'];
-                    } elseif ($params['contenttype'] == 'text/html') {
-                        $attachments = array_filter($params['attachments'], function ($attachment) {
-                            return isset($attachment['content-id']);
-                        });
-                    }
-                }
-
-                foreach ($recipients as $email) {
-                    $params['mail_headers']['To'] = '<' . $email . '>';
-                    $LMS->SendMail(
-                        $email,
-                        $params['mail_headers'],
-                        $params['mail_body'],
-                        isset($attachments) && !empty($attachments) ? $attachments : null,
-                        null,
-                        $smtp_options
-                    );
-                }
-            }
-        }
-
-        // send sms
-        $args['type'] = MSG_SMS;
-
-        if ($params['verifierid'] && (!isset($params['recipients']) || ($params['recipients'] & RT_NOTIFICATION_VERIFIER))) {
+        /// send sms
+        // add verifier phone to recipients
+        if ($ticket['verifierid']) {
             $verifier_phone = $this->db->GetOne(
-                'SELECT phone FROM users WHERE phone <> \'\' AND deleted = 0 AND access = 1 AND users.id = ?
-                AND (ntype & ?) > 0',
-                array($params['verifierid'], MSG_SMS)
+                'SELECT phone 
+                    FROM users
+                    WHERE phone <> \'\'
+                    AND deleted = 0
+                    AND access = 1
+                    AND users.id = ?
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($params['verifierid'], MSG_SMS, RT_RIGHT_VERIFIERNOTICE)
             );
             if (!empty($verifier_phone)) {
-                $LMS->SendSMS($verifier_phone, $params['sms_body']);
+                $recipients[] = $verifier_phone;
             }
         }
 
-        if ($params['queue'] && (!isset($params['recipients']) || ($params['recipients'] & RT_NOTIFICATION_USER))) {
-            if (!empty($sms_service) && ($recipients = $this->db->GetCol(
+        // add owner phone to recipients
+        if ($ticket['owner']) {
+            $owner_phone = $this->db->GetOne(
+                'SELECT phone 
+                    FROM users
+                    WHERE phone <> \'\'
+                    AND deleted = 0
+                    AND access = 1
+                    AND users.id = ?
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($params['owner'], MSG_SMS, RT_RIGHT_OWNERNOTICE)
+            );
+            if (!empty($owner_phone)) {
+                $recipients[] = $owner_phone;
+            }
+        }
+
+        /// add queue users for notification
+        if ($notify_users) {
+            $queueusers = $this->db->GetCol(
                 'SELECT DISTINCT phone
-			FROM users, rtrights
-				WHERE users.id=userid AND queueid = ? AND phone != \'\'
-					AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1'
-                    . (!isset($args['user']) || $notify_author ? '' : ' AND users.id <> ?')
-                    . ($params['verifierid'] ? ' AND users.id <> ' . intval($params['verifierid']) : '')
-                    . ' AND (ntype & ?) > 0',
-                array_values($args)
-            ))) {
-                if (isset($params['oldqueue'])) {
-                    $oldrecipients = $this->db->GetCol(
-                        'SELECT DISTINCT phone
-					FROM users, rtrights
-					WHERE users.id=userid AND queueid = ? AND phone != \'\'
-						AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1
-						AND (ntype & ?) > 0',
-                        array($params['oldqueue'], MSG_SMS)
-                    );
-                    if (!empty($oldrecipients)) {
-                        $recipients = array_diff($recipients, $oldrecipients);
+                    FROM users, rtrights
+                    WHERE users.id = userid 
+                    AND queueid = ?
+                    AND phone != \'\'
+                    AND deleted = 0 
+                    AND access = 1
+                    AND (ntype & ?) > 0
+                    AND (rtrights.rights & ?) > 0',
+                array($ticket['queueid'], MSG_SMS, RT_RIGHT_NOTICE)
+                );
+            if (!empty($queueusers)) {
+                foreach ($queueusers as $quphone) {
+                    $recipients[] = $quphone;
+                }
+            }
+
+            // add users from oldqueue for notification when transfering ticket from one queue to another
+            if (isset($params['oldqueue']) && $params['oldqueue'] != $ticket['queueid']) {
+                $oldqueueusers = $this->db->GetCol(
+                    'SELECT DISTINCT phone
+                        FROM users, rtrights
+                        WHERE users.id = userid
+                        AND queueid = ?
+                        AND phone != \'\'
+                        AND deleted = 0
+                        AND access = 1
+                        AND (ntype & ?) > 0
+                        AND (rtrights.rights & ?) > 0',
+                    array($params['oldqueue'], MSG_SMS, RT_RIGHT_NOTICE)
+                );
+                if (!empty($oldqueueusers)) {
+                    foreach ($oldqueueusers as $oquphone) {
+                        $recipients[] = $oquphone;
                     }
                 }
+            }
+        }
 
-                foreach ($recipients as $phone) {
-                    $LMS->SendSMS($phone, $params['sms_body']);
+        // add all ticket watching users with notification set to notify receipients
+        $ticketwatchers = $this->db->GetCol(
+            'SELECT DISTINCT u.phone 
+                FROM rtticketwatchers rtw
+                LEFT JOIN users u ON (rtw.userid = u.id)
+                WHERE rtw.userid = u.id
+                AND u.phone != \'\'
+                AND u.deleted = 0
+                AND u.access = 1
+                AND (u.ntype & ?) > 0
+                AND u.id <> ?',
+            array(MSG_SMS, $userid)
+        );
+        if (!empty($ticketwatchers)) {
+            foreach ($ticketwatchers as $twphone) {
+                $recipients[] = $twphone;
+            }
+        }
+
+        if (!empty($recipients)) {
+            $recipients = (is_array($recipients) ? array_unique($recipients) : $recipients);
+
+            ///remove logged user actions from notifications
+            if (!$notify_author && !empty($userid)) {
+                $author_phone = $this->db->GetOne(
+                    'SELECT phone FROM users
+                            WHERE id = ?',
+                    array($userid)
+                );
+                if (!empty($author_mail)) {
+                    $recipients = array_diff($recipients, array($author_phone));
                 }
             }
         }
+
+        if (!empty($sms_service) && !empty($recipients)) {
+            foreach ($recipients as $phone) {
+                $LMS->SendSMS($phone, $sms_body);
+            }
+        }
+        unset($recipients);
     }
 
     public function CleanupTicketLastView()

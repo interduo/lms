@@ -99,26 +99,9 @@ if ($id && !isset($_POST['ticket'])) {
                 $headers['From'] = $from;
                 $headers['Reply-To'] = $headers['From'];
 
-                $params = array(
-                    'id' => $id,
-                    'queue' => $queue['name'],
-                    'verifierid' => $ticket['verifierid'],
-                    'customerid' => $ticket['customerid'],
-                    'status' => $ticket['status'],
-                    'categories' => $ticket['categorynames'],
-                    'priority' => $ticket['priority'] ? $RT_PRIORITIES[$ticket['priority']] : trans("undefined"),
-                    'deadline' => $ticket['deadline'],
-                    'service' => $ticket['service'],
-                    'type' => $ticket['type'],
-                );
-                $headers['Subject'] = $LMS->ReplaceNotificationSymbols($queue['verifierticketsubject'], $params);
-
                 $LMS->NotifyUsers(array(
                     'ticketid' => $id,
-                    'verifierid' => $ticket['verifierid'],
                     'mail_headers' => $headers,
-                    'mail_body' => $LMS->ReplaceNotificationSymbols($queue['verifierticketbody'], $params),
-                    'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                 ));
 
                 if ($SESSION->is_set('backto')) {
@@ -293,31 +276,9 @@ if ($id && !isset($_POST['ticket'])) {
                         }
                     }
 
-                    $message = end($ticket['messages']);
-                    $message['body'] = str_replace('<br>', "\n", $message['body']);
-
-                    $params = array(
-                        'id' => $id,
-                        'queue' => $queue['name'],
-                        'customerid' => $ticket['customerid'],
-                        'status' => $ticket['status'],
-                        'categories' => $ticket['categorynames'],
-                        'priority' => $ticket['priority'] ? $RT_PRIORITIES[$ticket['priority']] : trans("undefined"),
-                        'deadline' => $ticket['deadline'],
-                        'service' => $ticket['service'],
-                        'type' => $ticket['type'],
-                        'subject' => $ticket['subject'],
-                        'body' => $message['body'],
-                    );
-                    $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
-                    $params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
-                    $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-
                     $LMS->NotifyUsers(array(
                         'ticketid' => $id,
                         'mail_headers' => $headers,
-                        'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
-                        'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
                     ));
                 }
 
@@ -560,48 +521,10 @@ if (isset($_POST['ticket'])) {
                 $message = reset($ticket['messages']);
             }
 
-            $params = array(
-                'id' => $ticket['ticketid'],
-                'queue' => $queue['name'],
-                'customerid' => $ticketedit['customerid'],
-                'status' => $ticketdata['status'],
-                'categories' => $ticketdata['categorynames'],
-                'subject' => $ticket['subject'],
-                'body' => $message['body'],
-                'priority' => $RT_PRIORITIES[$ticketdata['priority']],
-                'deadline' => $ticketdata['deadline'],
-                'service' => $ticketdata['service'],
-                'type' => $ticketdata['type'],
-                'invproject' => $ticketdata['invproject_name'],
-                'invprojectid' => $ticketdata['invproject'],
-                'requestor' => $ticketdata['requestor'],
-                'requestor_mail' => $ticketdata['requestor_mail'],
-                'requestor_phone' => $ticketdata['requestor_phone'],
-                'requestor_userid' => $ticketdata['requestor_userid'],
-                'parentid' => $ticketdata['parentid'],
-                'node' => $ticketdata['node_name'],
-                'nodeid' => $ticketdata['nodeid'],
-                'netnode' => $ticketdata['netnode_name'],
-                'netnodeid' => $ticketdata['netnodeid'],
-                'netdev' => $ticketdata['netdev_name'],
-                'netdevid' => $ticketdata['netdevid'],
-                'owner' => $ticketdata['ownername'],
-                'ownerid' => $ticketdata['owner'],
-                'verifier' => $ticketdata['verifier_username'],
-                'verifierid' => $ticketdata['verifierid'],
-                'attachments' => &$attachments,
-            );
-            $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
-            $params['customerinfo'] =  isset($mail_customerinfo) ? $mail_customerinfo : null;
-            $params['customerinfo'] =  isset($sms_customerinfo) ? $sms_customerinfo : null;
-
             $LMS->NotifyUsers(array(
                 'ticketid' => $ticket['ticketid'],
                 'oldqueue' => $ticket['queueid'] == $ticketedit['queue'] ? null : $ticket['queueid'],
-                'verifierid' => $verifierid == $ticketedit['verifierid'] ? null : $ticketedit['verifierid'],
                 'mail_headers' => $headers,
-                'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
-                'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
             ));
         }
 

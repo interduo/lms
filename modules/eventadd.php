@@ -334,26 +334,10 @@ if (isset($_POST['event'])) {
                         $sms_customerinfo = "\n" . trans('Customer:') . ' ' . $requestor;
                     }
 
-                    $params = array(
-                        'id' => $event['ticketid'],
-                        'queue' => $queuedata['name'],
-                        'customerid' => $ticket['customerid'],
-                        'status' => $ticketdata['status'],
-                        'categories' => $ticketdata['categorynames'],
-                        'priority' => $RT_PRIORITIES[$ticketdata['priority']],
-                        'subject' => $ticket['subject'],
-                        'body' => $ticket['body'],
-                    );
-                    $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject'), $params);
-                    $params['customerinfo'] = isset($mail_customerinfo) ? $mail_customerinfo : null;
-                    $params['customerinfo'] = isset($sms_customerinfo) ? $sms_customerinfo : null;
-
                     $LMS->NotifyUsers(array(
                         'ticketid' => $event['ticketid'],
-                        'verifierid' => $ticket['verifierid'],
                         'mail_headers' => $headers,
-                        'mail_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body'), $params),
-                        'sms_body' => $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body'), $params),
+                        'usersnotify' => ($ticket['notify'] ? true : false),
                     ));
                 }
                 break;
