@@ -1068,6 +1068,9 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         $this->lastmessageid = '<msg.' . $message['queue'] . '.' . $message['ticketid']
             . '.' . time() . '@rtsystem.' . gethostname() . '>';
 
+        $message['messageid'] = '<msg.' . $message['queue'] . '.' . $message['ticketid']
+             . '.'  . time() . '@rtsystem.' . gethostname() . '>';
+
         $createtime = isset($message['createtime']) ? $message['createtime'] : time();
 
         $body = preg_replace("/\r/", "", $message['body']);
@@ -2135,6 +2138,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             $reply = $this->GetMessage($params['references']);
             $headers['References'] = explode(' ', $reply['id']);
             $headers['In-Reply-To'] = array_pop(explode(' ', $reply['id']));
+            $headers['Message-ID'] = $reply['id'];
             if (!empty($reply['cc'])) {
                 $headers['cc'] = $reply['cc'];
             }
@@ -2142,6 +2146,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             $reply = $this->GetFirstMessage($ticket['id']);
             $headers['References'] = implode(' ', $reply);
             $headers['In-Reply-To'] = $reply['id'];
+            $headers['Message-ID'] = $reply['id'];
             if (!empty($reply['cc'])) {
                 $headers['cc'] = $reply['cc'];
             }

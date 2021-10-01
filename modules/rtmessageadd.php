@@ -168,9 +168,6 @@ if (isset($_POST['message'])) {
 
             $message['queue'] = $queue;
 
-            $message['messageid'] = '<msg.' . $queue['id'] . '.' . $ticketid . '.' . time()
-                . '@rtsystem.' . gethostname() . '>';
-
             $message['customerid'] = null;
 
             $mailfname = '';
@@ -192,7 +189,6 @@ if (isset($_POST['message'])) {
                 $references = explode(' ', $message['references']);
                 $headers['In-Reply-To'] = array_pop($references);
             }
-            $headers['Message-ID'] = $message['messageid'];
 
             if ($message['userid'] && ($user['email'] || $queue['email'] || $requestor_mail)) {
                 $mailfrom = $LMS->DetermineSenderEmail($user['email'], $queue['email'], $requestor_mail);

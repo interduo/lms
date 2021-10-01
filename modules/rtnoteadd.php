@@ -101,8 +101,6 @@ if (isset($_GET['ticketid'])) {
     $SMARTY->assign('fileupload', $fileupload);
 
     if (!$error) {
-        $messageid = '<msg.' . $note['queueid'] . '.' . $note['ticketid'] . '.'  . time() . '@rtsystem.' . gethostname() . '>';
-
         $note['categories'] = is_array($note['categories']) ? array_flip($note['categories']) : array();
 
         $attachments = null;
@@ -119,7 +117,6 @@ if (isset($_GET['ticketid'])) {
         }
         $msgid = $LMS->TicketMessageAdd(array(
                 'ticketid' => $note['ticketid'],
-                'messageid' => $messageid,
                 'body' => $note['body'],
                 'type' => RTMESSAGE_NOTE,
             ), $files);
