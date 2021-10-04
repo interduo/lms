@@ -14,7 +14,8 @@ jobs:
       - image: cimg/php:7.4.24
       - image: postgres:13-bullseye
         envirnoment:
-          POSTGRES_HOST_AUTH_METHOD=trust      
+          POSTGRES_HOST_AUTH_METHOD=trust
+          POSTGRES_PASSWORD=test123
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
