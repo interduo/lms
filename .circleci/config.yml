@@ -48,8 +48,8 @@ jobs:
             - ./vendor
 
       # prepare the database
-      - run: sudo psql -c 'CREATE DATABASE lmsdb'
-      - run: sudo psql -d lmsdb -f doc/lms.pgsql
+      - run: sudo su - postgres -c "psql -c 'CREATE DATABASE lmsdb'"
+      - run: sudo su - postgres -c "psql -d lmsdb -f doc/lms.pgsql"
 
       # run tests with phpunit or codecept
       #- run: ./vendor/bin/phpunit
