@@ -11,7 +11,7 @@ jobs:
     docker:
       # Specify the version you desire here
       - image: circleci/postgres:13.4-buster
-
+      - resource_class: small
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
