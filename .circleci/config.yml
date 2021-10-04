@@ -11,7 +11,8 @@ jobs:
     resource_class: small
     docker:
       # Specify the version you desire here
-      - image: circleci/postgres:13-bullseye
+      - image: cimg/7.4.24
+      - image: postgres:13-bullseye
         envirnoment:
           POSTGRES_HOST_AUTH_METHOD=trust      
 
