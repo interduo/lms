@@ -13,6 +13,10 @@ jobs:
       # Specify the version you desire here
       - image: circleci/postgres:13-bullseye
       - image: postgres
+        envirnoment:
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres123
+
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
