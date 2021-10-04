@@ -11,7 +11,7 @@ jobs:
     resource_class: small
     docker:
       # Specify the version you desire here
-      - image: cimg/7.4.24
+      - image: cimg/php7.4.24
       - image: postgres:13-bullseye
         envirnoment:
           POSTGRES_HOST_AUTH_METHOD=trust      
