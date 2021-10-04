@@ -11,16 +11,18 @@ jobs:
     resource_class: small
     docker:
       # Specify the version you desire here
-      - image: circleci/postgres:13-bullseye
-      - image: postgres
-        envirnoment:
-          POSTGRES_HOST_AUTH_METHOD=trust      
+      image: circleci/postgres:13-bullseye  
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # Using the RAM variation mitigates I/O contention
       # for database intensive operations.
+      services:
+        postgresql:
+          image: postgres
+          envirnoment:
+            - POSTGRES_HOST_AUTH_METHOD=trust    
 
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
@@ -50,8 +52,8 @@ jobs:
             - ./vendor
 
       # prepare the database
-      - run: psql -c 'CREATE DATABASE lmsdb';
-      - run: psql -d lmsdb -f /home/circleci/project/doc/lms.pgsql
+      - run: sudo su - postgres -c "psql -c 'CREATE DATABASE lmsdb'"
+      - run: sudo su - postgres -c "psql -d lmsdb -f /home/circleci/project/doc/lms.pgsql"
 
       # run tests with phpunit or codecept
       - run: if find . -name "*.php" ! -path "./vendor/*" -print0 | xargs -0 -n 1 -P 8 php -l | grep -v "No syntax errors detected"; then exit 1; fi
