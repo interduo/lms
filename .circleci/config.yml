@@ -52,6 +52,9 @@ jobs:
       - run: sudo su - postgres -c "psql -d lmsdb -f /home/circleci/project/doc/lms.pgsql"
 
       # run tests with phpunit or codecept
+      - run: if find . -name "*.php" ! -path "./vendor/*" -print0 | xargs -0 -n 1 -P 8 php -l | grep -v "No syntax errors detected"; then exit 1; fi
+      - run: if find templates -type f -iname '*.html' | xargs devel/smartylint.php |grep -i "syntax error"; then exit 1; fi
+ 
       #- run: ./vendor/bin/phpunit
       #- run: ./vendor/bin/codecept build
       #- run: ./vendor/bin/codecept run
