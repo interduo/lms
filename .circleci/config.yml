@@ -12,7 +12,6 @@ jobs:
     docker:
       # Specify the version you desire here
       - image: circleci/postgres:13-bullseye
-      - image: circleci/postgres:13-alpine-ram
         envirnoment:
           POSTGRES_HOST_AUTH_METHOD=trust      
 
