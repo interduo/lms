@@ -46,6 +46,7 @@ jobs:
             - ./vendor
 
       # prepare the database
+      - run: sudo su - postgres -c "systemctl start postgres"
       - run: sudo su - postgres -c "psql -c 'CREATE DATABASE lmsdb'"
       - run: sudo su - postgres -c "psql -d lmsdb -f /home/circleci/project/doc/lms.pgsql"
 
