@@ -11,18 +11,14 @@ jobs:
     resource_class: small
     docker:
       # Specify the version you desire here
-      image: circleci/postgres:13-bullseye  
+      image: circleci/postgres:13-bullseye
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # Using the RAM variation mitigates I/O contention
-      # for database intensive operations.
       services:
-        postgresql:
-          image: postgres
-          envirnoment:
-            - POSTGRES_HOST_AUTH_METHOD=trust    
+        database:
+          postgresql:
+            image: postgres
+            envirnoment:
+              - POSTGRES_HOST_AUTH_METHOD=trust
 
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
