@@ -14,9 +14,7 @@ jobs:
       - image: circleci/postgres:13-bullseye
       - image: postgres
         envirnoment:
-          POSTGRES_USER=postgres,
-          POSTGRES_PASSWORD=postgres123,
-          POSTGRES_HOST_AUTH_METHOD=trust,        
+          POSTGRES_HOST_AUTH_METHOD=trust      
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
