@@ -12,18 +12,11 @@ jobs:
     docker:
       # Specify the version you desire here
       - image: cimg/php:7.4.24
+
       - image: postgres:9.4.1
         environment:
           POSTGRES_HOST_AUTH_METHOD=trust
-          POSTGRES_PASSWORD=password          
-
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # Using the RAM variation mitigates I/O contention
-      # for database intensive operations.
-
+          POSTGRES_PASSWORD=password
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
