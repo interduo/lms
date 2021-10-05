@@ -15,8 +15,12 @@ jobs:
 
       - image: postgres:9.4.1
         environment:
-          POSTGRES_HOST_AUTH_METHOD=trust
-          POSTGRES_PASSWORD=password
+          - POSTGRES_HOST_AUTH_METHOD=trust
+          - PGUSER=postgres
+          - PGHOST=postgres
+          - PGDATABASE=postgres
+          - PGPASSWORD=postgres_password
+          - PGPORT=5432
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
