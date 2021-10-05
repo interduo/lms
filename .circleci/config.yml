@@ -17,7 +17,7 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
-      - run: sudo apt update && sudo apt dist-upgrade && sudo apt install -y composer php-dom postgresql-server postgres-client php-pgsql
+      - run: sudo apt update && sudo apt dist-upgrade && sudo apt install -y composer postgresql-server postgres-client php-pgsql
 
       # Download and cache dependencies
       - restore_cache:
