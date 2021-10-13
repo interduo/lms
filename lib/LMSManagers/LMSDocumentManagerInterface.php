@@ -95,4 +95,14 @@ interface LMSDocumentManagerInterface
     public function updateNumberPlan(array $numberplan);
 
     public function deleteNumberPlan($id);
+
+    public function GetPurchaseDocumentList($params = array());
+
+    public function GetPurchaseDocumentInfo($id);
+
+    public function AddPurchaseDocument($args);
+
+    public function DeletePurchaseDocument($id);
+
+    public function UpdatePurchaseDocument($args);
 }
