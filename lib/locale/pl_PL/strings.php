@@ -1556,6 +1556,26 @@ $_LANG['or'] = 'lub';
 $_LANG['or Customer ID:'] = 'lub ID klienta:';
 $_LANG['original'] = 'oryginał';
 $_LANG['ORIGINAL'] = 'ORYGINAŁ';
+
+$_LANG['Purchase document list'] = 'Lista dokumentów kosztowych';
+$_LANG['Are you sure, you want to delete that purchase document?'] = 'Czy jesteś pewien że chcesz skasować ten dokument kosztowy?';
+$_LANG['Purchase document number'] = 'Numer dokumentu kosztowego';
+$_LANG['Supplier'] = 'Dostawca';
+$_LANG['Document date'] = 'Data dokumentu';
+$_LANG['Document upload date'] = 'Data wgrania dokumnetu';
+$_LANG['Enter deadline in YYYY/MM/DD format or click to select it from calendar'] = 'Wpisz termin płatności w formacie YYYY/MM/DD lub kliknij by wybrać ją z kalendarza';
+$_LANG['Enter document date in YYYY/MM/DD format or click to select it from calendar'] = 'Wpisz datę dokumentu w formacie YYYY/MM/DD lub kliknij by wybrać ją z kalendarza';
+$_LANG['Enter document deadline date in YYYY/MM/DD format or click to select it from calendar'] = 'Wprowadź termin płatności dokumentu w formacie YYYY/MM/DD lub kliknij by wybrać ją z kalendarza';
+
+$_LANG['Add purchase document'] = 'Dodaj dokument zakupu';
+$_LANG['Modify purchase document'] = 'Modyfikuj dokument zakupu';
+$_LANG['Show only unpaid'] = 'Tylko niezapłacone';
+$_LANG['Show only expired'] = 'Tylko przeterminowane';
+$_LANG['Today date of payment'] = 'Dzisiaj termin płatności';
+
+$_LANG['Pay date'] = 'Data zapłaty';
+$_LANG['Document scan'] = 'Skan dokumentu';
+
 $_LANG['Or, most likely, can\'t get MAC addresses table on that host.'] = 'Lub najprawdopodobniej nie można pobrać tablicy adresów MAC na tym komputerze.';
 $_LANG['Outstandings'] = 'Zaległości';
 $_LANG['Overcharges'] = 'Nadpłaty';
@@ -3096,6 +3116,7 @@ $_LANG['cash-out receipt'] = 'KW';
 $_LANG['cash receipts'] = 'dok. kasowe';
 $_LANG['New document:'] = 'Nowy dokument:';
 $_LANG['Show All:'] = 'Pokaż wszystkie:';
+$_LANG['Show All'] = 'Pokaż wszystkie';
 $_LANG['transactions'] = 'transakcje';
 $_LANG['debit notes'] = 'noty obciążeniowe';
 $_LANG['Debit Note Edit: $a'] = 'Edycja noty: $a';

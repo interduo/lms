@@ -1556,6 +1556,15 @@ $_LANG['Outstandings'] = 'Zaległości';
 $_LANG['Overcharges'] = 'Nadpłaty';
 $_LANG['Owing'] = 'Winien';
 $_LANG['Owner'] = 'Właściciel';
+
+$_LANG['Purchase document list'] = 'Lista dokumentów kosztowych';
+$_LANG['Are you sure, you want to delete that purchase document?'] = 'Czy jesteś pewien że chcesz skasować ten dokument kosztowy?';
+$_LANG['Purchase document number'] = 'Numer dokumentu kosztowego';
+$_LANG['Supplier'] = 'Dostawca';
+$_LANG['Document date'] = 'Data dokumentu';
+$_LANG['Document upload date'] = 'Data wgrania dokumnetu';
+$_LANG['Payment date'] = 'Termin płatności';
+
 $_LANG['Owner:'] = 'Właściciel:';
 $_LANG['Owner ID:'] = 'Identyfikator właściciela:';
 $_LANG['Partial matches'] = 'Częściowe dopasowania';

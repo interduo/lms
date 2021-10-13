@@ -477,6 +477,12 @@ $menu = array(
                     'tip' => trans('Tags list'),
                     'prio' => 150,
                 ),
+                'pdlist' => array(
+                    'name' => trans('Purchase document list'),
+                    'link' => '?m=pdlist',
+                    'tip' => trans('Purchase document list'),
+                    'prio' => 180,
+                ),
             ),
         ),
 

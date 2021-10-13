@@ -3434,6 +3434,36 @@ class LMS
         return $manager->isDocumentAccessible($docid);
     }
 
+    public function GetPurchaseDocumentList($params = array())
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->GetPurchaseDocumentList($params);
+    }
+
+    public function GetPurchaseDocumentInfo($id)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->GetPurchaseDocumentInfo($id);
+    }
+
+    public function AddPurchaseDocument($args)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->AddPurchaseDocument($args);
+    }
+
+    public function DeletePurchaseDocument($id)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->DeletePurchaseDocument($id);
+    }
+
+    public function UpdatePurchaseDocument($args)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->UpdatePurchaseDocument($args);
+    }
+
     /*
      *  Location
      */
