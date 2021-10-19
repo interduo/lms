@@ -17,7 +17,7 @@
 			{trans("Name:")}
 		</TD>
 		<TD style="width: 98%;">
-			<INPUT type="text" name="promotion[name]" value="{$promotion.name}" size="40" {tip text="Enter promotion name" trigger="name" bold=1}>
+			<INPUT type="text" name="promotion[name]" value="{$promotion.name|escape}" size="40" {tip text="Enter promotion name" trigger="name" bold=1}>
 		</TD>
 	</TR>
 	</THEAD>
@@ -30,7 +30,7 @@
 			{trans("Description:")}
 		</TD>
 		<TD style="width: 98%;">
-			<TEXTAREA name="promotion[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$promotion.description}</TEXTAREA>
+			<TEXTAREA name="promotion[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$promotion.description|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>

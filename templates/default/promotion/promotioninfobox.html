@@ -6,7 +6,7 @@
 			{icon name="money"}
 		</TD>
 		<TD WIDTH="98%" COLSPAN="2">
-			<B>{$promotion.name} ({$promotion.id|string_format:"%04d"})</B>
+			<B>{$promotion.name|escape} ({$promotion.id|string_format:"%04d"})</B>
 			{if $promotion.deleted} <span class="lms-ui-alert">({trans("deleted promotion")})</span>{/if}
 		</TD>
 	</TR>
@@ -32,7 +32,7 @@
 		<TD WIDTH="98%" COLSPAN="2">
 			<TABLE WIDTH="100%" CELLPADDING="5">
 			    <TR><TD CLASS="fall superlight">
-				    {$promotion.description|replace:"\n":"<BR>"}
+				    {$promotion.description|escape|replace:"\n":"<BR>"}
 			    </TD></TR>
 			</TABLE>
 		</TD>

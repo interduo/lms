@@ -22,7 +22,7 @@
 			{trans("Name:")}
 		</TD>
 		<TD>
-			<INPUT type="TEXT" name="promotion[name]" value="{$promotion.name}" size="40"
+			<INPUT type="TEXT" name="promotion[name]" value="{$promotion.name|escape}" size="40"
 				{if !empty($promotion.assignmentcount) && !ConfigHelper::checkPrivilege('superuser')}
 					readonly {tip text="Promotion is indirectly assigned to liabilities, so name change is disabled!" trigger="name" bold=1}
 				{else}
@@ -40,7 +40,7 @@
 			{trans("Description:")}
 		</TD>
 		<TD>
-			<TEXTAREA name="promotion[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$promotion.description}</TEXTAREA>
+			<TEXTAREA name="promotion[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$promotion.description|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>

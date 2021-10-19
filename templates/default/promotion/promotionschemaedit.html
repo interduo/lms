@@ -39,7 +39,7 @@
 			{trans("Name:")}
 		</TD>
 		<TD>
-			<INPUT type="text" name="schema[name]" value="{$schema.name}" size="40"
+			<INPUT type="text" name="schema[name]" value="{$schema.name|escape}" size="40"
 				   {if !empty($schema.assignmentcount) && !ConfigHelper::checkPrivilege('superuser')}
 						readonly {tip text="Schema is assigned to liabilities, so name change is disabled!" trigger="name" bold=1}
 				   {else}
@@ -93,7 +93,7 @@
 			{trans("Description:")}
 		</TD>
 		<TD>
-			<TEXTAREA name="schema[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$schema.description}</TEXTAREA>
+			<TEXTAREA name="schema[description]" cols="50" rows="5" {tip text="Enter additional information (optional)"}>{$schema.description|escape}</TEXTAREA>
 		</TD>
 	</TR>
 	<TR>

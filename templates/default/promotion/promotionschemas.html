@@ -34,10 +34,10 @@
 			{foreach from=$promotion.schemas item=schema}
     		<TR class="highlight{if $schema.disabled} blend{/if}{if $schema.deleted} lms-ui-resource-deleted{/if}" data-name="{$schema.name}">
 			    <TD onClick="return self.location.href='?m=promotionschemainfo&id={$schema.id}';" class="nobr">
-				    <B>{$schema.name}</B>
+				    <B>{$schema.name|escape}</B>
 			    </TD>
 			    <TD onClick="return self.location.href='?m=promotionschemainfo&id={$schema.id}';">
-				    {$schema.description}
+				    {$schema.description|escape}
 			    </TD>
 				<td>
 					{$schema.assignments|default:"-"}

@@ -42,7 +42,7 @@
 	{foreach $promotionlist as $promo}
 	<TR class="highlight {if $promo.disabled} blend{/if}{if $promo.deleted} lms-ui-resource-deleted{/if}" data-name="{$promo.name}">
 		<TD nowrap onClick="return self.location.href='?m=promotioninfo&amp;id={$promo.id}';">
-			{icon name="money"} <B>{$promo.name}</B>
+			{icon name="money"} <B>{$promo.name|escape}</B>
 			{if $promo.datefrom || $promo.dateto}
 				{if $promo.datefrom}
 				({trans("from:")} {$promo.datefrom|date_format:"%Y/%m/%d"}{if !$promo.dateto}){/if}
@@ -56,7 +56,7 @@
 			({$promo.id|string_format:"%04d"})
 		</TD>
 		<TD onClick="return self.location.href='?m=promotioninfo&amp;id={$promo.id}';">
-			{$promo.description}
+			{$promo.description|escape}
 		</TD>
 		<TD class="text-right" onClick="return self.location.href='?m=promotioninfo&amp;id={$promo.id}';">
 			{$promo.scs|default:"-"}

@@ -11,7 +11,7 @@
 			{icon name="money"}
 		</TD>
 		<TD class="bold" colspan="2">
-			{$schema.name} ({$schema.id|string_format:"%04d"})
+			{$schema.name|escape} ({$schema.id|string_format:"%04d"})
 			{if $schema.deleted} <span class="lms-ui-alert">({trans("deleted promotion schema")})</span>{/if}
 		</TD>
 	</TR>
@@ -44,7 +44,7 @@
 			{icon name="money"}
 		</TD>
 		<TD class="nobr" colspan="2">
-			<A href="?m=promotioninfo&amp;id={$schema.pid}">{$schema.promotion}</A>
+			<A href="?m=promotioninfo&amp;id={$schema.pid}">{$schema.promotion|escape}</A>
 		</TD>
 	</TR>
 	{if $schema.description}
@@ -55,7 +55,7 @@
 		<TD colspan="2">
 			<TABLE width="100%" cellpadding="5">
 				<TR><TD class="fall superlight">
-					{$schema.description|replace:"\n":"<BR>"}
+					{$schema.description|escape|replace:"\n":"<BR>"}
 				</TD></TR>
 			</TABLE>
 		</TD>
