@@ -57,10 +57,10 @@
             <td data-template-deadline="{$pd.deadline|date_format:"%Y/%m/%d"}">
                 {$pd.deadline|date_format:"%Y/%m/%d"}
             </td>
-            <td data-template-description="{$pd.description}" {tip text="$pd.description"}>
+            <td data-template-description="{$pd.description}" {tip text=$pd.description}>
                 {$pd.description|trunescape:40}
             </td>
-            <td data-template-customerid="{$pd.customerid}" {tip text="{$pd.customername}"}>
+            <td data-template-customerid="{$pd.customerid}" {tip text=$pd.customername}>
                 <a href="?m=customerinfo&id={$pd.customerid}">{$pd.customername|truncate:25:"&hellip;":true}</a>
            </td>
             <td class="buttons">
