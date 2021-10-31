@@ -51,11 +51,11 @@
             <td data-template-sdate="{$pd.sdate|date_format:"%Y/%m/%d"}">
                 {$pd.sdate|date_format:"%Y/%m/%d"}
             </td>
-            <td data-template-paydate="{$pd.paydate|date_format:"%Y/%m/%d"}">
-                {$pd.paydate|date_format:"%Y/%m/%d"}
-            </td>
             <td data-template-deadline="{$pd.deadline|date_format:"%Y/%m/%d"}">
                 {$pd.deadline|date_format:"%Y/%m/%d"}
+            </td>
+            <td data-template-paydate="{$pd.paydate|date_format:"%Y/%m/%d"}">
+                {$pd.paydate|date_format:"%Y/%m/%d"}
             </td>
             <td data-template-description="{$pd.description}" {tip text=$pd.description}>
                 {$pd.description|trunescape:40}

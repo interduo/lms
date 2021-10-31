@@ -2424,7 +2424,7 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
             'sdate' => !empty($args['sdate']) ? date_to_timestamp($args['sdate']) : null,
             'deadline' => !empty($args['deadline']) ? date_to_timestamp($args['deadline']) : null,
             'paydate' => !empty($args['paydate']) ? date_to_timestamp($args['paydate']) : null,
-            'description' => !empty($args['description']) ? date_to_timestamp($args['description']) : null,
+            'description' => $args['description'],
             'customerid' => $args['customerid'],
         );
 
@@ -2453,7 +2453,7 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
             'sdate' => !empty($args['sdate']) ? date_to_timestamp($args['sdate']) : null,
             'deadline' => !empty($args['deadline']) ? date_to_timestamp($args['deadline']) : null,
             'paydate' => !empty($args['paydate']) ? date_to_timestamp($args['paydate']) : null,
-            'description' => !empty($args['description']) ? date_to_timestamp($args['description']) : null,
+            'description' => $args['description'],
             'customerid' => $args['customerid'],
             'id' => $args['id'],
         );
