@@ -5386,3 +5386,6 @@ $_LANG[
     . 'Despite this you want to make customer modification which you had made in form?'
 ] = "Użytkownik '\$a' w międzyczasie (\$b) zmienił dane edytowanego przez Ciebie klienta.\n"
     . 'Czy mimo tego chcesz zmienić dane klienta na te przez Ciebie wprowadzone w formularzu?';
+
+$_LANG['<!pin>(hashed)'] = '(zahaszowany)';
+$_LANG['<!pin>(expired)'] = '(przeterminowany)';
