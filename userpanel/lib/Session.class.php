@@ -32,7 +32,9 @@ class Session
     private $ip;
     private $db;
     private $pin_allowed_characters;
+    private $unsecure_pin_validity;
     public $islogged = false;
+    public $isPasswdChangeRequired = false;
     public $error;
 
     public $_content = array();     // session content array
@@ -44,6 +46,7 @@ class Session
         session_start();
         $this->db = &$DB;
         $this->pin_allowed_characters = ConfigHelper::getConfig('phpui.pin_allowed_characters', '0123456789');
+        $this->unsecure_pin_validity = intval(ConfigHelper::getConfig('phpui.unsecure_pin_validity', 0, true));
         $this->ip = str_replace('::ffff:', '', $_SERVER['REMOTE_ADDR']);
 
         if (isset($_GET['override'])) {
@@ -103,7 +106,7 @@ class Session
                     return;
             }
             $customer = $this->db->GetRow(
-                'SELECT c.id, pin
+                'SELECT c.id, pin, pinlastchange
                 FROM customers c
                 ' . $join . '
                 WHERE c.deleted = 0
@@ -122,6 +125,32 @@ class Session
             } else {
                 $body = ConfigHelper::getConfig('userpanel.reminder_sms_body');
             }
+
+            if (preg_match('/^\$[0-9]+\$/', $customer['pin']) || $this->unsecure_pin_validity && time() - $customer['pinlastchange'] > $this->unsecure_pin_validity) {
+                $pin_min_size = intval(ConfigHelper::getConfig('phpui.pin_min_size', 4));
+                if (!$pin_min_size) {
+                    $pin_min_size = 4;
+                }
+                $pin_max_size = intval(ConfigHelper::getConfig('phpui.pin_max_size', 6));
+                if (!$pin_max_size) {
+                    $pin_max_size = 6;
+                }
+                if ($pin_min_size > $pin_max_size) {
+                    $pin_max_size = $pin_min_size;
+                }
+                $customer['pin'] = generate_random_string(random_int($pin_min_size, $pin_max_size), $this->pin_allowed_characters);
+
+                $this->db->Execute(
+                    'UPDATE customers
+                    SET pin = ?, pinlastchange = ?NOW?
+                    WHERE id = ?',
+                    array(
+                        $customer['pin'],
+                        $customer['id'],
+                    )
+                );
+            }
+
             $body = str_replace('%id', $customer['id'], $body);
             $body = str_replace('%pin', $customer['pin'], $body);
             if ($remindform['type'] == 1) {
@@ -181,6 +210,7 @@ class Session
 
         if ($authdata != null && $authdata['passwd'] != null && $this->TimeOut($timeout)) {
             $this->islogged = true;
+            $this->isPasswdChangeRequired = !preg_match('/^\$[0-9]+\$/', $authdata['passwd']);
             $this->id = $authdata['id'];
             $_SESSION['session_login'] = $this->login;
             $_SESSION['session_passwd'] = $this->passwd;
@@ -304,10 +334,24 @@ class Session
         }
 
         $string = $this->passwd;
+
         for ($i = 0; $i < strlen($this->pin_allowed_characters); $i++) {
             $string = str_replace($this->pin_allowed_characters[$i], '', $string);
         }
         return !strlen($string);
+    }
+
+    private function checkPIN($passwd, $passwdlastchange)
+    {
+        if (preg_match('/^\$[0-9]+\$/', $passwd)) {
+            return crypt($this->passwd, $passwd) == $passwd;
+        }
+
+        if ($this->unsecure_pin_validity && time() - $passwdlastchange >= $this->unsecure_pin_validity) {
+            return false;
+        }
+
+        return $this->passwd == $passwd;
     }
 
     private function GetCustomerIDByPhoneAndPIN()
@@ -326,8 +370,20 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne('SELECT pin FROM customers
-			WHERE pin = ? AND id = ?', array($this->passwd, $authinfo['id']));
+        $customer = $this->db->GetRow(
+            'SELECT pin, pinlastchange
+            FROM customers
+            WHERE id = ?',
+            array(
+                $authinfo['id'],
+            )
+        );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -345,8 +401,20 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne('SELECT pin FROM customers
-			WHERE pin = ? AND id = ?', array($this->passwd, $this->login));
+        $customer = $this->db->GetRow(
+            'SELECT pin, pinlastchange
+            FROM customers
+            WHERE id = ?',
+            array(
+                $this->login,
+            )
+        );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -368,8 +436,20 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne('SELECT pin FROM customers
-			WHERE pin = ? AND id = ?', array($this->passwd, $authinfo['id']));
+        $customer = $this->db->GetRow(
+            'SELECT pin, pinlastchange
+            FROM customers
+			WHERE id = ?',
+            array(
+                $authinfo['id']
+            )
+        );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -390,8 +470,20 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne('SELECT pin FROM customers
-			WHERE pin = ? AND id = ?', array($this->passwd, $authinfo['id']));
+        $customer = $this->db->GetRow(
+            'SELECT pin, pinlastchange
+            FROM customers
+            WHERE id = ?',
+            array(
+                $authinfo['id'],
+            )
+        );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -409,9 +501,21 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne('SELECT pin FROM customers c
-			JOIN nodes n ON c.id = n.ownerid
-			WHERE n.name = ? AND n.passwd = ?', array($this->login, $this->passwd));
+        $customer = $this->db->GetRow(
+            'SELECT n.passwd AS pin, pinlastchange
+            FROM customers c
+            JOIN nodes n ON c.id = n.ownerid
+            WHERE n.name = ?',
+            array(
+                $this->login,
+            )
+        );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -439,11 +543,20 @@ class Session
             return null;
         }
 
-        $authinfo['passwd'] = $this->db->GetOne(
-            'SELECT pin FROM customers
-		    WHERE id = ? AND pin = ?',
-            array($authinfo['id'], $this->passwd)
+        $customer = $this->db->GetRow(
+            'SELECT pin, pinlastchange
+            FROM customers
+            WHERE id = ?',
+            array(
+                $authinfo['id'],
+            )
         );
+
+        if ($this->checkPIN($customer['pin'], $customer['pinlastchange'])) {
+            $authinfo['passwd'] = $customer['pin'];
+        } else {
+            $authinfo['passwd'] = null;
+        }
 
         return $authinfo;
     }
@@ -451,8 +564,13 @@ class Session
     private function GetCustomerAuthInfo($customerid)
     {
         return $this->db->GetRow(
-            'SELECT customerid AS id, lastlogindate, lastloginip, failedlogindate, failedloginip, enabled FROM up_customers WHERE customerid=?',
-            array($customerid)
+            'SELECT customerid AS id, c.pinlastchange, lastlogindate, lastloginip, failedlogindate, failedloginip, enabled
+            FROM up_customers
+            JOIN customers c ON c.id = customerid
+            WHERE customerid = ?',
+            array(
+                $customerid,
+            )
         );
     }
 
@@ -461,20 +579,40 @@ class Session
         $actauthinfo = $this->GetCustomerAuthInfo($authinfo['id']);
         if ($actauthinfo != null) {
             $this->db->Execute(
-                'UPDATE up_customers SET lastlogindate=?, lastloginip=?, failedlogindate=?, failedloginip=?, enabled=? WHERE customerid=?',
-                array($authinfo['lastlogindate'], $authinfo['lastloginip'], $authinfo['failedlogindate'], $authinfo['failedloginip'],
-                $authinfo['enabled'],
-                $authinfo['id'])
+                'UPDATE up_customers
+                    SET lastlogindate = ?, lastloginip = ?, failedlogindate = ?, failedloginip = ?, enabled = ? WHERE customerid = ?',
+                array(
+                    $authinfo['lastlogindate'],
+                    $authinfo['lastloginip'],
+                    $authinfo['failedlogindate'],
+                    $authinfo['failedloginip'],
+                    $authinfo['enabled'],
+                    $authinfo['id'],
+                )
             );
         } else {
             $this->db->Execute(
-                'INSERT INTO up_customers(customerid, lastlogindate, lastloginip, failedlogindate, failedloginip, enabled) VALUES (?, ?, ?, ?, ?, ?)',
-                array($authinfo['id'], $authinfo['lastlogindate'], $authinfo['lastloginip'],
-                $authinfo['failedlogindate'],
-                $authinfo['failedloginip'],
-                $authinfo['enabled'])
+                'INSERT INTO up_customers (customerid, lastlogindate, lastloginip, failedlogindate, failedloginip, enabled) VALUES (?, ?, ?, ?, ?, ?)',
+                array(
+                    $authinfo['id'],
+                    $authinfo['lastlogindate'],
+                    $authinfo['lastloginip'],
+                    $authinfo['failedlogindate'],
+                    $authinfo['failedloginip'],
+                    $authinfo['enabled'],
+                )
             );
         }
+
+        $this->db->Execute(
+            'UPDATE customers
+                SET pinlastchange = ?
+            WHERE id = ?',
+            array(
+                $authinfo['pinlastchange'],
+                $authinfo['id'],
+            )
+        );
     }
 
     public function VerifyPassword()
