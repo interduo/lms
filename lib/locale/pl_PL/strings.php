@@ -5389,3 +5389,4 @@ $_LANG[
 
 $_LANG['<!pin>(hashed)'] = '(zahaszowany)';
 $_LANG['<!pin>(expired)'] = '(przeterminowany)';
+$_LANG['If you leave this field empty, then PIN will not change!'] = 'Jeśli to pole pozostawisz puste, PIN nie zostanie zmieniony!';
