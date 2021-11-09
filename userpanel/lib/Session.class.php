@@ -206,7 +206,7 @@ class Session
                         $this->id = $authdata['id'];
 
                         if ($this->id) {
-                            if (isset($_COOKIE['LMS_USERPANEL_SID'])) {
+                            if (isset($_COOKIE['USID'])) {
                                 $this->_restoreSession();
                             }
                             if (empty($this->_vdata)) {
@@ -264,7 +264,7 @@ class Session
                 }
             }
         } else {
-            if (isset($_COOKIE['LMS_USERPANEL_SID'])) {
+            if (isset($_COOKIE['USID'])) {
                 $this->_restoreSession();
                 if (!isset($this->_vdata['REMOTE_ADDR']) || $this->_vdata['REMOTE_ADDR'] != $this->ip) {
                     $this->islogged = false;
@@ -401,12 +401,12 @@ class Session
                 serialize($this->_content),
             )
         );
-        setcookie('LMS_USERPANEL_SID', $this->SID);
+        setcookie('USID', $this->SID);
     }
 
     private function _restoreSession()
     {
-        $this->SID = $_COOKIE['LMS_USERPANEL_SID'];
+        $this->SID = $_COOKIE['USID'];
 
         $row = $this->db->GetRow('SELECT * FROM up_sessions WHERE id = ?', array($this->SID));
 
@@ -447,7 +447,7 @@ class Session
         $this->db->Execute('DELETE FROM up_sessions WHERE id = ?', array($this->SID));
         $this->_content = array();
         $this->SID = null;
-        setcookie('LMS_USERPANEL_SID', false);
+        setcookie('USID', false);
     }
 
     private function ValidateRecaptchaResponse()
