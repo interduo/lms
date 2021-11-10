@@ -1239,6 +1239,8 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                                 'AND (a.dateto > ?NOW? OR a.dateto = 0)')) . '
 							AND (tariffid IN (' . $value . ')))';
                             break;
+                        case 'balance_date':
+                        case 'balance_days':
                         case 'addresstype':
                             break;
                         case 'tarifftype':
@@ -1255,8 +1257,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                                 $balance_relation = intval($search['balance_relation']);
                                 $searchargs[] = 'b.balance' . ($balance_relation == -1 ? '<=' : '>=') . ' ' . str_replace(',', '.', floatval($value));
                             }
-                            break;
-                        case 'balance_date':
                             break;
                         case 'ten':
                             if ($value == '*') {
@@ -1316,14 +1316,14 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                     GROUP BY docid
                 ) tv ON tv.docid = cash.docid
                 WHERE (cash.docid IS NULL AND ((cash.type <> 0 AND cash.time < ' . ($time ?: time()) . ')
-                    OR (cash.type = 0 AND cash.time + (CASE customers.paytime WHEN -1 THEN
+                    OR (cash.type = 0 AND cash.time + ((CASE customers.paytime WHEN -1 THEN
                         (CASE WHEN divisions.inv_paytime IS NULL THEN '
                             . ConfigHelper::getConfig('payments.deadline', ConfigHelper::getConfig('invoices.paytime', 0))
-                        . ' ELSE divisions.inv_paytime END) ELSE customers.paytime END) * 86400 < ' . ($time ?: time()) . ')))
+                        . ' ELSE divisions.inv_paytime END) ELSE customers.paytime END)' . ($days > 0 ? ' + ' . $days : '') . ') * 86400 < ' . ($time ?: time()) . ')))
                     OR (cash.docid IS NOT NULL AND ((d.type = ' . DOC_RECEIPT . ' AND cash.time < ' . ($time ?: time()) . ')
                         OR (d.type = ' . DOC_CNOTE . ' AND cash.time < ' . ($time ?: time()) . ' AND tv.totalvalue >= 0)
                         OR (((d.type = ' . DOC_CNOTE . ' AND tv.totalvalue < 0)
-                            OR d.type IN (' . DOC_INVOICE . ',' . DOC_DNOTE . ')) AND d.cdate + d.paytime  * 86400 < ' . ($time ?: time()) . ')))
+                            OR d.type IN (' . DOC_INVOICE . ',' . DOC_DNOTE . ')) AND d.cdate + (d.paytime' . ($days > 0 ? ' + ' . $days : '') . ')  * 86400 < ' . ($time ?: time()) . ')))
                 GROUP BY cash.customerid
             ) b2 ON b2.customerid = c.id ' : '')
             . (!empty($customergroup) ? 'LEFT JOIN (SELECT vcustomerassignments.customerid, COUNT(*) AS gcount
