@@ -1381,7 +1381,7 @@ if (empty($types) || in_array('debtors', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
@@ -1620,7 +1620,7 @@ if (empty($types) || in_array('reminder', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
@@ -2028,7 +2028,7 @@ if (empty($types) || in_array('invoices', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
@@ -2236,7 +2236,7 @@ if (empty($types) || in_array('notes', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
@@ -2426,7 +2426,7 @@ if (empty($types) || in_array('birthday', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
@@ -2621,7 +2621,7 @@ if (empty($types) || in_array('warnings', $types)) {
                     $start_idx = 0;
                     $end_idx = $count;
                 } else {
-                    $part_size = floor(($percent * $count) / 100);
+                    $part_size = ceil(($percent * $count) / 100);
                     $part_offset = $part_number * $part_size;
                     if ((!$part_offset && $part_number) || $part_offset >= $count) {
                         $start_idx = $part_offset;
