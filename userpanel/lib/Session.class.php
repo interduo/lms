@@ -794,7 +794,7 @@ class Session
                 SET pinlastchange = ?
             WHERE id = ?',
             array(
-                $authinfo['pinlastchange'],
+                empty($authinfo['pinlastchange']) ? 0 : $authinfo['pinlastchange'],
                 $authinfo['id'],
             )
         );
