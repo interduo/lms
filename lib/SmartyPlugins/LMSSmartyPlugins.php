@@ -1076,7 +1076,7 @@ class LMSSmartyPlugins
                         $template
                     ) . '>
                 ' . trans('days') . '
-                <select class="lms-ui-deadline-selection-days" lms-ui-combobox">
+                <select class="lms-ui-deadline-selection-days lms-ui-combobox">
                     <option value="7">7</option>
                     <option value="14">14</option>
                     <option value="21">21</option>
