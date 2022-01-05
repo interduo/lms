@@ -1958,6 +1958,12 @@ class LMS
         return $manager->GetModelList($pid);
     }
 
+    public function getNetDevTypes()
+    {
+        $manager = $this->getNetDevManager();
+        return $manager->getNetDevTypes();
+    }
+
     public function GetRadioSectors($netdevid, $technology = 0)
     {
         $manager = $this->getNetDevManager();
