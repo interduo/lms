@@ -348,6 +348,8 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                     $ownerfilter = ' AND t.owner IN (' . implode(',', $owner) . ') ';
                 }
             }
+        } else {
+            $ownerfilter = '';
         }
 
         if (!empty($deadline)) {
@@ -400,6 +402,8 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             } else {
                 $parentfilter = ' AND t.parentid IN (' . implode(',', $parentids) . ')';
             }
+        } else {
+            $parentfilter = '';
         }
 
         if (!empty($catids) && !in_array('all', $catids)) {
