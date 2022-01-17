@@ -22,7 +22,7 @@
  *  $Id$
  */
 
-function lmsFileUpload(elemid, formid) {
+function lmsFileUpload(elemid, formid, inlineviewspan) {
 	var elem = $("#" + elemid);
 	var formelem = typeof(formid) != 'undefined' ? $('#' + formid) : $(this).closest("form");
 	var formdata = new FormData(formelem.get(0));
@@ -84,14 +84,36 @@ function lmsFileUpload(elemid, formid) {
 							track: true
 						});
 						fileListItem.find(".fileupload-view").on("click", function() {
-							switch (file.type) {
-								case 'image/jpg':
-								case 'image/jpeg':
-								case 'image/png':
-									$( files[key].contentElem ).dialog( {height:'auto', width: 'auto', title: file.name, modal: true} );
-									break;
-								default:
-									alert($t("Cannot view this type of attachements"));
+							if (inlineviewspan !== "") {
+								switch (file.type) {
+									case 'image/jpg':
+									case 'image/jpeg':
+									case 'image/png':
+									case 'application/pdf':
+										files[key].contentElem.show_inline_attachment_from_obj(inlineviewspan);
+										console.log('wyswietl podglad inline');
+										break;
+									default:
+										alert($t("Cannot view this type of attachements"));
+								}
+							} else {
+								switch (file.type) {
+									case 'image/jpg':
+									case 'image/jpeg':
+									case 'image/png':
+										$(files[key].contentElem).dialog({
+											height: 'auto',
+											width: 'auto',
+											title: file.name,
+											modal: true
+										});
+										break;
+									case 'application/pdf':
+										console.log('wyswietl podglad pdf w dialogu');
+										files[key].contentElem.show_dialog_attachment_from_obj();
+									default:
+										alert($t("Cannot view this type of attachements"));
+								}
 							}
 						});
 						elem.find(".fileupload-file").on("click", function() {
