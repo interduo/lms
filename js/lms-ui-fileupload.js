@@ -265,14 +265,16 @@ function lmsFileView(file, containerid) {
         return;
     }
     const content = document.createElement("object");
-
     ///show in popup or use inline container
     if (typeof (containerid) == 'undefined') {
-        $(content).dialog({width: 'auto', height: 'auto', title: file.name, modal: true});
+		if (file.type == 'application/pdf') {
+			$(content).dialog({width: 'auto', height: window.innerHeight*0.9, title: file.name, modal: true});
+		} else {
+			$(content).dialog({width: 'auto', height: 'auto', title: file.name, modal: true});
+		}
     } else {
         $("#" + containerid).html(content);
     }
-    content.style = 'height:100%; width: 100%';
     content.setAttribute('data', objUrl);
     content.setAttribute('type', file.type);
     URL.revokeObjectURL(objUrl);
