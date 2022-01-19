@@ -68,6 +68,7 @@ version 28-git (????-??-??):
     value of all elements pointed by target parameter [chilan]
   - enhancement: allow plugins to attach specific contents in rtticketview module
     ('rtticketview_before_display' plugin hook introduced) [chilan]
+  - enhancement: allow to view uploaded files in modal or inline (js:lmsFileView) [interduo]
 
 version 27.0 (2021-08-20):
 

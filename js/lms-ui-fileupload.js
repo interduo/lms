@@ -22,7 +22,7 @@
  *  $Id$
  */
 
-function lmsFileUpload(elemid, formid) {
+function lmsFileUpload(elemid, formid, inlineviewspan) {
 	var elem = $("#" + elemid);
 	var formelem = typeof(formid) != 'undefined' ? $('#' + formid) : $(this).closest("form");
 	var formdata = new FormData(formelem.get(0));
@@ -65,8 +65,9 @@ function lmsFileUpload(elemid, formid) {
 					$.each(data.files, function(key, file) {
 						var size = get_size_unit(file.size);
 						var fileListItem = $('<div>' +
-							'<a href="#" class="fileupload-file"><i class="fas fa-trash"></i></a>&nbsp;' +
-							'<a href="#" class="fileupload-view"><i class="fas fa-search"></i></a>&nbsp;' +
+							'<a href="#" class="file-delete"><i class="fas fa-trash"></i></a>&nbsp;' +
+							'<a href="#" class="file-preview"><i class="fas fa-search"></i></a>&nbsp;' +
+							'<a href="#" class="file-view"><i class="fas fa-eye"></i></a>&nbsp;' +
 							file.name + ' (' + size.size + ' ' + size.unit + ')' +
 							'<input type="hidden" name="fileupload[' + elemid + '][' + (count + key) + '][name]"' +
 								' value="' + file.name + '" ' + (formid ? ' form="' + formid + '"' : '') + '>' +
@@ -75,7 +76,7 @@ function lmsFileUpload(elemid, formid) {
 							'<input type="hidden" name="fileupload[' + elemid + '][' + (count + key) + '][type]"' +
 								' value="' + file.type + '" ' + (formid ? ' form="' + formid + '"' : '') + '>' +
 						'</div>').appendTo(fileupload_files);
-						fileListItem.find('.fileupload-view').tooltip({
+						fileListItem.find('.file-preview').tooltip({
 							items: 'a',
 							content: files[key].imgElem,
 							classes: {
@@ -83,20 +84,15 @@ function lmsFileUpload(elemid, formid) {
 							},
 							track: true
 						});
-						fileListItem.find(".fileupload-view").on("click", function() {
-							switch (file.type) {
-								case 'image/jpg':
-								case 'image/jpeg':
-								case 'image/png':
-									$( files[key].contentElem ).dialog( {height:'auto', width: 'auto', title: file.name, modal: true} );
-									break;
-								default:
-									alert($t("Cannot view this type of attachements"));
+						fileListItem.find('.file-view').on('click', function() {
+							lmsFileView(files[key], inlineviewspan);
 							}
-						});
-						elem.find(".fileupload-file").on("click", function() {
-							$(this).parent().remove();
-						});
+						);
+						fileListItem.find('.file-delete').on('click',
+							function() {
+								$(this).parent().remove();
+							}
+						);
 					});
 				}
 			},
@@ -157,7 +153,7 @@ function lmsFileUpload(elemid, formid) {
 							canvas.width = width;
 							canvas.height = height;
 							canvas.getContext('2d').drawImage(image, 0, 0, width, height);
-							file.imgElem = $('<img src="' + canvas.toDataURL(file.type) + '">');
+							file.imgElem = $('<img src="' + canvas.toDataURL(file.type) + '" alt="">');
 							file.contentElem = $(image);
 
 							width = imgWidth;
@@ -253,7 +249,34 @@ function lmsFileUpload(elemid, formid) {
 		prepare_files();
 		formdata.delete(elemid + '[]');
 	});
-	elem.find(".fileupload-file").on("click", function() {
+	elem.find(".file-delete").on("click", function() {
 		$(this).parent().remove();
 	});
+}
+
+function lmsFileView(file, containerid) {
+	/// file is an object or http://filelink, or not exists
+	if (typeof (file) == 'object') {
+		if (file.size !== '0') {
+			var objUrl = (window.URL ? URL : webkitURL).createObjectURL(file);
+		}
+	} else {
+		var objUrl = file;
+	} else if(!file) {
+		alert("404: No file found");
+		return;
+	}
+	const content = document.createElement("object");
+
+	///popup or inlinecontainer
+	if (typeof (containerid) == 'undefined') {
+		$( content ).dialog( { width: 'auto', height: 'auto', title: file.name, modal: true });
+	} else {
+		var contid = "#" + containerid;
+		$( contid ).html(content);
+	}
+	content.style = 'height:100%; width: 100%';
+	content.setAttribute('data', objUrl);
+	content.setAttribute('type', file.type);
+	URL.revokeObjectURL(objUrl);
 }
