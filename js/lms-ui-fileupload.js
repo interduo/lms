@@ -255,26 +255,25 @@ function lmsFileUpload(elemid, formid, inlineviewspan) {
 }
 
 function lmsFileView(file, containerid) {
-	/// file is an object or http://filelink, or not exists
-	if (typeof (file) == 'object') {
-		if (file.size !== '0') {
-			var objUrl = (window.URL ? URL : webkitURL).createObjectURL(file);
-		}
-	} else {
-		alert("404: No file found");
-		return;
-	}
-	const content = document.createElement("object");
+    /// file is an object or http://filelink
+    if (typeof (file) == 'object') {
+        if (file.size !== '0') {
+            var objUrl = (window.URL ? URL : webkitURL).createObjectURL(file);
+        }
+    } else {
+        alert("404, Error: Uploaded file not found");
+        return;
+    }
+    const content = document.createElement("object");
 
-	///popup or inlinecontainer
-	if (typeof (containerid) == 'undefined') {
-		$( content ).dialog( { width: 'auto', height: 'auto', title: file.name, modal: true });
-	} else {
-		var contid = "#" + containerid;
-		$( contid ).html(content);
-	}
-	content.style = 'height:100%; width: 100%';
-	content.setAttribute('data', objUrl);
-	content.setAttribute('type', file.type);
-	URL.revokeObjectURL(objUrl);
+    ///show in popup or use inline container
+    if (typeof (containerid) == 'undefined') {
+        $(content).dialog({width: 'auto', height: 'auto', title: file.name, modal: true});
+    } else {
+        $("#" + containerid).html(content);
+    }
+    content.style = 'height:100%; width: 100%';
+    content.setAttribute('data', objUrl);
+    content.setAttribute('type', file.type);
+    URL.revokeObjectURL(objUrl);
 }
