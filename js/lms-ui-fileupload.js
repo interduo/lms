@@ -261,8 +261,6 @@ function lmsFileView(file, containerid) {
 			var objUrl = (window.URL ? URL : webkitURL).createObjectURL(file);
 		}
 	} else {
-		var objUrl = file;
-	} else if(!file) {
 		alert("404: No file found");
 		return;
 	}
