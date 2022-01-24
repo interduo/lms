@@ -1278,4 +1278,9 @@ class LMSSmartyPlugins
 
         return $result;
     }
+
+    public static function sizeModifier($array, $default = 0)
+    {
+        return (is_array($array) ? count($array) : $default);
+    }
 }
