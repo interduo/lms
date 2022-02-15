@@ -286,6 +286,10 @@ switch ($action) {
             $cnote['sdate'] = $invoice['sdate'];
         }
 
+        if ($cnote['deadline'] < $cnote['cdate']) {
+            break;
+        }
+
         $invoicecontents = $invoice['content'];
         $newcontents = r_trim($_POST);
 

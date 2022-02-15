@@ -331,6 +331,10 @@ switch ($action) {
         $paytime = $cnote['paytime'] = round(($cnote['deadline'] - $cnote['cdate']) / 86400);
         $iid   = $cnote['id'];
 
+        if ($deadline < $cdate) {
+            break;
+        }
+
         $invoicecontents = $cnote['invoice']['content'];
         $cnotecontents = $cnote['content'];
         $newcontents = r_trim($_POST);
