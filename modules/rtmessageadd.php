@@ -423,7 +423,7 @@ if (isset($_POST['message'])) {
                     $sms_customerinfo = "\n" . trans('Customer:') . ' ' . $ticketdata['requestor'];
                 }
 
-                if (isset($message['notify']) || !empty($message['verifierid'])) {
+                if (isset($message['notify'])) {
                     $params = array(
                         'id' => $ticketid,
                         'queue' => $queue['name'],
