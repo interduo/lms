@@ -3158,14 +3158,17 @@ if (!empty($intersect)) {
                         break;
                     }
 
-                    $where = array();
+                    $where_customers = array();
+                    $where_nodes = array();
                     foreach ($block_prechecks as $precheck => $precheck_params) {
                         switch ($precheck) {
                             case 'node-access':
-                                $where[] = 'EXISTS (SELECT id FROM nodes WHERE nodes.ownerid = c.id AND access = 1)';
+                                $where_customers[] = 'EXISTS (SELECT 1 FROM nodes n2 WHERE n2.ownerid = c.id AND n2.access = 1)';
+                                $where_nodes[] = 'n.access = 1';
                                 break;
                             case 'node-warning':
-                                $where[] = 'EXISTS (SELECT id FROM nodes WHERE nodes.ownerid = c.id AND warning = 0)';
+                                $where_customers[] = 'EXISTS (SELECT 1 FROM nodes n2 WHERE n2.ownerid = c.id AND n2.warning = 0)';
+                                $where_nodes[] = 'n.warning = 0';
                                 break;
                             case 'assignment-invoice':
                                 switch (reset($precheck_params)) {
@@ -3182,7 +3185,7 @@ if (!empty($intersect)) {
                                         $target_doctype = DOC_INVOICE;
                                         break;
                                 }
-                                $where[] = 'EXISTS (SELECT id FROM assignments
+                                $where_customers[] = 'EXISTS (SELECT id FROM assignments
                                     WHERE invoice <> ' . $target_doctype . ' AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
                                         AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
                                         AND customerid = c.id)';
@@ -3192,15 +3195,15 @@ if (!empty($intersect)) {
                                 if (empty($target_cstatus)) {
                                     $target_cstatus = CSTATUS_DEBT_COLLECTION;
                                 }
-                                $where[] = 'EXISTS (SELECT id FROM customers
+                                $where_customers[] = 'EXISTS (SELECT id FROM customers
                                     WHERE status <> ' . $target_cstatus . ' AND customers.id = c.id)';
                                 break;
                             case 'all-assignment-suspension':
-                                $where[] = 'NOT EXISTS (SELECT id FROM assignments
+                                $where_customers[] = 'NOT EXISTS (SELECT id FROM assignments
                                     WHERE customerid = c.id AND tariffid IS NULL AND liabilityid IS NULL)';
                                 break;
                             case 'customer-group':
-                                $where[] = 'NOT EXISTS (
+                                $where_customers[] = 'NOT EXISTS (
                                     SELECT ca.id FROM vcustomerassignments ca
                                     JOIN customergroups g ON g.id = ca.customergroupid
                                     WHERE ca.customerid = c.id AND LOWER(g.name) = LOWER(\'' . reset($precheck_params) . '\'))';
@@ -3208,22 +3211,35 @@ if (!empty($intersect)) {
                         }
                     }
 
-                    $customers = $DB->GetCol(
+                    $all_customers = $DB->GetCol(
                         'SELECT c.id FROM customers c
                         WHERE c.id IN (' . implode(',', $customers) . ')'
                         . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
-                        . (empty($where) ? '' : ' AND (' . implode(' AND ', $where) . ')')
+                        . (empty($where_customers) ? '' : ' AND (' . implode(' AND ', $where_customers) . ')')
                     );
-                    if (empty($customers)) {
+                    if (empty($all_customers)) {
                         break;
+                    }
+
+                    $all_nodes = $DB->GetCol(
+                        'SELECT n.id FROM nodes n
+                        WHERE n.ownerid IN (' . implode(',', $all_customers) . ')'
+                        . (empty($where_nodes) ? '' : ' AND (' . implode(', ', $where_nodes) . ')')
+                    );
+                    if (empty($all_nodes)) {
+                        $all_nodes = array();
                     }
 
                     foreach ($actions as $action => $action_params) {
                         switch ($action) {
                             case 'node-access':
+                                if (empty($all_nodes)) {
+                                    break;
+                                }
                                 $nodes = $DB->GetAll(
-                                    "SELECT id, ownerid FROM nodes WHERE access = ?
-                                    AND ownerid IN (" . implode(',', $customers) . ")",
+                                    "SELECT n.id, n.ownerid FROM nodes n
+                                    WHERE n.access = ?
+                                        AND n.id IN (" . implode(',', $all_nodes) . ")",
                                     array(1)
                                 );
                                 if (!empty($nodes)) {
@@ -3252,9 +3268,13 @@ if (!empty($intersect)) {
                                 }
                                 break;
                             case 'node-warning':
+                                if (empty($all_nodes)) {
+                                    break;
+                                }
                                 $nodes = $DB->GetAll(
-                                    "SELECT id, ownerid FROM nodes WHERE warning = ?
-                                    AND ownerid IN (" . implode(',', $customers) . ")",
+                                    "SELECT n.id, n.ownerid FROM nodes n
+                                    WHERE n.warning = ?
+                                        AND n.id IN (" . implode(',', $all_nodes) . ")",
                                     array(0)
                                 );
                                 if (!empty($nodes)) {
@@ -3424,14 +3444,17 @@ if (!empty($intersect)) {
 
                     break;
                 case 'unblock':
-                    $where = array();
+                    $where_customers = array();
+                    $where_nodes = array();
                     foreach ($unblock_prechecks as $precheck => $precheck_params) {
                         switch ($precheck) {
                             case 'node-access':
-                                $where[] = 'EXISTS (SELECT id FROM nodes WHERE nodes.ownerid = c.id AND access = 0)';
+                                $where_customers[] = 'EXISTS (SELECT 1 FROM nodes n2 WHERE n2.ownerid = c.id AND n2.access = 0)';
+                                $where_nodes[] = 'n.access = 0';
                                 break;
                             case 'node-warning':
-                                $where[] = 'EXISTS (SELECT id FROM nodes WHERE nodes.ownerid = c.id AND warning = 1)';
+                                $where_customers[] = 'EXISTS (SELECT 1 FROM nodes n2 WHERE n2.wnerid = c.id AND n2.warning = 1)';
+                                $where_nodes[] = 'n.warning = 1';
                                 break;
                             case 'assignment-invoice':
                                 switch (reset($precheck_params)) {
@@ -3448,7 +3471,7 @@ if (!empty($intersect)) {
                                         $target_doctype = DOC_INVOICE;
                                         break;
                                 }
-                                $where[] = 'EXISTS (SELECT id FROM assignments
+                                $where_customers[] = 'EXISTS (SELECT id FROM assignments
                                     WHERE invoice = ' . $target_doctype . ' AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
                                         AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
                                         AND customerid = c.id)';
@@ -3458,15 +3481,15 @@ if (!empty($intersect)) {
                                 if (empty($target_cstatus)) {
                                     $target_cstatus = CSTATUS_CONNECTED;
                                 }
-                                $where[] = 'EXISTS (SELECT id FROM customers
+                                $where_customers[] = 'EXISTS (SELECT id FROM customers
                                     WHERE status <> ' . $target_cstatus . ' AND customers.id = c.id)';
                                 break;
                             case 'all-assignment-suspension':
-                                $where[] = 'EXISTS (SELECT id FROM assignments
+                                $where_customers[] = 'EXISTS (SELECT id FROM assignments
                                     WHERE customerid = c.id AND tariffid IS NULL AND liabilityid IS NULL)';
                                 break;
                             case 'customer-group':
-                                $where[] = 'EXISTS (
+                                $where_customers[] = 'EXISTS (
                                     SELECT ca.id FROM vcustomerassignments ca
                                     JOIN customergroups g ON g.id = ca.customergroupid
                                     WHERE ca.customerid = c.id AND LOWER(g.name) = LOWER(\'' . reset($precheck_params) . '\'))';
@@ -3474,24 +3497,37 @@ if (!empty($intersect)) {
                         }
                     }
 
-                    $customers = $DB->GetCol(
+                    $all_customers = $DB->GetCol(
                         'SELECT c.id FROM customers c
                         WHERE 1 = 1' . $customer_status_condition
                         . (empty($customers) ? '' : ' AND c.id NOT IN (' . implode(',', $customers) . ')')
                         . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
-                        . (empty($where) ? '' : ' AND (' . implode(' AND ', $where) . ')')
+                        . (empty($where_customers) ? '' : ' AND (' . implode(' AND ', $where_customers) . ')')
                         . ($customergroups ?: '')
                     );
-                    if (empty($customers)) {
+                    if (empty($all_customers)) {
                         break;
+                    }
+
+                    $all_nodes = $DB->GetCol(
+                        'SELECT n.id FROM nodes n
+                        WHERE n.ownerid IN (' . implode(',', $all_customers) . ')'
+                        . (empty($where_nodes) ? '' : ' AND (' . implode(', ', $where_nodes) . ')')
+                    );
+                    if (empty($all_nodes)) {
+                        $all_nodes = array();
                     }
 
                     foreach ($actions as $action => $action_params) {
                         switch ($action) {
                             case 'node-access':
+                                if (empty($all_nodes)) {
+                                    break;
+                                }
                                 $nodes = $DB->GetAll(
-                                    "SELECT id, ownerid FROM nodes WHERE access = ?
-                                    AND ownerid IN (" . implode(',', $customers) . ")",
+                                    "SELECT n.id, n.ownerid FROM nodes n
+                                    WHERE n.access = ?
+                                        AND n.id IN (" . implode(',', $all_nodes) . ")",
                                     array(0)
                                 );
                                 if (!empty($nodes)) {
@@ -3520,9 +3556,13 @@ if (!empty($intersect)) {
                                 }
                                 break;
                             case 'node-warning':
+                                if (empty($all_nodes)) {
+                                    break;
+                                }
                                 $nodes = $DB->GetAll(
-                                    "SELECT id, ownerid FROM nodes WHERE warning = ?
-                                    AND ownerid IN (" . implode(',', $customers) . ")",
+                                    "SELECT n.id, n.ownerid FROM nodes n
+                                    WHERE n.warning = ?
+                                        AND n.id IN (" . implode(',', $all_nodes) . ")",
                                     array(1)
                                 );
                                 if (!empty($nodes)) {
@@ -3555,7 +3595,7 @@ if (!empty($intersect)) {
                                     "SELECT id, customerid FROM assignments
                                     WHERE invoice <> ? AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
                                         AND datefrom <= ?NOW? AND (dateto = 0 OR dateto >= ?NOW?)
-                                        AND customerid IN (" . implode(',', $customers) . ")",
+                                        AND customerid IN (" . implode(',', $all_customers) . ")",
                                     array(DOC_INVOICE)
                                 );
                                 if (!empty($assigns)) {
@@ -3586,7 +3626,7 @@ if (!empty($intersect)) {
                             case 'customer-status':
                                 $custids = $DB->GetCol(
                                     "SELECT id FROM customers
-                                    WHERE status = ? AND id IN (" . implode(',', $customers) . ")",
+                                    WHERE status = ? AND id IN (" . implode(',', $all_customers) . ")",
                                     array(CSTATUS_DEBT_COLLECTION)
                                 );
                                 if (!empty($custids)) {
@@ -3624,7 +3664,7 @@ if (!empty($intersect)) {
                                     'settlement' => 1,
                                     'datefrom' => time(),
                                 );
-                                foreach ($customers as $cid) {
+                                foreach ($all_customers as $cid) {
                                     if ($SYSLOG) {
                                         $SYSLOG->NewTransaction('lms-notify.php');
                                     }
@@ -3685,7 +3725,7 @@ if (!empty($intersect)) {
                             case 'customer-group':
                                 $customergroupid = $LMS->CustomergroupGetId(reset($action_params));
                                 if ($customergroupid) {
-                                    foreach ($customers as $cid) {
+                                    foreach ($all_customers as $cid) {
                                         if (!$quiet) {
                                             printf("[unblock/customer-group] Customer: #%d, CustomerGroup: #%d" . PHP_EOL, $cid, $customergroupid);
                                         }
@@ -3705,7 +3745,8 @@ if (!empty($intersect)) {
                     }
 
                     $plugin_manager->executeHook('notification_unblocks', array(
-                        'customers' => $customers,
+                        'customers' => $all_customers,
+                        'nodes' => $all_nodes,
                         'actions' => $actions,
                     ));
 
