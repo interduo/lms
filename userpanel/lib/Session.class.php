@@ -200,7 +200,7 @@ class Session
                     $authdata['passwd'] = null;
                     $this->error = trans('Access is temporarily blocked. Please try again in 10 minutes.');
                 } else {
-                    if ($authdata != null && $authdata['passwd'] != null) {
+                    if ($authdata['passwd'] != null) {
                         $this->islogged = true;
                         $this->isPasswdChangeRequired = $this->unsecure_pin_validity && !preg_match('/^\$[0-9]+\$/', $authdata['passwd']);
                         $this->id = $authdata['id'];
@@ -230,6 +230,8 @@ class Session
                             $authinfo['enabled'] = 3;
                             $this->SetCustomerAuthInfo($authinfo);
                         }
+                    } elseif (empty($this->error)) {
+                        $this->error = trans('Access denied!');
                     }
                 }
             } else {
