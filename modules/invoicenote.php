@@ -262,7 +262,7 @@ switch ($action) {
             unset($customer);
         }
 
-        if (count($numberplans) && empty($cnote['numberplanid'])) {
+        if ($numberplans && count($numberplans) && empty($cnote['numberplanid'])) {
             $error['numberplanid'] = trans('Select numbering plan');
         }
 
@@ -441,7 +441,7 @@ switch ($action) {
         );
         $numberplans = $LMS->GetNumberPlans($args);
 
-        if (count($numberplans) && empty($cnote['numberplanid'])) {
+        if ($numberplans && count($numberplans) && empty($cnote['numberplanid'])) {
             $error['numberplanid'] = trans('Select numbering plan');
         }
 
