@@ -301,8 +301,8 @@ function initAdvancedSelects(selector) {
 			}
 		});
 
-		$(this).on('chosen:showing_dropdown', function(e) {
-			var dropdown = $(this).next().find('.chosen-drop');
+		$(this).on('chosen:showing_dropdown', function(e, data) {
+			var dropdown = data.chosen.dropdown;
 			dropdown.position({
 				my: "left top",
 				at: "left bottom",
