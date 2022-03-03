@@ -299,7 +299,7 @@ $RT_SOURCES = array(
     RT_SOURCE_USERPANEL => trans('userpanel'),
     RT_SOURCE_PERSONAL => trans('personal'),
     RT_SOURCE_MESSCHAT => trans('instant messengers'),
-    RT_SOURCE_PAPER => trans('letter complaint'),
+    RT_SOURCE_PAPER => trans('complaint'),
     RT_SOURCE_SMS => trans('SMS'),
     RT_SOURCE_CALLCENTER => trans('call center'),
 );
