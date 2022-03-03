@@ -92,7 +92,7 @@ if (isset($_POST['document'])) {
     } elseif (!preg_match('/^[0-9]+$/', $document['todate'])) {
         $error['todate'] = trans('Incorrect date format! Enter date in YYYY/MM/DD format!');
     } else {
-        $document['todate'] += 86399;
+        $document['todate'] = strtotime('tomorrow', $document['todate']) - 1;
     }
 
     if ($document['fromdate'] > $document['todate'] && $document['todate'] != 0) {
