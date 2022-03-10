@@ -148,4 +148,8 @@ interface LMSHelpdeskManagerInterface
     public function getTicketImageGalleries(&$ticket);
 
     public function cleanupTicketSubject($subject);
+
+    public function isCategoryAssignedToTicket($categoryid, $ticketid);
+
+    public function assignCategoryToTicket($categoryid, $ticketid);
 }
