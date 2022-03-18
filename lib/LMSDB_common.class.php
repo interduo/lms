@@ -721,6 +721,9 @@ abstract class LMSDB_common implements LMSDBInterface
             array('dbversion' . (is_null($pluginclass) ? '' : '_' . $pluginclass))
         )) {
             if ($dbver > $dbversion) {
+                $old_locale = setlocale(LC_NUMERIC, '0');
+                setlocale(LC_NUMERIC, 'C');
+
                 set_time_limit(0);
 
                 if ($this->_dbtype == LMSDB::POSTGRESQL && $this->GetOne('SELECT COUNT(*) FROM information_schema.routines
@@ -759,6 +762,8 @@ abstract class LMSDB_common implements LMSDBInterface
                         }
                     }
                 }
+
+                setlocale(LC_NUMERIC, $old_locale);
             }
         } else {
             // save current errors
