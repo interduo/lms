@@ -152,4 +152,6 @@ interface LMSHelpdeskManagerInterface
     public function isCategoryAssignedToTicket($categoryid, $ticketid);
 
     public function assignCategoryToTicket($categoryid, $ticketid);
+
+    public function deleteTicket($ticketid);
 }
