@@ -30,7 +30,7 @@
 class LMS
 {
     const SOFTWARE_NAME = 'LMS+';
-    const SOFTWARE_VERSION = '27.25';
+    const SOFTWARE_VERSION = '27.26';
     const SOFTWARE_URL = 'https://lms-plus.org';
     const SOFTWARE_DOCUMENTATION_URL = 'https://wiki.lms-plus.org';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
