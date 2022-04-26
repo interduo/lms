@@ -152,7 +152,7 @@ class LMSSmartyPlugins
     public static function divisionSelectionFunction(array $params, $template)
     {
         static $user_divisions = array();
-        $lms = LMS::getInstance();
+        $LMS = LMS::getInstance();
         $layout = $template->getTemplateVars('layout');
         $force_global_division_context = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.force_global_division_context'), false);
 
@@ -161,56 +161,54 @@ class LMSSmartyPlugins
         }
 
         $label = isset($params['label']) ? $params['label'] : null;
+        $form = isset($params['form']) ? $params['form'] : null;
         $name = isset($params['name']) ? $params['name'] : 'division';
+        $shortname = !empty($params['shortname']);
+        $icon = empty($params['icon']) ? null : $params['icon'];
         $id = isset($params['id']) ? $params['id'] : $name;
-        $selected = isset($params['selected']) ? $params['selected'] : null;
-        $superuser = isset($params['superuser']) && !empty($params['superuser']) ? $params['superuser'] : null;
-        $onchange = isset($params['onchange']) && !empty($params['onchange']) ? $params['onchange'] : null;
-        $tip = trans(isset($params['tip']) ? $params['tip'] : 'Select division');
+        $selected = empty($params['selected']) ? null : $params['selected'];
+        $superuser = empty($params['superuser']) ? null : $params['superuser'];
+        $onchange = empty($params['onchange']) ? null : $params['onchange'];
+        $tip = (isset($params['tip']) ? $params['tip'] : trans('Select division'));
 
-        if (isset($user_divisions) && empty($user_divisions)) {
+        if ($superuser) {
+            $user_divisions = $LMS->GetDivisions();
+        } else {
             if ($force_global_division_context) {
-                if (!empty($layout['division'])) {
-                    $user_divisions = $lms->GetDivision($layout['division']);
-                }
+                $user_divisions = $LMS->GetDivisions(array('divisionid' => $layout['division']));
             } else {
-                $user_divisions = (empty($superuser) ? $lms->GetDivisions(array('userid' => Auth::GetCurrentUser())) : $lms->GetDivisions());
+                $user_divisions = $LMS->GetDivisions(array('userid' => Auth::GetCurrentUser()));
             }
         }
 
-        $result = '';
-
-        if ($force_global_division_context) {
-            $result .= ($label ? '<label>' : '') . ($label ? trans($label) : '');
-            $result .= '<span class="division-context bold">' . (!empty($user_divisions) ? $user_divisions['shortname'] : trans("all")) . '</span>';
-            $result .= ($label ? '</label>' : '');
-            $result .= '<input type="hidden" class="division-context-selected" name="' . $name . '"'
-                . (isset($params['form']) ? ' form="' . $params['form'] . '"' : '') . ' value="'
-                . $layout['division'] . '">';
-        } else {
-            if (!empty($user_divisions) && count($user_divisions) > 1) {
-                $result .= ($label ? '<label for="' . $name . '">' : '') . ($label ? trans($label) : '') . ($label ? '&nbsp;' : '');
+        if (!empty($user_divisions)) {
+            $result = ($label ? '<label for="' . $name . '">' . trans($label) . '&nbsp;' : '')
+                . (empty($icon) ? '' : '<i class="' . (strpos($icon, 'lms-ui-icon-') === 0
+                    || strpos($icon, 'fa') === 0 ? $icon : 'lms-ui-icon-' . $icon) . '"></i>&nbsp;');
+            if (count($user_divisions) > 1) {
                 $result .= '<select class="division-context" id="' . $id . '" name="' . $name . '" '
                     . (empty($tip) ? '' : ' title="' . $tip . '"')
-                    . (isset($params['form']) ? ' form="' . $params['form'] . '"' : '')
-                    . ($onchange ? ' onchange="' . $onchange . '"' : '')
-                    . '>';
-                $result .= '<option value=""' . (!$selected ? ' selected' : '') . '>- ' . trans("all") . ' -</option>';
+                    . (isset($form) ? ' form="' . $form . '"' : '')
+                    . (isset($onchange) ? ' onchange="' . $onchange . '"' : ''). '>'
+                    . '<option value=""' . (!$selected ? ' selected' : '') . '>- ' . trans("all") . ' -</option>';
+
                 foreach ($user_divisions as $division) {
                     $result .= '<option value="' . $division['id'] . '"'
-                        . ($selected == $division['id'] ? ' selected' : '') . '>' . htmlspecialchars($division['label']) . '</option>';
+                        . ($division['id'] == $selected ? ' selected' : '') . '>'
+                        . htmlspecialchars($division['label']) . '</option>';
                 }
                 $result .= '</select>';
-                $result .= ($label ? '</label>' : '');
             } else {
-                $user_division = reset($user_divisions);
-                $result .= ($label ? '<label>' : '') . ($label ? trans($label) : '');
-                $result .= '<span class="division-context bold">' . (!empty($user_divisions) ? $user_division['shortname'] : trans("all")) . '</span>';
-                $result .= ($label ? '</label>' : '');
-                $result .= '<input type="hidden" class="division-context-selected" name="' . $name . '"'
-                    . (isset($params['form']) ? ' form="' . $params['form'] . '"' : '') . ' value="'
-                    . $user_division['id'] . '">';
+                $division = reset($user_divisions);
+                $result .= '<span class="division-context bold">'
+                    . ($shortname ? $division['shortname'] : $division['name']) . '</span>'
+                    . '<input type="hidden" class="division-context-selected"'
+                    . ' name="' . $name . '"'
+                    . (isset($form) ? ' form="' . $form . '"' : '')
+                    . (empty($tip) ? '' : ' title="' . $tip . '"')
+                    . ' value="' . $division['id'] . '">';
             }
+            $result .= ($label ? '</label>' : '');
         }
 
         return $result;
