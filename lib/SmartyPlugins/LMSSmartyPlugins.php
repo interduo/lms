@@ -216,137 +216,70 @@ class LMSSmartyPlugins
 
     public static function customerListFunction(array $params, $template)
     {
-        $result = '';
-
-        $version = isset($params['version']) && intval($params['version']) ? intval($params['version']) : 1;
-
+        $version = empty($params['version']) ? '1' : intval($params['version']);
+        $customers = $params['customers'] ??
         $customername = !isset($params['customername']) || $params['customername'];
+        $form = isset($params['form']) ? ' form = "' . $params['form'] . '"' : null;
+        $select_id = empty($params['select_id']) ? null : ' id="' . $params['select_id'] . '"';
+        $selectedcustomer = empty(preg_match('/^[0-9]+$/', $params['selected'])) ?? null;
+        $selected = $selectedcustomer ?? trans("- select customer -");
+        $firstoption = empty($params['firstoption']) ? null : $params['firstoption'];
+        $customonchange = empty($params['customOnChange']) ? null : ' onchange="' . $params['customOnChange'] . '"';
+        $form = isset($params['form']) ? ' form = "' . $params['form'] . '"' : null;
+        $required = empty($params['required']) ? null : ' required';
+        $default_value = empty($params['default_value']) ? '' : htmlspecialchars($params['default_value']);
+        $input_id = empty($params['input_id']) ? '' : ' id="' . $params['input_id'] . '"';
+        $selecttip = empty($params['selecttip']) ? ' ' . trans('Select customer (optional)') : ' ' . $params['selecttip'];
+        $selectname = $params['selectname'] ?? null;
 
-        $form = isset($params['form']) ? $params['form'] : null;
+        $result = '<div class="lms-ui-customer-select-container" data-version="' . $version . '"'
+            . ' data-show-id="1">'
+            . (empty($customers) ? '' :
+                sprintf('<select name="%s" value="%s"', $selectname, $selectedcustomer)
+                . $form
+                . $select_id . ' '
+                . self::tipFunction(array('text' => $selecttip), $template)
+                . '"><option value="0"' . ($selected ?? ' selected') . '>' . $firstoption . '</option>'
+                . foreach ($customers as $customer) {
+                    echo '<option value="' . $customer['id'] . '"'
+                    . ($customer['id'] == $params['selected'] ? ' selected' : '')
+                    . '>' . mb_substr($customer['customername'], 0, 40)
+                    . ' (' . sprintf("%04d", $customer['id']) . ')</option>';
+                } . '</select>');
 
-        if (isset($params['selected']) && !preg_match('/^[0-9]+$/', $params['selected'])) {
-            $params['selected'] = '';
-        }
+            $result .= '<div class="lms-ui-customer-select"><span>' . trans("or Customer ID:")
+                . '</span><div class="lms-ui-customer-select">'
+                . '<div class="lms-ui-customer-select-suggestion-container"></div>'
+                . '<input type="text" name="' . $params['inputname'] . '"'
+                . $selectedcustomer ?? 'selected value="' . $selectedcustomer .'"'
+                . ' class="lms-ui-customer-select-customerid"'
+                . ' data-default-value="' . $default_value . '"'
+                . ' data-prev-value="' . $selected . '" size="5"'
+                . $form
+                . $input_id
+                . $required
+                . $form
+                . $customonchange
+                . empty($params['customers']) && $customername ? ' data-customer-name="1"' : '';
 
-        $result .= '<div class="lms-ui-customer-select-container" data-version="' . $version . '"'
-            . ($version == 2 ? ' data-show-id="1"' : '') . '>' . PHP_EOL;
-
-        if (!empty($params['customers'])) {
-            $result .= sprintf('<select name="%s" value="%s"', $params['selectname'], $params['selected']);
-
-            if (isset($form)) {
-                $result .= ' form="' . $form . '"';
-            }
-
-            if (!empty($params['select_id'])) {
-                $result .= ' id="' . $params['select_id'] . '"';
-            }
-
-            if (!empty($params['selecttip'])) {
-                $result .= ' ' . self::tipFunction(array('text' => $params['selecttip']), $template);
-            } else {
-                $result .= ' ' . self::tipFunction(array('text' => 'Select customer (optional)'), $template);
-            }
-
-            $result .= '">' . PHP_EOL;
-
-            if (isset($params['firstoption'])) {
-                if (!empty($params['firstoption'])) {
-                    $result .= '<option value="0"';
-                    if (empty($params['selected'])) {
-                        $result .= ' selected';
-                    }
-                    $result .= '>' . trans($params['firstoption']) . '</option>';
-                }
-            } else {
-                $result .= '<option value="0"';
-                if (empty($params['selected'])) {
-                    $result .= ' selected';
-                }
-                $result .= '>' . trans("- select customer -") . '</option>';
-            }
-            foreach ($params['customers'] as $customer) {
-                $result .= '<option value="' . $customer['id'] . '"';
-                if ($customer['id'] == $params['selected']) {
-                    $result .= ' selected';
-                }
-                $result .= '>' . mb_substr($customer['customername'], 0, 40) . ' (' . sprintf("%04d", $customer['id']) . ')</option>' . PHP_EOL;
-            }
-            $result .= '</select>' . PHP_EOL
-                . '<div class="lms-ui-customer-select">' . PHP_EOL
-                . '<span>' . trans("or Customer ID:") . '</span>' . PHP_EOL;
-        } else {
-            $result .=  '<div class="lms-ui-customer-select">' . PHP_EOL;
-            if ($version < 2) {
-                $result .= '<span>' . trans('ID') . '</span>' . PHP_EOL;
-            }
-        }
-
-        if ($version == 2) {
-            $result .= '<div class="lms-ui-customer-select-suggestion-container"></div>' . PHP_EOL;
-        }
-
-        $result .= '<input type="text" name="' . $params['inputname'] . '"' . (empty($params['selected']) ? '' : ' value="'
-            . $params['selected'] . '"') . ' class="lms-ui-customer-select-customerid"'
-            . ' data-default-value="' . (isset($params['default_value']) ? htmlspecialchars($params['default_value']) : '') . '"'
-            . ' data-prev-value="' . $params['selected'] . '" size="5"';
-
-        if (isset($form)) {
-            $result .= ' form="' . $form . '"';
-        }
-
-        if (!empty($params['input_id'])) {
-            $result .= ' id="' . $params['input_id'] . '"';
-        }
-
-        if (isset($params['required']) && $params['required']) {
-            $result .= ' required';
-        }
-
-        if (!empty($params['customOnChange'])) {
-            $result .= ' onChange="' . $params['customOnChange'] . '"';
-        }
-
-        $result .= empty($params['customers']) && $customername ? ' data-customer-name="1"' : '';
-
-        if ($version < 2) {
-            if (!empty($params['inputtip'])) {
-                $result .= ' ' . self::tipFunction(array('text' => $params['inputtip']), $template);
-            } else {
-                $result .= ' ' . self::tipFunction(array('text' => 'Enter customer ID', 'trigger' => 'customerid'), $template);
-            }
-        }
-
-        $result .= '>' . PHP_EOL;
-
-        if ($version == 2) {
-            $result .= '<input type="text"'
-                . ' placeholder="' . trans('Search for customer') . '"'
-                . (isset($form) ? ' form="' . $form . '"' : '')
-                . ' ' . self::tipFunction(
+            $result .= '><input type="text" placeholder="' . trans('Search for customer') . '"'
+                . $form . ' '
+                . self::tipFunction(
                     array(
                         'text' => 'Search for customer',
                         'trigger' => 'customerid',
                         'class' => 'lms-ui-customer-select-suggestion-input lms-ui-autogrow'
                     ),
-                    $template
-                )
-                . '">' . PHP_EOL;
-            $result .= '<div ' . self::tipFunction(array('text' => 'Click to reset customer selection', 'class' => 'lms-ui-customer-function-button'), $template) . '>' . PHP_EOL
-                . '<i class="lms-ui-icon-clear fa-fw"></i>' . PHP_EOL . '</div>' . PHP_EOL;
-        } else {
-            $result .= '<div ' . self::tipFunction(array('text' => 'Click to search customer', 'class' => 'lms-ui-customer-function-button'), $template) . '>' . PHP_EOL
-                . '<i class="lms-ui-icon-search fa-fw"></i>' . PHP_EOL . '</div>' . PHP_EOL;
-        }
-
-        $result .= '</div>' . PHP_EOL;
-
-        if (empty($params['customers'])) {
-            $result .= '<span class="lms-ui-customer-select-name">' . PHP_EOL
-                . ($version == 2 ? '<a href=""></a>' : '') . '</span>' . PHP_EOL;
-        }
-
-        $result .= '</div>' . PHP_EOL;
+                    $template) . '"><div '
+                . self::tipFunction(
+                    array(
+                        'text' => 'Click to reset customer selection',
+                        'class' => 'lms-ui-customer-function-button'
+                    ), $template)
+                . '><i class="lms-ui-icon-clear fa-fw"></i></div></div>'
+                . (empty($params['customers']) ? null :
+                    '<span class="lms-ui-customer-select-name"><a href=""></a></span>')
+                . '</div>';
 
         return $result;
     }
