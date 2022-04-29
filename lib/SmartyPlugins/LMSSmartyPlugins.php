@@ -160,11 +160,12 @@ class LMSSmartyPlugins
             $params = array();
         }
 
-        $label = isset($params['label']) ? $params['label'] : null;
+        $label = isset($params['label']) ? htmlspecialchars($params['label']) : null;
         $form = isset($params['form']) ? $params['form'] : null;
         $name = isset($params['name']) ? $params['name'] : 'division';
         $shortname = !empty($params['shortname']);
-        $icon = empty($params['icon']) ? null : $params['icon'];
+        $icon = empty($params['icon']) ? null : '<i class="' . (strpos($params['icon'], 'lms-ui-icon-') === 0
+            || strpos($params['icon'], 'fa') === 0 ? $params['icon'] : 'lms-ui-icon-' . $params['icon']) . '"></i>&nbsp;';
         $id = isset($params['id']) ? $params['id'] : $name;
         $selected = empty($params['selected']) ? null : $params['selected'];
         $superuser = empty($params['superuser']) ? null : $params['superuser'];
@@ -183,9 +184,7 @@ class LMSSmartyPlugins
         $user_divisions = $LMS->GetDivisions($args);
 
         if (!empty($user_divisions)) {
-            $result = ($label ? '<label for="' . $name . '">' . trans($label) . '&nbsp;' : '')
-                . (empty($icon) ? '' : '<i class="' . (strpos($icon, 'lms-ui-icon-') === 0
-                    || strpos($icon, 'fa') === 0 ? $icon : 'lms-ui-icon-' . $icon) . '"></i>&nbsp;');
+            $result = ($label ? '<label for="' . $name . '">' . trans($label) . '&nbsp;' : '') . $icon;
             if (count($user_divisions) > 1) {
                 $result .= '<select class="division-context" id="' . $id . '" name="' . $name . '" '
                     . (empty($tip) ? '' : ' title="' . $tip . '"')
@@ -195,8 +194,7 @@ class LMSSmartyPlugins
 
                 foreach ($user_divisions as $division) {
                     $result .= '<option value="' . $division['id'] . '"'
-                        . ($division['id'] == $selected ? ' selected' : '') . '>'
-                        . htmlspecialchars($division['label']) . '</option>';
+                        . ($division['id'] == $selected ? ' selected' : '') . '>' . $label . '</option>';
                 }
                 $result .= '</select>';
             } else {
