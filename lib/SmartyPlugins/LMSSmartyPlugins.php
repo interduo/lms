@@ -169,17 +169,18 @@ class LMSSmartyPlugins
         $selected = empty($params['selected']) ? null : $params['selected'];
         $superuser = empty($params['superuser']) ? null : $params['superuser'];
         $onchange = empty($params['onchange']) ? null : $params['onchange'];
-        $tip = (isset($params['tip']) ? $params['tip'] : trans('Select division'));
+        $tip = isset($params['tip']) ? $params['tip'] : trans('Select division');
 
         if ($superuser) {
-            $user_divisions = $LMS->GetDivisions();
+            $args = null;
         } else {
             if ($force_global_division_context) {
-                $user_divisions = $LMS->GetDivisions(array('divisionid' => $layout['division']));
+                $args['divisionid'] = $layout['division'];
             } else {
-                $user_divisions = $LMS->GetDivisions(array('userid' => Auth::GetCurrentUser()));
+                $args['userid'] = Auth::GetCurrentUser();
             }
         }
+        $user_divisions = $LMS->GetDivisions($args);
 
         if (!empty($user_divisions)) {
             $result = ($label ? '<label for="' . $name . '">' . trans($label) . '&nbsp;' : '')
