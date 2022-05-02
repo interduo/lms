@@ -156,9 +156,7 @@ class LMSSmartyPlugins
         $layout = $template->getTemplateVars('layout');
         $force_global_division_context = ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.force_global_division_context'), false);
 
-        if (empty($params)) {
-            $params = array();
-        }
+        $params = $params ?? array();
 
         $label = isset($params['label']) ? htmlspecialchars($params['label']) : null;
         $form = isset($params['form']) ? $params['form'] : null;
@@ -190,7 +188,7 @@ class LMSSmartyPlugins
                     . (empty($tip) ? '' : ' title="' . $tip . '"')
                     . (isset($form) ? ' form="' . $form . '"' : '')
                     . (isset($onchange) ? ' onchange="' . $onchange . '"' : ''). '>'
-                    . '<option ' . (!$selected ? ' selected' : '') . '>' . trans("- ignore -") . '</option>';
+                    . '<option value=""' . (!$selected ? ' selected' : '') . '>' . trans("- ignore -") . '</option>';
 
                 foreach ($user_divisions as $division) {
                     $result .= '<option value="' . $division['id'] . '"'
@@ -213,15 +211,14 @@ class LMSSmartyPlugins
 
     public static function customerListFunction(array $params, $template)
     {
-        $customers = $params['customers'] ??
+        $customers = empty($params['customers']) ? null : $params['customers'];
         $customername = !isset($params['customername']) || $params['customername'];
-        $form = isset($params['form']) ? ' form = "' . $params['form'] . '"' : null;
+        $form = empty($params['form']) ? null : ' form = "' . $params['form'] . '"';
         $select_id = empty($params['select_id']) ? null : ' id="' . $params['select_id'] . '" ';
-        $selectedcustomer = empty(preg_match('/^[0-9]+$/', $params['selected'])) ?? null;
+            $selectedcustomer = preg_match('/^[0-9]+$/', $params['selected']);
         $selected = $selectedcustomer ?? trans("- select customer -");
         $firstoption = empty($params['firstoption']) ? null : $params['firstoption'];
         $customonchange = empty($params['customOnChange']) ? null : ' onchange="' . $params['customOnChange'] . '"';
-        $form = isset($params['form']) ? ' form = "' . $params['form'] . '" ' : null;
         $required = empty($params['required']) ? null : ' required';
         $default_value = empty($params['default_value']) ? '' : htmlspecialchars($params['default_value']);
         $input_id = empty($params['input_id']) ? '' : ' id="' . $params['input_id'] . '"';
@@ -230,17 +227,19 @@ class LMSSmartyPlugins
 
         $result = '<div class="lms-ui-customer-select-container" data-show-id="1">';
 
-        if (empty($customers)) {
-            $result .= '<select class="lms-ui-advanced-select" name="' . $selectname . '" value="'
-                . $selectedcustomer .'"'
+        if (!empty($customers)) {
+            $result .= '<select class="lms-ui-advanced-select" name="' . $selectname
+                . '" value="' . $selectedcustomer . '"'
+                . $customonchange
                 . $form
                 . $select_id
                 . self::tipFunction(array('text' => $selecttip), $template) . '">'
-                . '<option value="0"' . ($selected ?? ' selected') . '>' . $firstoption . '</option>';
+                . ($firstoption ?
+                    '<option value="0"' . ($selected ?? ' selected') . '>' . trans("$firstoption") . '</option>' : '');
                     foreach ($customers as $customer) {
                         $result .= '<option value="' . $customer['id'] . '"'
                         . ($customer['id'] == $params['selected'] ? ' selected' : '') . '>'
-                        . mb_substr($customer['customername'], 0, 40) . ' (' . $customer['id'] . ')</option>';
+                        . mb_substr($customer['lastname'] . $customer['name'], 0, 40) . ' (#' . $customer['id'] . ')</option>';
                     }
             $result .= '</select>';
         }
@@ -258,9 +257,11 @@ class LMSSmartyPlugins
                 . $required
                 . $form
                 . $customonchange
-                . (empty($params['customers']) && $customername ? ' data-customer-name="1"' : '')
-                . '><input type="text" placeholder="' . trans('Search for customer') . '"'
+                . (empty($params['customers']) && $customername ? ' data-customer-name="1"' : '') . '>'
+                . '<input type="text" placeholder="' . trans('Search for customer') . '"'
                 . $form
+                . $customonchange
+                . $required
                 . self::tipFunction(
                     array(
                         'text' => 'Search for customer',
@@ -272,8 +273,8 @@ class LMSSmartyPlugins
                             array(
                                 'text' => 'Click to reset customer selection',
                                 'class' => 'lms-ui-customer-function-button'
-                            ), $template) . '><i class="lms-ui-icon-clear fa-fw"></i></div>'
-                ///. '</div>'
+                            ), $template) . '>'
+                . '<i class="lms-ui-icon-clear fa-fw"></i></div>'
                 . (empty($params['customers']) ? null : '<span class="lms-ui-customer-select-name"><a href=""></a></span>')
                 . '</div>';
 
