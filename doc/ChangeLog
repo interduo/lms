@@ -141,6 +141,8 @@ version 28-git (????-??-??):
     of invoice or correction note [chilan]
   - enhancement: implemented 'year' filter in invoice and balance lists [chilan]
   - enhancement: negation option in customer group filter of customer search form [chilan]
+  - enhancement: allow to assign events with netnodes and netdevices [interduo]
+  - enhancement: implement {networkDeviceSelection} smarty function [interduo]
 
 version 27.0 (2021-08-20):
 

@@ -102,6 +102,40 @@
 						{/if}
 					{/box_row}
 
+					{$visibility=!empty($netnodes)}
+					{box_row class="netnode-row" icon="netnode" label="Network node" visible=$visibility icon_class="fa-fw"}
+						{if empty($netnodeid)}
+							<select class="netnode-list lms-ui-advanced-select" name="event[netnodeid]" {tip text="Select network node"}>
+								<option value="">{trans("- none -")}</option>
+								{foreach $netnodes as $nn}
+									<option value="{$nn.id}"{if $nn.id == $event.netnodeid} selected{/if}>{$nn.name}</option>
+								{/foreach}
+							</select>
+						{else}
+							{foreach $netnodes as $nn}
+								{if $nn.id == $netnodeid}
+									{$nn.name} (#{$nn.id})
+									<input type="hidden" name="event[netnodeid]" value="{$netnodeid}">
+								{/if}
+							{/foreach}
+						{/if}
+					{/box_row}
+
+					{$visibility=!empty($netdevices)}
+					{box_row class="netdev-row" icon="netdev" label="Network device" visible=$visibility icon_class="fa-fw"}
+						{if empty($netdevid)}
+							<select class="netdev-list lms-ui-advanced-select" name="event[netdevid]" {tip text="Select network device"}>
+								<option value="">{trans("- none -")}</option>
+								{foreach $netdevices as $nd}
+									<option value="{$nd.id}"{if $nd.id == $event.netdevid} selected{/if}>{$nd.name}</option>
+								{/foreach}
+							</select>
+						{else}
+							{$netdevices.$netdevid.name} (#{$netdevid})
+							<input type="hidden" name="event[netdevid]" value="{$event.netdevid}">
+						{/if}
+					{/box_row}
+
 					{$visibility=!empty($nodes)}
 					{box_row class="node-row" icon="node" label="Node:" icon_class="fa-fw" visible=$visibility}
 						{if !empty($event.ticketid)}

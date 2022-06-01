@@ -2407,6 +2407,10 @@ CREATE TABLE events (
 		CONSTRAINT events_address_id_fkey REFERENCES addresses (id) ON UPDATE CASCADE ON DELETE SET NULL,
 	ticketid integer DEFAULT NULL
 		CONSTRAINT events_ticketid_fk REFERENCES rttickets (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	netnodeid integer DEFAULT NULL
+		CONSTRAINT events_netnodeid_fkey REFERENCES netnodes (id) ON DELETE SET NULL ON UPDATE CASCADE,
+	netdevid integer DEFAULT NULL
+		CONSTRAINT events_netdevid_fkey REFERENCES netdevices (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	PRIMARY KEY (id)
 );
 CREATE INDEX events_date_idx ON events(date);

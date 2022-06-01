@@ -21,10 +21,9 @@
 				{t a=$count}Assigned network devices ($a){/t}
 			</td>
 			<td class="text-right nobr">
-				<a href="#" id="new-net-dev" onclick="javascript:netDevForNetNodeChooseWin('{$objectid}')">
-					{trans("Add devices to node")}
-					{icon name="next"}
-				</a>
+				{button type="link" icon="add" href="#" id="new-net-dev"
+					onclick="javascript:netDevForNetNodeChooseWin('{$objectid}')"
+					label="Add"}
 			</td>
 		</TR>
 	</thead>

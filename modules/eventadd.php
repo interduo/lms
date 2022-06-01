@@ -42,6 +42,23 @@ if (isset($_POST['event']['helpdesk']) && isset($_POST['ticket'])) {
 
 $userlist = $LMS->GetUserNames();
 
+$SMARTY->assign('netnodes', $LMS->GetNetNodes());
+
+$netnodeid = intval($_GET['netnodeid']);
+if (!empty($netnodeid)) {
+    $SMARTY->assign('netnodeid', $netnodeid);
+    $search['netnode'] = $netnodeid;
+    $search['short'] = true;
+}
+
+$netdevices = $LMS->GetNetDevList('name, asc', $search);
+unset($netdevices['total'], $netdevices['order'], $netdevices['direction']);
+$SMARTY->assign('netdevices', $netdevices);
+
+$netdevid = intval($_GET['netdevid']);
+if (!empty($netdevid)) {
+    $SMARTY->assign('netdevid', intval($_GET['netdevid']));
+}
 
 $backto = $SESSION->get_history_entry('m=eventlist');
 if (preg_match('/m=rtticketview/', $backto)) {
@@ -445,20 +462,11 @@ if (isset($_POST['event'])) {
     $SMARTY->assign('backurl', $backurl);
 }
 
-$netnodelist = $LMS->GetNetNodeList(array(), 'name');
-unset($netnodelist['total']);
-unset($netnodelist['order']);
-unset($netnodelist['direction']);
-
 if (isset($ticket['netnodeid']) && !empty($ticket['netnodeid'])) {
     $search = array('netnode' => $ticket['netnodeid']);
 } else {
     $search = array();
 }
-$netdevlist = $LMS->GetNetDevList('name', $search);
-unset($netdevlist['total']);
-unset($netdevlist['order']);
-unset($netdevlist['direction']);
 
 $invprojectlist = $LMS->GetProjects('name', array());
 
@@ -577,7 +585,5 @@ $SMARTY->assign('error', $error);
 $SMARTY->assign('event', $event);
 $SMARTY->assign('queuelist', $queuelist);
 $SMARTY->assign('categories', $categories);
-$SMARTY->assign('netnodelist', $netnodelist);
-$SMARTY->assign('netdevlist', $netdevlist);
 $SMARTY->assign('invprojectlist', $invprojectlist);
 $SMARTY->display('event/eventmodify.html');
