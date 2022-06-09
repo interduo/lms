@@ -3225,10 +3225,10 @@ class LMS
         return $manager->GetMessages($customerid, $limit);
     }
 
-    public function GetDocuments($customerid = null, $limit = null)
+    public function GetDocuments($customerid = null, $limit = null, $all = false)
     {
         $manager = $this->getDocumentManager();
-        return $manager->GetDocuments($customerid, $limit);
+        return $manager->GetDocuments($customerid, $limit, $all);
     }
 
     public function GetDocumentList(array $params)
