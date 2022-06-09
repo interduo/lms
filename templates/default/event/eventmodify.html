@@ -124,12 +124,7 @@
 					{$visibility=!empty($netdevices)}
 					{box_row class="netdev-row" icon="netdev" label="Network device" visible=$visibility icon_class="fa-fw"}
 						{if empty($netdevid)}
-							<select class="netdev-list lms-ui-advanced-select" name="event[netdevid]" {tip text="Select network device"}>
-								<option value="">{trans("- none -")}</option>
-								{foreach $netdevices as $nd}
-									<option value="{$nd.id}"{if $nd.id == $event.netdevid} selected{/if}>{$nd.name}</option>
-								{/foreach}
-							</select>
+							{networkdeviceselection elemname="event[netdevid]" selected=$event.netdevid}
 						{else}
 							{$netdevices.$netdevid.name} (#{$netdevid})
 							<input type="hidden" name="event[netdevid]" value="{$event.netdevid}">

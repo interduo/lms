@@ -1130,6 +1130,38 @@ class LMSSmartyPlugins
             . '</select>';
     }
 
+    public static function networkDeviceSelectionFunction(array $params, $template)
+    {
+        $LMS = LMS::getInstance();
+        $netdevices = $LMS->GetNetDevList();
+        unset($netdevices['total']);
+        unset($netdevices['order']);
+        unset($netdevices['direction']);
+
+        $elemname = empty($params['name']) ? null : 'name="' . $params['name'] . '"';
+        $onchange = empty($params['onchange']) ? null : 'onchange="' . $params['onchange'] . '"';
+        $id = empty($params['id']) ? null : 'id="' . $params['id'] . '"';
+        $selected = intval($params['selected']) ?? null;
+
+        $tip = self::tipFunction(
+            array(
+                'text' => (empty($params['tip']) ? trans('Select network device') : $params['tip']),
+                'trigger' => $params['elemname'],
+            ),
+            $template
+        );
+
+        $class = 'class="netdev-list lms-ui-advanced-select ' . (!empty($params['class']) ? $params['class'] : null) . '"';
+
+        $options = '<option value=""' . (!$selected ? ' selected' : '') . '> ' . trans("- none -") . '</option>';
+        foreach ($netdevices as $item) {
+            $options .= '<option value="' . $item['id'] . '"' . ($selected == $item['id'] ? ' selected' : '') . '>'
+                . trans($item['name']) . '(#' . $item['id'] . ')</option>';
+        }
+
+        return '<select ' . $elemname . $onchange . $id . $class . $tip . '>' . $options . '</select>';
+    }
+
     public static function identityTypesFunction(array $params, $template)
     {
         static $identityTypes = array();
