@@ -3443,6 +3443,7 @@ if (!empty($intersect)) {
                     $plugin_manager->executeHook('notification_blocks', array(
                         'customers' => $customers,
                         'actions' => $actions,
+                        'quiet' => $quiet,
                     ));
 
                     break;
@@ -3751,6 +3752,7 @@ if (!empty($intersect)) {
                         'customers' => $all_customers,
                         'nodes' => $all_nodes,
                         'actions' => $actions,
+                        'quiet' => $quiet,
                     ));
 
                     break;
