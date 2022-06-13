@@ -29,6 +29,6 @@ if (!$this->ResourceExists('voip_cdr.cdate', LMSDB::RESOURCE_TYPE_COLUMN)) {
     $this->Execute("UPDATE voip_cdr SET cdate = call_start_time + totaltime");
 }
 
-$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2022061300', 'dbversion'));
+$this->Execute("UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?", array('2021072911', 'dbversion'));
 
 $this->CommitTrans();
