@@ -3501,10 +3501,10 @@ class LMS
         return $manager->isDocumentAccessible($docid);
     }
 
-    public function getDocumentReferences($docid)
+    public function getDocumentReferences($docid, $cashid = null)
     {
         $manager = $this->getDocumentManager();
-        return $manager->getDocumentReferences($docid);
+        return $manager->getDocumentReferences($docid, $cashid);
     }
 
     /*
