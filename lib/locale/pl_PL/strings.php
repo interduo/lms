@@ -4269,7 +4269,7 @@ $_LANG['Today'] = 'Dziś';
 
 $_LANG['Begin time:'] = 'Czas rozpoczęcia:';
 $_LANG['Begin time'] = 'Czas rozpoczęcia';
-$_LANG['Begin time:<!voip>'] = 'Czas rozpoczęcia:';
+$_LANG['<!voip>Begin time'] = 'Czas rozpoczęcia';
 
 $_LANG['Debit Note No.'] = 'Numer noty obciążeniowej';
 
