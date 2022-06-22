@@ -26,9 +26,12 @@
 
 function smarty_function_tax_rate_selection(array $params, $template)
 {
+    $lms = LMS::getInstance();
+    $taxratelist = $lms->GetTaxes();
+
     $id = isset($params['id']) ? ' id="' . $params['id'] . '"' : null;
     $name = isset($params['name']) ? ' name="' . $params['name'] . '"' : null;
-    $selected = $params['selected'] ?? ConfigHelper::getConfig('phpui.default_taxrate', 23);
+    $selected = $params['selected'] ?? ConfigHelper::getConfig('phpui.default_taxrate', 23.00);
     $class = isset($params['class']) ? ' class="'. $params['class'] . '"' : null;
     $form = isset($params['form']) ? ' form="'. $params['form'] . '"' : null;
     $trigger = $params['trigger'] ?? null;
@@ -51,21 +54,17 @@ function smarty_function_tax_rate_selection(array $params, $template)
         }
     }
 
-    $lms = LMS::getInstance();
-    $taxratelist = $lms->GetTaxes();
-
-    $result = $icon . '<select ' . $name . $id . $class . $form . $tip_text . $visible . $required . $data_attributes . '>';
-
     if (empty($selected)) {
-        $result .= '<option value="" selected disabled>' . trans('Select Tax rate') . '</option>';
+        $options = '<option value="" selected disabled>' . trans('Select Tax rate') . '</option>';
     }
 
     foreach ($taxratelist as $tax) {
-        $result .= '<option value="' . $tax['id'] . '" data-taxratevalue="' . $tax['value'] . '"'
+        $data_default_taxid = ($selected == $tax['value']) ? ' data-default-taxid="' . $tax['id'] . '"' : null;
+        $options .= '<option value="' . $tax['id'] . '" data-taxratevalue="' . $tax['value'] . '"'
             . LMSSmartyPlugins::tipFunction(array('text' => $tax['label']), $template)
             . ($tax['value'] == $selected ? ' selected' : null) . '>' . $tax['label'] . ' (' . $tax['value'] . '%)</option>';
     }
-    $result .= '</select>';
 
-    return $result;
+    return $icon . '<select ' . $data_default_taxid . $name . $id . $class . $form . $tip_text . $visible . $required . $data_attributes . '>'
+        . $options . '</select>';
 }
