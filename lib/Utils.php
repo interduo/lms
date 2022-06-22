@@ -774,4 +774,65 @@ class Utils
             return $e->getMessage();
         }
     }
+
+    public static function strftime($format, $date)
+    {
+        return str_replace(
+            array(
+                '%Y',
+                '%m',
+                '%d',
+                '%e',
+                '%j',
+                '%u',
+                '%a',
+                '%A',
+                '%w',
+                '%b',
+                '%B',
+                '%y',
+                '%H',
+                '%I',
+                '%M',
+                '%S',
+                '%T',
+                '%F',
+                '%D',
+                '%s',
+                '%Z',
+                '%z',
+                '%k',
+                '%k',
+                '%R',
+            ),
+            array(
+                date('Y', $date),
+                date('m', $date),
+                date('m', $date),
+                date('j', $date),
+                sprintf('%03d', date('z', $date) + 1),
+                date('N', $date),
+                date('D', $date),
+                date('l', $date),
+                date('w', $date),
+                date('M', $date),
+                date('F', $date),
+                date('y', $date),
+                date('H', $date),
+                date('h', $date),
+                date('i', $date),
+                date('s', $date),
+                date('H:i:s', $date),
+                date('Y-m-d', $date),
+                date('m/d/y', $date),
+                date('U', $date),
+                date('T', $date),
+                date('O', $date),
+                date('G', $date),
+                date('G', $date),
+                date('H:i', $date),
+            ),
+            $format
+        );
+    }
 }
