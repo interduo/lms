@@ -159,8 +159,8 @@ if (empty($channels)) {
     $channels[] = 'mail';
 }
 
-$current_month = intval(strftime('%m'));
-$current_year = intval(strftime('%Y'));
+$current_month = intval(date('m'));
+$current_year = intval(date('Y'));
 
 $config_section = (array_key_exists('section', $options) && preg_match('/^[a-z0-9-_]+$/i', $options['section'])
     ? $options['section'] : 'notify');
@@ -588,9 +588,9 @@ function parse_customer_data($data, $format, $row)
     } else {
         $deadline = $row['cdate'] + $row['paytime'] * 86400;
     }
-    $data = preg_replace("/\%deadline-y/", strftime("%Y", $deadline), $data);
-    $data = preg_replace("/\%deadline-m/", strftime("%m", $deadline), $data);
-    $data = preg_replace("/\%deadline-d/", strftime("%d", $deadline), $data);
+    $data = preg_replace("/\%deadline-y/", date('Y', $deadline), $data);
+    $data = preg_replace("/\%deadline-m/", date('m', $deadline), $data);
+    $data = preg_replace("/\%deadline-d/", date('d', $deadline), $data);
     $data = preg_replace("/\%B/", sprintf('%01.2f', $row['balance']), $data);
     $data = preg_replace("/\%totalB/", sprintf('%01.2f', $row['totalbalance']), $data);
     $data = preg_replace("/\%saldo/", moneyf($row['balance']), $data);
@@ -639,12 +639,12 @@ function parse_customer_data($data, $format, $row)
     $data = preg_replace("/\%invoice/", $row['doc_number'], $data);
     $data = preg_replace("/\%number/", $row['doc_number'], $data);
     $data = preg_replace("/\%value/", moneyf($row['value'], $row['currency']), $data);
-    $data = preg_replace("/\%cdate-y/", strftime("%Y", $row['cdate']), $data);
-    $data = preg_replace("/\%cdate-m/", strftime("%m", $row['cdate']), $data);
-    $data = preg_replace("/\%cdate-d/", strftime("%d", $row['cdate']), $data);
+    $data = preg_replace("/\%cdate-y/", date('Y', $row['cdate']), $data);
+    $data = preg_replace("/\%cdate-m/", date('m', $row['cdate']), $data);
+    $data = preg_replace("/\%cdate-d/", date('d', $row['cdate']), $data);
 
-    list ($now_y, $now_m) = explode('/', strftime("%Y/%m", time()));
-    $data = preg_replace("/\%lastday/", strftime("%d", mktime(12, 0, 0, $now_m + 1, 0, $now_y)), $data);
+    list ($now_y, $now_m) = explode('/', date('Y/m'));
+    $data = preg_replace("/\%lastday/", date('d', mktime(12, 0, 0, $now_m + 1, 0, $now_y)), $data);
 
     return $data;
 }
@@ -3681,8 +3681,8 @@ if (!empty($intersect)) {
                                         "SELECT datefrom FROM assignments WHERE customerid = ? AND tariffid IS NULL AND liabilityid IS NULL",
                                         array($cid)
                                     )) {
-                                        $year = intval(strftime('%Y', $datefrom));
-                                        $month = intval(strftime('%m', $datefrom));
+                                        $year = intval(date('Y', $datefrom));
+                                        $month = intval(date('m', $datefrom));
                                         if ($year < $current_year || ($year == $current_year && $month < $current_month)) {
                                             $aids = $DB->GetCol(
                                                 "SELECT id FROM assignments
