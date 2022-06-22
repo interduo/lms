@@ -580,9 +580,9 @@ function parse_customer_data($data, $format, $row)
     $data = preg_replace('/%age/', $row['age'], $data);
     $data = preg_replace("/\%b/", sprintf('%01.2f', $amount), $data);
     $data = preg_replace("/\%totalb/", sprintf('%01.2f', $totalamount), $data);
-    $data = preg_replace("/\%date-y/", strftime("%Y"), $data);
-    $data = preg_replace("/\%date-m/", strftime("%m"), $data);
-    $data = preg_replace("/\%date_month_name/", strftime("%B"), $data);
+    $data = preg_replace("/\%date-y/", date('Y'), $data);
+    $data = preg_replace("/\%date-m/", date('m'), $data);
+    $data = preg_replace("/\%date_month_name/", date('F'), $data);
     if (isset($row['deadline'])) {
         $deadline = $row['deadline'];
     } else {
