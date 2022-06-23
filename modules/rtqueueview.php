@@ -272,7 +272,7 @@ if (isset($_GET['priority'])) {
     }
 } elseif (!isset($filter['priority'])) {
     $filter['priority'] = ConfigHelper::getConfig('phpui.ticketlist_priority');
-    if (strlen($filter['priority'])) {
+    if (isset($filter['priority']) && strlen($filter['priority'])) {
         $filter['priority'] = explode(',', $filter['priority']);
     }
 }
