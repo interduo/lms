@@ -576,10 +576,10 @@ class SYSLOG
                     $data['value'] = $data['value'];
                 }
         }
-        if ($data['resource'] != self::RES_USER && strlen($data['value']) > 50) {
-            $data['value'] = substr($data['value'], 0, 50) . '...';
-        }
         if (isset($data['value'])) {
+            if ($data['resource'] != self::RES_USER && strlen($data['value']) > 50) {
+                $data['value'] = substr($data['value'], 0, 50) . '...';
+            }
             $data['value'] = htmlspecialchars($data['value']);
         }
         //$data['name'] = trans($data['name']);
