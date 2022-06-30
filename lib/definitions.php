@@ -205,6 +205,7 @@ define('CONFIG_TYPE_RICHTEXT', 8);
 define('CONFIG_TYPE_MAIL_BACKEND', 9);
 define('CONFIG_TYPE_MAIL_SECURE', 10);
 define('CONFIG_TYPE_DATE_FORMAT', 11);
+define('CONFIG_TYPE_EMAILS', 12);
 
 $CONFIG_TYPES = array(
     CONFIG_TYPE_AUTO => trans('- auto -'),
@@ -219,6 +220,7 @@ $CONFIG_TYPES = array(
     CONFIG_TYPE_MAIL_BACKEND => trans('mail backend'),
     CONFIG_TYPE_MAIL_SECURE => trans('mail security protocol'),
     CONFIG_TYPE_DATE_FORMAT => trans('date format'),
+    CONFIG_TYPE_EMAILS => trans('comma separated emails'),
 );
 
 // Helpdesk ticket status
