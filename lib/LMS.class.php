@@ -33,8 +33,8 @@ class LMS
     const SOFTWARE_VERSION = '27.28';
     const SOFTWARE_URL = 'https://lms-plus.org';
     const SOFTWARE_DOCUMENTATION_URL = 'https://wiki.lms-plus.org';
-    const SOFRWARE_REPO_URL = 'https://git.lms-plus.org';
-    const SOFRWARE_SUPPORT_URL = 'https://issues.lms-plus.org';
+    const SOFTWARE_REPO_URL = 'https://git.lms-plus.org';
+    const SOFTWARE_SUPPORT_URL = 'https://issues.lms-plus.org';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
 
     public $DB;   // database object
