@@ -5459,3 +5459,8 @@ $_LANG[
 $_LANG['<!pin>(hashed)'] = '(zahaszowany)';
 $_LANG['<!pin>(expired)'] = '(przeterminowany)';
 $_LANG['If you leave this field empty, then PIN will not change!'] = 'Jeśli to pole pozostawisz puste, PIN nie zostanie zmieniony!';
+
+$_LANG['<!subconsent-label>$a ($b)'] = '$a ($b)';
+$_LANG['<!billing-type>none'] = 'brak';
+$_LANG['<!billing-type>full'] = 'pełny';
+$_LANG['<!billing-type>simplified'] = 'uproszczony';
