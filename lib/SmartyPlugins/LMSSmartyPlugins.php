@@ -823,7 +823,7 @@ class LMSSmartyPlugins
                     $result .= ' title="' . $error . '" ';
                     $result .= ' class="' . (empty($class) ? '' : $class) . ($params['bold'] ? ' lms-ui-warning bold" ' : ' lms-ui-warning" ');
                 } else {
-                    if ($params['text'] != '') {
+                    if (isset($params['text']) && $params['text'] != '') {
                         $text = $params['text'];
                         unset($params['text']);
                         $text = trans(array_merge((array)$text, $params));
