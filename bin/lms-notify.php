@@ -567,13 +567,17 @@ function parse_customer_data($data, $format, $row)
     global $LMS;
     $DB = LMSDB::getInstance();
 
+    if (!isset($row['totalbalance'])) {
+        $row['totalbalance'] = 0;
+    }
+
     $amount = -$row['balance'];
     $totalamount = -$row['totalbalance'];
     $hook_data = $LMS->executeHook('notify_parse_customer_data', array('data' => $data, 'customer' => $row));
     $data = $hook_data['data'];
     $data = preg_replace(
         "/\%bankaccount/",
-        format_bankaccount(bankaccount($row['id'], $row['account'])),
+        isset($row['account']) ? format_bankaccount(bankaccount($row['id'], $row['account'])) : '',
         $data
     );
     $data = preg_replace('/%name/', $row['name'], $data);
@@ -586,7 +590,7 @@ function parse_customer_data($data, $format, $row)
     $data = preg_replace("/\%date_month_name/", date('F'), $data);
     if (isset($row['deadline'])) {
         $deadline = $row['deadline'];
-    } elseif (isset($row['cdate'])) {
+    } elseif (isset($row['cdate'], $row['paytime'])) {
         $deadline = $row['cdate'] + $row['paytime'] * 86400;
     }
     $data = preg_replace("/\%deadline-y/", isset($deadline) ? date('Y', $deadline) : '', $data);
