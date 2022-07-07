@@ -843,7 +843,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             $customergroupsqlskey = 'AND';
         }
 
-        if (!is_array($state) && !empty($state)) {
+        if (isset($state) && !is_array($state) && !empty($state)) {
             $state = array($state);
         }
 
@@ -877,6 +877,8 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             $state = array();
         }
 
+        $contracts = 0;
+        $overduereceivables = 0;
         $archived_document_condition = '';
 
         foreach ($state as $state_item) {
@@ -1110,7 +1112,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 break;
         }
 
-        if ($network) {
+        if (isset($network) && $network) {
             $network_manager = new LMSNetworkManager($this->db, $this->auth, $this->cache, $this->syslog);
             $net = $network_manager->getNetworkParams($network);
         }
@@ -1408,7 +1410,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 LEFT JOIN (SELECT customerid, (' . $this->db->GroupConcat('contact') . ') AS phone
                 FROM customercontacts WHERE (type & ' . (CONTACT_MOBILE | CONTACT_LANDLINE) .' > 0) GROUP BY customerid) ccp ON ccp.customerid = c.id
                 LEFT JOIN countries ON (c.countryid = countries.id) ')
-            . ($time ?
+            . (isset($time) && $time ?
                 'LEFT JOIN (SELECT SUM(value * currencyvalue) AS balance, customerid FROM cash
                 WHERE time < ' . $time . ' GROUP BY customerid) b ON b.customerid = c.id'
                 : 'LEFT JOIN customerbalances b ON b.customerid = c.id')
@@ -1514,7 +1516,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 . ' WHERE '
                 . (empty($state_conditions) ? '1 = 1' : implode(' ' . $statesqlskey . ' ', $state_conditions))
                 . ($flag_condition ? ' AND ' . $flag_condition : '')
-                . ($division ? ' AND c.divisionid = ' . intval($division) : '')
+                . (isset($division) && $division ? ' AND c.divisionid = ' . intval($division) : '')
                 . ($assignment ? ' AND c.id IN ('.$assignment.')' : '')
                 . ($network ? ' AND (EXISTS (SELECT 1 FROM vnodes WHERE ownerid = c.id
                 		AND (netid' . (is_array($network) ? ' IN (' . implode(',', $network) . ')' : ' = ' . $network) . '
@@ -1526,13 +1528,13 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 		OR (ipaddr_pub > ' . $net['address'] . ' AND ipaddr_pub < ' . $net['broadcast'] . '))))' : '')
                 . (!empty($customergroup) && $customergroup != -1 ? ' AND ca.gcount '
                     . ($customergroupsqlskey == 'AND' ? '= ' . (is_array($customergroup) ? count($customergroup) : 1) : '> 0') : '')
-                . ($customergroup == -1 ? ' AND ca.gcount IS NULL ' : '')
+                . (isset($customergroup) && $customergroup == -1 ? ' AND ca.gcount IS NULL ' : '')
                 . (!empty($nodegroup) ? ' AND na.gcount = ' . (is_array($nodegroup) ? count($nodegroup) : 1) : '')
                 . (!empty($consent_condition) ? ' AND ' . $consent_condition : '')
                 . (isset($sqlsarg) ? ' AND (' . $sqlsarg . ')' : '')
                 . ($sqlord != ''  && !$count ? $sqlord . ' ' . $direction . ', c.id ASC' : '')
-                . ($limit !== null && !$count ? ' LIMIT ' . $limit : '')
-                . ($offset !== null && !$count ? ' OFFSET ' . $offset : '');
+                . (isset($limit) && !$count ? ' LIMIT ' . $limit : '')
+                . (isset($offset) && !$count ? ' OFFSET ' . $offset : '');
 
         if (!$count) {
             $customerlist = $this->db->GetAll($sql);
