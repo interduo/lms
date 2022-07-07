@@ -159,7 +159,7 @@ class Session
     {
         if ($tab) {
             if ($variable === 'backto') {
-                self::$oldBackTo = $this->_tab_content[$this->tabId]['backto'];
+                self::$oldBackTo = isset($this->_tab_content[$this->tabId]['backto']) ? $this->_tab_content[$this->tabId]['backto'] : null;
                 self::$backTo = $content;
             }
             if (!isset($this->_tab_content[$this->tabId])) {
