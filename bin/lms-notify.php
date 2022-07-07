@@ -577,7 +577,7 @@ function parse_customer_data($data, $format, $row)
         $data
     );
     $data = preg_replace('/%name/', $row['name'], $data);
-    $data = preg_replace('/%age/', $row['age'], $data);
+    $data = preg_replace('/%age/', isset($row['age']) ? $row['age'] : '', $data);
     $data = preg_replace("/\%b/", sprintf('%01.2f', $amount), $data);
     $data = preg_replace("/\%totalb/", sprintf('%01.2f', $totalamount), $data);
     $data = preg_replace("/\%date-y/", date('Y'), $data);
@@ -586,12 +586,12 @@ function parse_customer_data($data, $format, $row)
     $data = preg_replace("/\%date_month_name/", date('F'), $data);
     if (isset($row['deadline'])) {
         $deadline = $row['deadline'];
-    } else {
+    } elseif (isset($row['cdate'])) {
         $deadline = $row['cdate'] + $row['paytime'] * 86400;
     }
-    $data = preg_replace("/\%deadline-y/", date('Y', $deadline), $data);
-    $data = preg_replace("/\%deadline-m/", date('m', $deadline), $data);
-    $data = preg_replace("/\%deadline-d/", date('d', $deadline), $data);
+    $data = preg_replace("/\%deadline-y/", isset($deadline) ? date('Y', $deadline) : '', $data);
+    $data = preg_replace("/\%deadline-m/", isset($deadline) ? date('m', $deadline) : '', $data);
+    $data = preg_replace("/\%deadline-d/", isset($deadline) ? date('d', $deadline) : '', $data);
     $data = preg_replace("/\%B/", sprintf('%01.2f', $row['balance']), $data);
     $data = preg_replace("/\%totalB/", sprintf('%01.2f', $row['totalbalance']), $data);
     $data = preg_replace("/\%saldo/", moneyf($row['balance']), $data);
@@ -613,7 +613,7 @@ function parse_customer_data($data, $format, $row)
                 AND NOT EXISTS (
                     SELECT COUNT(id) FROM assignments
                     WHERE customerid = c.id AND tariffid IS NULL AND liabilityid IS NULL
-                        AND datefrom <= ? AND (dateto > ? OR dateto = 0                
+                        AND datefrom <= ? AND (dateto > ? OR dateto = 0
                 )
             GROUP BY tariffs.currency',
             array(
@@ -637,12 +637,12 @@ function parse_customer_data($data, $format, $row)
     $data = $LMS->getLastNInTable($data, $row['id'], $format, $row['aggregate_documents']);
 
     // invoices, debit notes, documents
-    $data = preg_replace("/\%invoice/", $row['doc_number'], $data);
-    $data = preg_replace("/\%number/", $row['doc_number'], $data);
-    $data = preg_replace("/\%value/", moneyf($row['value'], $row['currency']), $data);
-    $data = preg_replace("/\%cdate-y/", date('Y', $row['cdate']), $data);
-    $data = preg_replace("/\%cdate-m/", date('m', $row['cdate']), $data);
-    $data = preg_replace("/\%cdate-d/", date('d', $row['cdate']), $data);
+    $data = preg_replace("/\%invoice/", isset($row['doc_number']) ? $row['doc_number'] : '', $data);
+    $data = preg_replace("/\%number/", isset($row['doc_number']) ? $row['doc_number'] : '', $data);
+    $data = preg_replace("/\%value/", isset($row['value'], $row['currency']) ? moneyf($row['value'], $row['currency']) : '', $data);
+    $data = preg_replace("/\%cdate-y/", isset($row['cdate']) ? date('Y', $row['cdate']) : '', $data);
+    $data = preg_replace("/\%cdate-m/", isset($row['cdate']) ? date('m', $row['cdate']) : '', $data);
+    $data = preg_replace("/\%cdate-d/", isset($row['cdate']) ? date('d', $row['cdate']) : '', $data);
 
     list ($now_y, $now_m) = explode('/', date('Y/m'));
     $data = preg_replace("/\%lastday/", date('d', mktime(12, 0, 0, $now_m + 1, 0, $now_y)), $data);
