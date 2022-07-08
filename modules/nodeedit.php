@@ -347,6 +347,7 @@ if (isset($_POST['nodeedit'])) {
     $nodeinfo['latitude'] = $nodeedit['latitude'];
     $nodeinfo['longitude'] = $nodeedit['longitude'];
     $nodeinfo['invprojectid'] = $nodeedit['invprojectid'];
+    $nodeinfo['authtype'] = $nodeedit['authtype'];
     $nodeinfo['info'] = $nodeedit['info'];
     $nodeinfo['wysiwyg'] = $nodeedit['wysiwyg'];
 
@@ -435,6 +436,5 @@ if (!isset($resource_tabs['routednetworks']) || $resource_tabs['routednetworks']
 $SMARTY->assign('error', $error);
 $SMARTY->assign('nodeinfo', $nodeinfo);
 $SMARTY->assign('objectid', $nodeinfo['id']);
-$SMARTY->assign('nodeauthtype', $nodeauthtype);
 $SMARTY->assign('nodeedit_sortable_order', $SESSION->get_persistent_setting('nodeedit-sortable-order'));
 $SMARTY->display('node/nodeedit.html');
