@@ -5468,3 +5468,5 @@ $_LANG['<!subconsent-label>$a ($b)'] = '$a ($b)';
 $_LANG['<!billing-type>none'] = 'brak';
 $_LANG['<!billing-type>full'] = 'pełny';
 $_LANG['<!billing-type>simplified'] = 'uproszczony';
+
+$_LANG['attach documents'] = 'dołącz dokumenty';
