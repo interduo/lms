@@ -347,7 +347,7 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
                 $privacy_condition = ' AND (private = 0 OR (private = 1 AND userid = ' . intval(Auth::GetCurrentUser()) . '))';
                 break;
             case 1:
-                $privacy_condition = 'AND private = 0';
+                $privacy_condition = ' AND private = 0';
                 break;
             case 2:
                 $privacy_condition = ' AND private = 1 AND userid = ' . intval(Auth::GetCurrentUser());
