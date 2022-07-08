@@ -1055,7 +1055,12 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             }
         }
 
-        $this->lastmessageid = '<msg.' . $this->GetQueueByTicketId($message['ticketid'])
+        if (!isset($message['queue'])) {
+            $queue = $this->GetQueueByTicketId($message['ticketid']);
+            $message['queue'] = $queue['id'];
+        }
+
+        $this->lastmessageid = '<msg.' . $message['queue']
             . '.' . $message['ticketid']
             . '.' . time() . '@rtsystem.' . gethostname() . '>';
 
