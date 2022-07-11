@@ -1052,6 +1052,7 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
         $message['phonecount'] = 0;
 
         if (!empty($phones)) {
+            $message['checkedphones'] = 0;
             foreach ($phones as $phone) {
                 $customerid = $phone['customerid'];
                 if (isset($message['customers'][$customerid])) {
@@ -1122,6 +1123,7 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
     $message['phonecount'] = 0;
 
     if (!empty($phones)) {
+        $message['checkedphones'] = 0;
         foreach ($phones as $phone) {
             $customerid = $phone['customerid'];
             if (isset($message['customers'][$customerid])) {
