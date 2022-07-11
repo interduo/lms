@@ -881,6 +881,8 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         $overduereceivables = 0;
         $archived_document_condition = '';
 
+        $ignore_deleted_customers = ConfigHelper::checkConfig('phpui.ignore_deleted_customers');
+
         foreach ($state as $state_item) {
             switch ($state_item) {
                 case 50:
@@ -894,6 +896,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                         return $customerlist;
                     }
                     $state_conditions[] = 'c.deleted = 1';
+                    $ignore_deleted_customers = false;
                     break;
                 case 51:
                     $state_conditions[] = '(s.ownerid IS NOT null AND s.account > s.acsum)';
@@ -1025,6 +1028,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         }
         if (!empty($customer_statuses)) {
             $state_conditions[] = '((c.status = ' . implode(' ' . $statesqlskey . ' c.status = ', $customer_statuses) . ') AND c.deleted = 0)';
+            $ignore_deleted_customers = false;
         }
 
         $flagmask = 0;
@@ -1515,6 +1519,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
 						) ass ON ass.customerid = c.id') : '')))
                 . ' WHERE '
                 . (empty($state_conditions) ? '1 = 1' : implode(' ' . $statesqlskey . ' ', $state_conditions))
+                . ($ignore_deleted_customers ? ' AND c.deleted = 0' : '')
                 . ($flag_condition ? ' AND ' . $flag_condition : '')
                 . (isset($division) && $division ? ' AND c.divisionid = ' . intval($division) : '')
                 . ($assignment ? ' AND c.id IN ('.$assignment.')' : '')
