@@ -537,7 +537,7 @@ function GetNetDevicesInSubtree($netdevid)
 $layout['pagetitle'] = trans('Message Add');
 
 $divisions = $LMS->getDivisionList();
-$divivion_count = 0;
+$division_count = 0;
 foreach ($divisions as $division) {
     if (!empty($division['cnt'])) {
         $division_count++;
