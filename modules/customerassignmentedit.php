@@ -35,7 +35,7 @@ if (!$customer) {
     $SESSION->redirect('?'.$SESSION->get('backto'));
 }
 
-if ($_GET['action'] == 'suspend') {
+if (isset($_GET['action']) && $_GET['action'] == 'suspend') {
     $LMS->SuspendAssignment($_GET['id'], $_GET['suspend']);
     $SESSION->redirect('?'.$SESSION->get('backto'));
 }
