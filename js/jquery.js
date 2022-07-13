@@ -333,6 +333,10 @@ function updateAdvancedSelects(selector) {
 	});
 }
 
+function activateAdvancedSelect(selector) {
+	$(selector).trigger('chosen:activate');
+}
+
 function init_comboboxes(selector) {
 	$(selector).each(function() {
 		$(this).scombobox($.extend({ wrap: false },
@@ -2060,6 +2064,15 @@ $(function() {
 			button.prop('disabled', false);
 		});
 	});
+
+	window.addEventListener('message', function(e) {
+		if (e.data.hasOwnProperty('targetValue',) && e.data.hasOwnProperty('targetSelector')) {
+			var elem = $(e.data.targetSelector);
+			elem.val(e.data.targetValue);
+			updateAdvancedSelects(elem);
+			activateAdvancedSelect(elem);
+		}
+	}, false);
 
 	initAutoGrow('.lms-ui-autogrow');
 });
