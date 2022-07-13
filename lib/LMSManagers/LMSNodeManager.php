@@ -472,6 +472,10 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
             $net = null;
         }
 
+        if (!isset($status)) {
+            $status = null;
+        }
+
         $sql = '';
 
         if ($count) {
@@ -502,7 +506,8 @@ class LMSNodeManager extends LMSManager implements LMSNodeManagerInterface
                         AND ' . $daysecond . ' <= tosec AND nodeid = n.id
                 ) THEN 1 ELSE 0 END) AS locked ';
         }
-        $sql .= 'FROM vnodes n 
+
+        $sql .= 'FROM vnodes n
 				JOIN customerview c ON (n.ownerid = c.id)
 				JOIN networks net ON net.id = n.netid
 				LEFT JOIN netdevices nd ON nd.id = n.netdev
