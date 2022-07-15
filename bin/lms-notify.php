@@ -2869,6 +2869,9 @@ if (empty($types) || in_array('events', $types)) {
             'id',
             array(MSG_MAIL, MSG_SMS, MSG_MAIL | MSG_SMS)
         );
+        if (empty($users)) {
+            $users = array();
+        }
 
         $customer_message_pattern = $notifications['events']['message'] == 'events notification'
             ? '%description'
@@ -2915,7 +2918,7 @@ if (empty($types) || in_array('events', $types)) {
                     $customers[$cid] = $DB->GetRow(
                         "SELECT (" . $DB->Concat('c.lastname', "' '", 'c.name') . ") AS name,
                             m.email, x.phone
-                        FROM customers c
+                        FROM customerview c
                         LEFT JOIN divisions ON divisions.id = c.divisionid
                         LEFT JOIN (SELECT " . $DB->GroupConcat('contact') . " AS email, customerid
                             FROM customercontacts
