@@ -73,16 +73,17 @@ if (!isset($_POST['xjxfun'])) {
     $SESSION->save('backto', $_SERVER['QUERY_STRING'], true);
 
     $layout['pagetitle'] = trans('Customer Info: $a', $customerinfo['customername']);
+
+    $hook_data = $LMS->executeHook(
+        'customerinfo_before_display',
+        array(
+            'customerinfo' => $customerinfo,
+            'smarty' => $SMARTY,
+        )
+    );
+    $customerinfo = $hook_data['customerinfo'];
 }
 
-$hook_data = $LMS->executeHook(
-    'customerinfo_before_display',
-    array(
-        'customerinfo' => $customerinfo,
-        'smarty' => $SMARTY,
-    )
-);
-$customerinfo = $hook_data['customerinfo'];
 $SMARTY->assign('xajax', $LMS->RunXajax());
 $SMARTY->assign('customerinfo_sortable_order', $SESSION->get_persistent_setting('customerinfo-sortable-order'));
 $SMARTY->display('customer/customerinfo.html');
