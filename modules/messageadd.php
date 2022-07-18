@@ -511,7 +511,9 @@ function BodyVars(&$body, $data, $format)
         );
     }
 
-    $body = $LMS->getLastNInTable($body, $data['id'], $format, ConfigHelper::checkConfig('phpui.aggregate_documents'));
+    if (isset($data['id'])) {
+        $body = $LMS->getLastNInTable($body, $data['id'], $format, ConfigHelper::checkConfig('phpui.aggregate_documents'));
+    }
 
     if (strpos($body, '%services') !== false) {
         $services = $data['services'];
@@ -1057,7 +1059,7 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
                     $key,
                     count($recipients),
                     sprintf('%02.1f%%', round((100 / count($recipients)) * $key, 1)),
-                    $row['customername'] . ' &lt;' . $destination . '&gt;'
+                    (isset($row['customername']) ? $row['customername'] : '-') . ' &lt;' . $destination . '&gt;'
                 );
                 flush();
 
@@ -1084,7 +1086,7 @@ if (isset($_POST['message']) && !isset($_GET['sent'])) {
                         break;
                     case MSG_SMS:
                     case MSG_ANYSMS:
-                        $result = $LMS->SendSMS($destination, $body, $msgitems[$customerid][$orig_destination], $sms_options);
+                        $result = $LMS->SendSMS($destination, $body, $msgitems[$customerid][$orig_destination], isset($sms_options) ? $sms_options : null);
                         break;
                     case MSG_USERPANEL:
                     case MSG_USERPANEL_URGENT:
