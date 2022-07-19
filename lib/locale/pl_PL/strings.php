@@ -1690,6 +1690,7 @@ $_LANG['recording turned on'] = 'nagrywanie włączone';
 $_LANG['recording turned off'] = 'nagrywanie wyłączone';
 $_LANG['recording for operator'] = 'nagrywanie na potrzeby operatora';
 $_LANG['recording for customer'] = 'nagrywanie na potrzeby klienta';
+$_LANG['<!voip-account>trunk'] = 'trunk';
 $_LANG['Call recording'] = 'Nagrywanie rozmów';
 $_LANG['Readdressing network $a'] = 'Przeadresowanie sieci $a';
 $_LANG['Readdressing Network $a'] = 'Przeadresowanie sieci $a';
