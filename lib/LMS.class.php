@@ -31,10 +31,10 @@ class LMS
 {
     const SOFTWARE_NAME = 'LMS+';
     const SOFTWARE_VERSION = '27.33';
-    const SOFTWARE_URL = 'https://lms-plus.org';
-    const SOFTWARE_DOCUMENTATION_URL = 'https://wiki.lms-plus.org';
-    const SOFTWARE_REPO_URL = 'https://git.lms-plus.org';
-    const SOFTWARE_SUPPORT_URL = 'https://issues.lms-plus.org';
+    const SOFTWARE_URL = 'https://lms.plus';
+    const SOFTWARE_DOCUMENTATION_URL = 'https://wiki.lms.plus';
+    const SOFTWARE_REPO_URL = 'https://git.lms.plus';
+    const SOFTWARE_SUPPORT_URL = 'https://issues.lms.plus';
     const SOFTWARE_REVISION = '$Format:%cI$'; // %H for last commit checksum
 
     public $DB;   // database object
