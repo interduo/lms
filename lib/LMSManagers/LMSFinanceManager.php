@@ -3015,7 +3015,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
             $id = $this->db->GetLastInsertID('tariffs');
 
             $tarifftag_manager = new LMSTariffTagManager($this->db, $this->auth, $this->cache, $this->syslog);
-            $tarifftag_manager->updateTariffTagsForTariff($id, $tariff['tags']);
+            $tarifftag_manager->updateTariffTagsForTariff($id, isset($tariff['tags']) ? $tariff['tags'] : null);
 
             if ($this->syslog) {
                 $args[SYSLOG::RES_TARIFF] = $id;
@@ -3121,7 +3121,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
         }
 
         $tarifftag_manager = new LMSTariffTagManager($this->db, $this->auth, $this->cache, $this->syslog);
-        $tarifftag_manager->updateTariffTagsForTariff($tariff['id'], $tariff['tags']);
+        $tarifftag_manager->updateTariffTagsForTariff($tariff['id'], isset($tariff['tags']) ? $tariff['tags'] : null);
 
         return $res;
     }
