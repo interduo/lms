@@ -73,12 +73,16 @@ if (!isset($_POST['xjxfun'])) {
     $SESSION->save('backto', $_SERVER['QUERY_STRING'], true);
 
     $layout['pagetitle'] = trans('Customer Info: $a', $customerinfo['customername']);
+} else {
+    $customerinfo = array(
+        'id' => $customerid,
+    );
 }
 
 $hook_data = $LMS->executeHook(
     'customerinfo_before_display',
     array(
-        'customerinfo' => isset($customerinfo) ? $customerinfo : array(),
+        'customerinfo' => $customerinfo,
         'smarty' => $SMARTY,
     )
 );
