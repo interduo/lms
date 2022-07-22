@@ -167,7 +167,7 @@ if (isset($_POST['customeradd'])) {
             $ten_existence_scope = 'global';
         }
         $ten_exists = $LMS->checkCustomerTenExistence(
-            $_GET['id'],
+            null,
             $customeradd['ten'],
             $ten_existence_scope == 'global' ? null : $customeradd['divisionid']
         );
@@ -197,7 +197,7 @@ if (isset($_POST['customeradd'])) {
             $ssb_existence_scope = 'global';
         }
         $ssn_exists = $LMS->checkCustomerSsnExistence(
-            $_GET['id'],
+            null,
             $customeradd['ssn'],
             $ssn_existence_scope == 'global' ? null : $customeradd['divisionid']
         );
