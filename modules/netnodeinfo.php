@@ -28,9 +28,9 @@ $id = intval($_GET['id']);
 
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
-$layout['pagetitle'] = trans('Net Device Node Info: $a', $info['name']);
-
 $result = $LMS->GetNetNode($id);
+
+$layout['pagetitle'] = trans('Net Device Node Info: $a', $result['name']);
 
 if (!$result) {
     $SESSION->redirect('?m=netnodelist');
@@ -92,7 +92,7 @@ $queue = $LMS->GetQueueContents(array('removed' => 0, 'netnodeids' => $id, 'shor
 $SMARTY->assign('queue', $queue);
 
 $start = 0;
-$pagelimit = ConfigHelper::getConfig('phpui.ticketlist_pagelimit', $total);
+$pagelimit = ConfigHelper::getConfig('phpui.ticketlist_pagelimit', empty($queue) ? -1 : count($queue));
 $SMARTY->assign('start', $start);
 $SMARTY->assign('pagelimit', $pagelimit);
 
