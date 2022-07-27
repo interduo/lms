@@ -33,6 +33,10 @@ $aee = ConfigHelper::getConfig('phpui.allow_modify_closed_events_newer_than', 60
 
 if (isset($_GET['id'])) {
     $event = $LMS->GetEvent($_GET['id']);
+    if (empty($event)) {
+        $SESSION->redirect('?m=eventlist');
+    }
+
     if (!empty($event['ticketid'])) {
         $event['ticket'] = $LMS->getTickets($event['ticketid']);
     }
