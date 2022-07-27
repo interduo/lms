@@ -2470,11 +2470,11 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     DOC_INVOICE_PRO
                 )
             );
-
-            $result['export'] = $result['division_countryid'] && $result['countryid'] && $result['division_countryid'] != $result['countryid'];
         }
 
         if ($result) {
+            $result['export'] = $result['division_countryid'] && $result['countryid'] && $result['division_countryid'] != $result['countryid'];
+
             $result['name'] = trim($result['name']);
 
             if ($detail_level == self::INVOICE_CONTENT_DETAIL_ALL && !empty($result['recipient_address_id'])) {
