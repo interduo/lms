@@ -445,6 +445,10 @@ if (isset($_POST['ticket'])) {
         }
     }
 
+    if (!isset($ticketedit['parentid'])) {
+        $ticketedit['parentid'] = null;
+    }
+
     $hook_data = $LMS->executeHook(
         'ticketedit_validation_before_submit',
         array(
