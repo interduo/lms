@@ -356,6 +356,9 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
             case 2:
                 $privacy_condition = ' AND private = 1 AND userid = ' . intval(Auth::GetCurrentUser());
                 break;
+            default:
+                $privacy_condition = '';
+                break;
         }
 
         if ($forward=='-1') {
