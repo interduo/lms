@@ -101,7 +101,7 @@ $layout['pagetitle'] = trans('New Numbering Plan');
 $SESSION->save('backto', $_SERVER['QUERY_STRING']);
 
 $divisions = $LMS->GetDivisions(array('status' => 0));
-$users = getUsers($divisions, $numberplanadd['divisions']);
+$users = getUsers($divisions, isset($numberplanadd['divisions']) ? $numberplanadd['divisions'] : array());
 
 $SMARTY->assign('numberplanadd', $numberplanadd);
 $SMARTY->assign('divisions', $divisions);
