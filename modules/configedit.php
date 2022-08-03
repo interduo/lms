@@ -74,7 +74,7 @@ if (isset($_GET['s']) && isset($_GET['v'])) {
 } elseif (isset($_GET['id'])) {
     $params['id'] = $_GET['id'];
 } else {
-    $SESSION->redirect_to_history_entry();
+    $SESSION->redirect('?m=configlist');
 }
 
 if (!($id = $LMS->ConfigOptionExists($params))) {
