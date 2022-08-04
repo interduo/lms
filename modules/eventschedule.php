@@ -40,9 +40,9 @@ function parseWorkingHours($hours_period)
 {
     $working_hours_ts = array();
 
-    list($begin,$end) = explode('-', $hours_period);
-    $parsed_begin = date_parse($begin);
-    $parsed_end = date_parse($end);
+    list ($begin, $end) = explode('-', $hours_period);
+    $parsed_begin = date_parse($begin . (strpos($begin, ':') === false ? ':00' : ''));
+    $parsed_end = date_parse($end . (strpos($end, ':') === false ? ':00' : ''));
     $working_hours_ts['begin'] = $parsed_begin['hour'] * 3600 + $parsed_begin['minute'] * 60;
     $working_hours_ts['end'] = $parsed_end['hour'] * 3600 + $parsed_end['minute'] * 60 - 1;
 
