@@ -26,7 +26,7 @@
 
 $addbalance = isset($_POST['addbalance']) ? $_POST['addbalance'] : (isset($_POST['instantpayment']) ? $_POST['instantpayment'] : null);
 if (empty($addbalance)) {
-    $SESSION->redirect_to_history_entry();
+    $SESSION->redirect('?' . $SESSION->get('backto'));
 }
 
 foreach ($addbalance as $key => $value) {
