@@ -331,6 +331,52 @@ $RT_SOURCES = array(
     RT_SOURCE_CALLCENTER => 'call center',
 );
 
+//User notification methods
+define('NOTIFY_EMAIL', 1);
+define('NOTIFY_SMS', 2);
+define('NOTIFY_INDICATORS', 4);
+define('NOTIFY_SLACK', 8);
+define('NOTIFY_TELEGRAM', 16);
+
+$NOTIFICATION_METHODS = array(
+    NOTIFY_EMAIL => array (
+        'label' => trans('E-mail'),
+        'color' => 'blue',
+        'icon' => 'mail',
+        'tip' => 'Enter e-mail address',
+        'type' => 'email',
+    ),
+    NOTIFY_SMS => array (
+        'label' => trans('SMS'),
+        'color' => 'red',
+        'icon' => 'sms',
+        'tip' => 'Enter phone number for SMS notification',
+        'type' => 'tel',
+    ),
+    NOTIFY_INDICATORS => array (
+        'label' => trans('Indicators'),
+        'color' => 'yellow',
+        'icon' => 'indicators',
+        'tip' => '',
+        'type' => '',
+        'inputdisabled' => true,
+    ),
+    NOTIFY_SLACK => array (
+        'label' => trans('Slack'),
+        'color' => 'brown',
+        'icon' => 'slack',
+        'tip' => 'Enter Slack webhook address',
+        'type' => 'url',
+    ),
+    NOTIFY_TELEGRAM => array (
+        'label' => trans('Telegram'),
+        'color' => 'darkblue',
+        'icon' => 'telegram',
+        'tip' => 'Enter Telegram webhook address',
+        'type' => 'url',
+    ),
+);
+
 //Helpdesk ticket priority
 define('RT_PRIORITY_IDLE', -3);
 define('RT_PRIORITY_VERYLOW', -2);
@@ -1320,6 +1366,7 @@ if (isset($SMARTY)) {
     $SMARTY->assign('_RT_RIGHTS', $RT_RIGHTS);
     $SMARTY->assign('_RT_STATES', $RT_STATES);
     $SMARTY->assign('_RT_SOURCES', $RT_SOURCES);
+    $SMARTY->assign('_NOTIFICATION_METHODS', $NOTIFICATION_METHODS);
     $SMARTY->assign('_RT_PRIORITIES', $RT_PRIORITIES);
     $SMARTY->assign('_RT_PRIORITY_STYLES', $RT_PRIORITY_STYLES);
     $SMARTY->assign('_RT_TYPES', $RT_TYPES);
