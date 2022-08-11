@@ -280,7 +280,7 @@ if (isset($_POST['event'])) {
 
                         if (ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')) {
                             $params = array(
-                                'id' => $evemt['ticketid'],
+                                'id' => $event['ticketid'],
                                 'customerid' => $ticket['customerid'],
                                 'customer' => $info,
                                 'emails' => $emails,
