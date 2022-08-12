@@ -33,7 +33,7 @@ if ($SESSION->is_set('backtoStack', true)) {
     $backto = end($backtoStack);
 } elseif ($SESSION->is_set('backto')) {
     $backtoStack = $SESSION->get('backtoStack');
-    $backto = end($backtoStack);
+    $backto = empty($backtoStack) ? '' : end($backtoStack);
 } else {
     $backto = '';
 }
