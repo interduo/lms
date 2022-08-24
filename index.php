@@ -363,7 +363,7 @@ if ($AUTH->islogged) {
     }
     $module = $res['module'];
 
-    if ($module != 'logout') {
+    if (!$api && $module != 'logout') {
         if ($AUTH->requiredPasswordChange()) {
             $module = 'chpasswd';
         } elseif ($AUTH->requiredTwoFactorAuthChange()) {
