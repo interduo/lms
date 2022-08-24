@@ -2282,7 +2282,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     'comment' => $item['name'],
                     'docid' => $iid,
                     'itemid' => $itemid,
-                    'servicetype' => $item['servicetype'],
+                    'servicetype' => isset($item['servicetype']) ? $item['servicetype'] : null,
                 ));
             }
         }
