@@ -21,7 +21,7 @@
  *
  */
 
-define('DOC_FLAG_NET_ACCOUNT', 16);
+define('DOC_FLAG_NET_ACCOUNT_2021072600', 16);
 
 $this->BeginTrans();
 
@@ -90,8 +90,8 @@ $this->Execute(
             WHERE (d.flags & ?) = 0
         )",
     array(
-        DOC_FLAG_NET_ACCOUNT,
-        DOC_FLAG_NET_ACCOUNT,
+        DOC_FLAG_NET_ACCOUNT_2021072600,
+        DOC_FLAG_NET_ACCOUNT_2021072600,
     )
 );
 
