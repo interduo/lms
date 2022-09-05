@@ -2207,6 +2207,13 @@ foreach ($assigns as $assign) {
                     $sdesc
                 );
 
+                $partial_value = round($partial_price * $assign['count'], 2);
+                if ($netflag) {
+                    $partial_grossvalue = $partial_value + round($partial_value * ($assign['taxrate'] / 100), 2);
+                } else {
+                    $partial_grossvalue = $partial_value;
+                }
+
                 if ($assign['invoice']) {
                     if ($assign['invoice'] == DOC_DNOTE) {
                         $tmp_itemid = 0;
@@ -2233,13 +2240,6 @@ foreach ($assigns as $assign) {
                                 )
                             );
                         }
-                    }
-
-                    $partial_value = round($partial_price * $assign['count'], 2);
-                    if ($netflag) {
-                        $partial_grossvalue = $partial_value + round($partial_value * ($assign['taxrate'] / 100), 2);
-                    } else {
-                        $partial_grossvalue = $partial_value;
                     }
 
                     if ($tmp_itemid != 0) {
