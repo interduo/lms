@@ -167,8 +167,6 @@
 						<option value="">{trans("- all -")}</option>
 						<option value="{$smarty.const.BILLING_RECORD_DIRECTION_INCOMING}" {if $listdata.fdirection == $smarty.const.BILLING_RECORD_DIRECTION_INCOMING} selected{/if}>{trans("<!voip>incoming")}</option>
 						<option value="{$smarty.const.BILLING_RECORD_DIRECTION_OUTGOING}" {if $listdata.fdirection == $smarty.const.BILLING_RECORD_DIRECTION_OUTGOING} selected{/if}>{trans("<!voip>outgoing")}</option>
-						<option value="{$smarty.const.CALL_INCOMING}" {if $listdata.ftype == $smarty.const.CALL_INCOMING} selected{/if}>{trans("<!voip>incoming")}</option>
-						<option value="{$smarty.const.CALL_OUTGOING}" {if $listdata.ftype == $smarty.const.CALL_OUTGOING} selected{/if}>{trans("<!voip>outgoing")}</option>
 					</select>
 
 					<span>{trans("<!voip>Status")}</span>
