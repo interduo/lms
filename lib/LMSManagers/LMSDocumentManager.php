@@ -167,7 +167,7 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
             case 'authorising':
                 $userfield = 'd.cuserid';
                 break;
-            case 'archivizator':
+            case 'archiver':
                 $userfield = 'd.auserid';
                 break;
             default:
