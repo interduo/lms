@@ -68,15 +68,14 @@ if (!empty($config)) {
         $error['section'] = trans('Section name contains forbidden characters!');
     }
 
-    if (!isset($config['reftype']) || empty($config['reftype'])) {
+    if (empty($config['reftype'])) {
         $option = $config['section'] . '.' . $config['var'];
         if (!ConfigHelper::checkPrivilege('superuser') || $config['type'] == CONFIG_TYPE_AUTO) {
             $config['type'] = $LMS->GetConfigDefaultType($option);
         }
-    }
-
-    if ($msg = $LMS->CheckOption($option, $config['value'], $config['type'])) {
-        $error['value'] = $msg;
+        if ($msg = $LMS->CheckOption($option, $config['value'], $config['type'])) {
+            $error['value'] = $msg;
+        }
     }
 
     if (!isset($config['disabled'])) {
