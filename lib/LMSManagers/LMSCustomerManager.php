@@ -654,7 +654,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         }
 
         $args = array(
-            'extid'          => $customeradd['extid'],
             'name'           => $customeradd['name'],
             'lastname'       => $customeradd['lastname'],
             'type'           => empty($customeradd['type']) ? 0 : 1,
@@ -704,11 +703,11 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         }
 
         $result = $this->db->Execute(
-            'INSERT INTO customers (extid, name, lastname, type,
+            'INSERT INTO customers (name, lastname, type,
             ten, ssn, status, creationdate,
             creatorid, info, notes, message, documentmemo, pin, pinlastchange, regon, rbename, rbe,
             ict, icn, icexpires, cutoffstop, divisionid, paytime, paytype, flags' . ($reuse_customer_id ? ', id' : ''). ')
-            VALUES (?, ?, ' . ($capitalize_customer_names ? 'UPPER(?)' : '?') . ', ?, ?, ?, ?, ?NOW?,
+            VALUES (?, ' . ($capitalize_customer_names ? 'UPPER(?)' : '?') . ', ?, ?, ?, ?, ?NOW?,
                     ?, ?, ?, ?, ?, ?, ?NOW?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?' . ($reuse_customer_id ? ', ?' : '') . ')',
             array_values($args)
         );
@@ -750,6 +749,18 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 $id,
                 array(),
                 array_keys($this->compactCustomerConsents($customeradd['consents']))
+            );
+
+            if (empty($customeradd['extids'])) {
+                $customeradd['extids'] = array();
+            } else {
+                $customeradd['extids'] = array_filter($customeradd['extids'], function ($customerextid) {
+                    return strlen($customerextid['extid']) > 0;
+                });
+            }
+            $this->updateCustomerExternalIDs(
+                $id,
+                $customeradd['extids']
             );
 
             if (ConfigHelper::checkValue(ConfigHelper::getConfig('phpui.add_customer_group_required', false))) {
@@ -1842,6 +1853,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                     $result['post_cstate'] = $cstate['name'];
                 }
                 $result['consents'] = $this->getCustomerConsents($id);
+                $result['extids'] = $this->getCustomerExternalIDs($id);
             }
             $result['balance'] = $this->getCustomerBalance($result['id']);
             $result['bankaccount'] = bankaccount($result['id'], $result['account']);
@@ -1967,7 +1979,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         }
 
         $args = array(
-            'extid'          => $customerdata['extid'],
             'status'         => $customerdata['status'],
             'type'           => empty($customerdata['type']) ? 0 : 1,
             'ten'            => $customerdata['ten'],
@@ -2032,7 +2043,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
 
         // UPDATE CUSTOMER FIELDS
         $res = $this->db->Execute(
-            'UPDATE customers SET extid=?, status=?, type=?,
+            'UPDATE customers SET status=?, type=?,
             ten=?, ssn=?, moddate=?NOW?, modid=?,
             info=?, notes=?, lastname=' . ($capitalize_customer_names ? 'UPPER(?)' : '?') . ', name=?,
             deleted=0, message=?, documentmemo=?, pin=?, pinlastchange = ?, regon=?, ict=?, icn=?, icexpires = ?, rbename=?, rbe=?,
@@ -2054,6 +2065,19 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                 array_keys($this->compactCustomerConsents($this->getCustomerConsents($customerdata['id']))),
                 array_keys($this->compactCustomerConsents($customerdata['consents']))
             );
+
+            if (empty($customerdata['extids'])) {
+                $customerdata['extids'] = array();
+            } else {
+                $customerdata['extids'] = array_filter($customerdata['extids'], function ($customerextid) {
+                    return strlen($customerextid['extid']) > 0;
+                });
+            }
+            $this->updateCustomerExternalIDs(
+                $customerdata['id'],
+                $customerdata['extids']
+            );
+
         }
 
         return $res;
@@ -3363,5 +3387,121 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             WHERE c.id = ?',
             array($customerid)
         );
+    }
+
+    public function getCustomerExternalIDs($customerid, $serviceproviderid = null)
+    {
+        $result = $this->db->GetAllByKey(
+            'SELECT ce.extid,
+                COALESCE(ce.serviceproviderid, 0) AS serviceproviderid,
+                sp.name AS serviceprovidername
+            FROM customerextids ce
+            LEFT JOIN serviceproviders sp ON sp.id = ce.serviceproviderid
+            WHERE ce.customerid = ?'
+                . (empty($serviceproviderid) ? '' : ' AND ce.serviceproviderid = ' . intval($serviceproviderid)),
+            'serviceproviderid',
+            array($customerid)
+        );
+        return empty($result) ? array() : $result;
+    }
+
+    public function updateCustomerExternalIDs($customerid, array $customerextids, $only_passed_service_providers = false)
+    {
+        if ($only_passed_service_providers) {
+            $service_providers = array();
+            foreach ($customerextids as $customerextid) {
+                $serviceproviderid = $customerextid['serviceproviderid'];
+                $service_providers[$serviceproviderid] = $serviceproviderid;
+            }
+        }
+
+        $current_customerextids = $this->getCustomerExternalIDs($customerid);
+
+        if (!empty($service_providers)) {
+            $current_customerextids = array_filter($current_customerextids, function ($customerextid) use ($service_providers) {
+                $serviceprovider = $customerextid['serviceproviderid'];
+                return isset($service_providers[$serviceprovider]);
+            });
+        }
+
+        $modifications = 0;
+
+        foreach ($customerextids as $customerextid) {
+            $serviceproviderid = $customerextid['serviceproviderid'];
+            if (isset($current_customerextids[$serviceproviderid])) {
+                if ($customerextid['extid'] == $current_customerextids[$serviceproviderid]['extid']) {
+                    $modifications++;
+                } else {
+                    if (empty($serviceproviderid)) {
+                        $result = $this->db->Execute(
+                            'UPDATE customerextids SET extid = ? WHERE customerid = ? AND serviceproviderid IS NULL',
+                            array(
+                                $customerextid['extid'],
+                                $customerid,
+                            )
+                        );
+
+                    } else {
+                        $result = $this->db->Execute(
+                            'UPDATE customerextids SET extid = ? WHERE customerid = ? AND serviceproviderid = ?',
+                            array(
+                                $customerextid['extid'],
+                                $customerid,
+                                $serviceproviderid,
+                            )
+                        );
+                    }
+                    if (empty($result)) {
+                        return null;
+                    } else {
+                        $modifications += $result;
+                    }
+                }
+            } else {
+                $result = $this->db->Execute(
+                    'INSERT INTO customerextids (customerid, extid, serviceproviderid)
+                       VALUES (?, ?, ?)',
+                    array(
+                        $customerid,
+                        $customerextid['extid'],
+                        empty($serviceproviderid) ? null : $serviceproviderid,
+                    )
+                );
+                if (empty($result)) {
+                    return null;
+                } else {
+                    $modifications += $result;
+                }
+            }
+        }
+
+        foreach ($current_customerextids as $customerextid) {
+            $serviceproviderid = $customerextid['serviceproviderid'];
+            if (!isset($customerextids[$serviceproviderid])) {
+                if (empty($serviceproviderid)) {
+                    $result = $this->db->Execute(
+                        'DELETE FROM customerextids WHERE customerid = ? AND serviceproviderid IS NULL',
+                        array(
+                            $customerid,
+                        )
+                    );
+                } else {
+                    $result = $this->db->Execute(
+                        'DELETE FROM customerextids WHERE customerid = ? AND serviceproviderid = ?',
+                        array(
+                            $customerid,
+                            $serviceproviderid,
+                        )
+                    );
+                }
+                if (empty($result)) {
+                    return null;
+                } else {
+                    $modifications += $result;
+                }
+            }
+        }
+
+        return $modifications;
     }
 }

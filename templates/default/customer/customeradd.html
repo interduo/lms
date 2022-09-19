@@ -124,9 +124,10 @@
 					<tr>
 						<td>
 							<div class="valign-middle">
+								<input type="hidden" name="customeradd[extids][0][serviceproviderid]" value="0">
 								<label>
 									<strong>{trans("External system identifier")}</strong>
-									<input type="text" size="20" maxlength="20" name="customeradd[extid]" value="{$customeradd.extid|escape}"
+									<input type="text" size="20" maxlength="20" name="customeradd[extids][0][extid]" value="{$customeradd.extids[0].extid|escape}"
 										{tip trigger="extid"}>
 								</label>
 								{hint content="Enter customer identifier in external system (optional)"}
