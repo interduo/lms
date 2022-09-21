@@ -744,7 +744,6 @@ abstract class LMSDB_common implements LMSDBInterface
                 if (!empty($upgradelist)) {
                     foreach ($upgradelist as $upgrade) {
                         $upgradeversion = preg_replace('/^' . $filename_prefix . '\.([0-9]{10})\.php$/', '\1', $upgrade);
-
                         if ($upgradeversion > $dbversion && $upgradeversion <= $dbver) {
                             $pendingupgrades[] = $upgradeversion;
                         }
@@ -754,16 +753,26 @@ abstract class LMSDB_common implements LMSDBInterface
                 if (!empty($pendingupgrades)) {
                     sort($pendingupgrades);
                     foreach ($pendingupgrades as $upgrade) {
-                        include($libdir . DIRECTORY_SEPARATOR . 'upgradedb' . DIRECTORY_SEPARATOR . $filename_prefix . '.' . $upgrade . '.php');
-                        if (empty($this->errors)) {
-                            $lastupgrade = $upgrade;
-                        } else {
+                        $fname = $libdir . DIRECTORY_SEPARATOR . 'upgradedb'
+                            . DIRECTORY_SEPARATOR . $filename_prefix . '.' . $upgrade . '.php';
+                        $this->BeginTrans();
+                        include($fname);
+                        $this->CommitTrans();
+                        if ($this->errors) {
+                            print 'Error in DB schema upgrade: ' . $fname . PHP_EOL;
                             break;
+                        } else {
+                            $this->Execute(
+                                'UPDATE dbinfo SET keyvalue = ? WHERE keytype = ?',
+                                array($upgrade, 'dbversion')
+                            );
+                            print 'Timestamp: ' . time() . ', DB version is now: '
+                                . $upgrade . PHP_EOL;
+                            $lastupgrade = $upgrade;
                         }
                     }
+                    setlocale(LC_NUMERIC, $old_locale);
                 }
-
-                setlocale(LC_NUMERIC, $old_locale);
             }
         } else {
             // save current errors
