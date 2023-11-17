@@ -136,6 +136,7 @@ class LMSUserManager extends LMSManager implements LMSUserManagerInterface
             FROM vusers
             WHERE deleted = 0'
             . (isset($withDeleted) ? ' OR deleted = 1' : '' )
+            . (isset($withDisabled) ? ' OR access = 0' : '' )
             . ' ORDER BY rname ASC'
         );
     }

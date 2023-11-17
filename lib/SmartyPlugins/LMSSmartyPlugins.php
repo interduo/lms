@@ -1335,6 +1335,54 @@ class LMSSmartyPlugins
             . '</select>';
     }
 
+    public static function userSelectionFunction(array $params, $template)
+    {
+        static $userlist = array();
+
+	$hide_disabled_users = ConfigHelper::checkConfig('timetable.hide_disabled_users');
+	$hide_deleted_users = ConfigHelper::checkConfig('timetable.hide_deleted_users');
+
+	$LMS = LMS::getInstance();
+
+	$params = array(
+		'withDeleted' => $hide_deleted_users,
+		'withDisabled' => $hide_disabled_users,
+	);
+	$userlist = $LMS->getUserNames($params);
+
+        $elemid = isset($params['elemid']) ? $params['elemid'] : false;
+        $elemname = isset($params['elemname']) ? $params['elemname'] : false;
+        $selected = isset($params['selected']) && !empty($params['selected']) ? $params['selected'] : false;
+        $tip = isset($params['tip']) ? $params['tip'] : trans('— Select users —');
+        $trigger = isset($params['trigger']) ? $params['trigger'] : $elemname;
+        $form = isset($params['form']) ? $params['form'] : null;
+	$multiple = empty($params['multiple']) ? false : true;
+        $data_default_value = empty($params['data-default-value']) ? trans('— ignore —') : $params['data-default-value'];
+        $onChange = empty($params['onchange']) ? 'document.filter.submit();' : $params['onchange'];
+
+        $options = '';
+
+        foreach ($userlist as $item) {
+            $options .= '<option value="' . $item['id'] . '"'
+		. ($selected == $item['id'] ? ' selected' : '')
+		. (empty($item['access']) ? ' data-blend' : '')
+		. (empty($item['deleted']) ? ' data-crossed' : '')
+		. '>' . trans($item['rname']) . '(' . $item['login'] . ')</option>';
+	}
+	$options .= '<option value=""' . (empty($selected) ? ' selected' : '') . ' data-exclusive> ' . trans('— ignore —') . '</option>';
+        $options .= '<option value=""' . (is_array($selected) && in_array('-1', $selected) ? ' selected' : '') . ' data-exclusive> ' . trans('— unassigned —') . '</option>';
+
+        return '<select'
+		. (empty($elemname) ? '' : ' name="' . $elemname . '"')
+		. (empty($id) ? '' : ' id="' . $elemid . '"')
+		. (empty($form) ? '' : ' form="' . $form . '"')
+                . (empty($multiple) ? '' : ' class="lms-ui-multiselect lms-ui-multiselect-filter" multiple')
+                . ' onChange="' . $onChange . '"'
+                . ' ' . self::tipFunction(array('text' => $tip, 'trigger' => $trigger), $template) . '>'
+                . $options
+            . '</select>';
+    }
+
     public static function networkDeviceSelectionFunction(array $params, $template)
     {
         $LMS = LMS::getInstance();
