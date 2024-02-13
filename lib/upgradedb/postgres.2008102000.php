@@ -109,15 +109,15 @@ $this->Execute(
     "INSERT INTO divisions (shortname, inv_header, inv_footer, inv_author, inv_cplace, name, 
 	address, city, zip, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     array(!empty($shortname) && $shortname != 'finances/shortname' ? $shortname : 'default',
-        !empty($header) ? str_replace("\\n", "\n", $header) : '',
-        !empty($footer) ? str_replace("\\n", "\n", $footer) : '',
-        !empty($default_author) ? $default_author : '',
-        !empty($cplace) ? $cplace : '',
+        empty($header) ? '' : str_replace("\\n", "\n", $header),
+        empty($footer) ? '' : str_replace("\\n", "\n", $footer),
+        empty($default_author) ? '' : $default_author,
+        empty($cplace) ? '' : $cplace,
         !empty($name) && $name != 'finances/name' ? $name : 'default',
         !empty($address) && $address != 'finances/address'  ? $address : '',
         !empty($city) && $city != 'finances/city'  ? $city : '',
         !empty($zip) && $zip != 'finances/zip'  ? $zip : '',
-        !empty($account) ? $account : '',
+        empty($account) ? '' : $account,
     )
 );
 

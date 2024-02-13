@@ -98,8 +98,8 @@ define('CONFIG_FILE', $CONFIG_FILE);
 $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 
 // Check for configuration vars and set default values
-$CONFIG['directories']['sys_dir'] = (!isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir']);
-$CONFIG['directories']['lib_dir'] = (!isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'].'/lib' : $CONFIG['directories']['lib_dir']);
+$CONFIG['directories']['sys_dir'] = (isset($CONFIG['directories']['sys_dir']) ? $CONFIG['directories']['sys_dir'] : getcwd());
+$CONFIG['directories']['lib_dir'] = (isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['lib_dir'] : $CONFIG['directories']['sys_dir'].'/lib');
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
@@ -444,9 +444,9 @@ function parse_file($filename, $contents)
         $comment = trim($comment);
 
         if (!empty($pattern['use_line_hash'])) {
-            $hash = md5($theline.(!empty($pattern['line_idx_hash']) ? $ln : ''));
+            $hash = md5($theline.(empty($pattern['line_idx_hash']) ? '' : $ln));
         } else {
-            $hash = md5($time.$value.$customer.$comment.(!empty($pattern['line_idx_hash']) ? $ln : ''));
+            $hash = md5($time.$value.$customer.$comment.(empty($pattern['line_idx_hash']) ? '' : $ln));
         }
 
         if (is_numeric($value)) {

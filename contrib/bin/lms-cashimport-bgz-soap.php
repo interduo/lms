@@ -47,10 +47,10 @@ define('CONFIG_FILE', $CONFIG_FILE);
 $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 
 // Check for configuration vars and set default values
-$CONFIG['directories']['sys_dir'] = (! $CONFIG['directories']['sys_dir'] ? getcwd() : $CONFIG['directories']['sys_dir']);
-$CONFIG['directories']['backup_dir'] = (! $CONFIG['directories']['backup_dir'] ? $CONFIG['directories']['sys_dir'].'/backups' : $CONFIG['directories']['backup_dir']);
-$CONFIG['directories']['lib_dir'] = (! $CONFIG['directories']['lib_dir'] ? $CONFIG['directories']['sys_dir'].'/lib' : $CONFIG['directories']['lib_dir']);
-$CONFIG['directories']['modules_dir'] = (! $CONFIG['directories']['modules_dir'] ? $CONFIG['directories']['sys_dir'].'/modules' : $CONFIG['directories']['modules_dir']);
+$CONFIG['directories']['sys_dir'] = ($CONFIG['directories']['sys_dir'] ? $CONFIG['directories']['sys_dir'] : getcwd());
+$CONFIG['directories']['backup_dir'] = ($CONFIG['directories']['backup_dir'] ? $CONFIG['directories']['backup_dir'] : $CONFIG['directories']['sys_dir'].'/backups');
+$CONFIG['directories']['lib_dir'] = ($CONFIG['directories']['lib_dir'] ? $CONFIG['directories']['lib_dir'] : $CONFIG['directories']['sys_dir'].'/lib');
+$CONFIG['directories']['modules_dir'] = ($CONFIG['directories']['modules_dir'] ? $CONFIG['directories']['modules_dir'] : $CONFIG['directories']['sys_dir'].'/modules');
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);

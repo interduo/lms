@@ -544,9 +544,9 @@ $nodeid = isset($_GET['nodeid']) ? $_GET['nodeid'] : 0;
 $bar = isset($_GET['bar']) ? $_GET['bar'] : null;
 $from = isset($_GET['from']) ? $_GET['from'] : null;
 $to = isset($_GET['to']) ? $_GET['to'] : null;
-$customer = !empty($_GET['customer']) ? $_GET['customer'] : null;
-$net = !empty($_GET['net']) ? $_GET['net'] : null;
-$add = !empty($_GET['add']) ? $_GET['add'] : null;
+$customer = empty($_GET['customer']) ? null : $_GET['customer'];
+$net = empty($_GET['net']) ? null : $_GET['net'];
+$add = empty($_GET['add']) ? null : $_GET['add'];
 
 if (empty($_GET['popup'])) {
     header('Content-type: image/png');

@@ -347,7 +347,7 @@ if (isset($_POST['document'])) {
                     $gencust['city'] ? $gencust['city'] : '',
                     $gencust['ten'] ? $gencust['ten'] : '',
                     $gencust['ssn'] ? $gencust['ssn'] : '',
-                    !empty($document['closed']) ? 1 : 0,
+                    empty($document['closed']) ? 0 : 1,
                     ($division['name'] ? $division['name'] : ''),
                     ($division['shortname'] ? $division['shortname'] : ''),
                     ($division['address'] ? $division['address'] : ''),

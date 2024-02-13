@@ -445,9 +445,9 @@ class SYSLOG
             'SELECT DISTINCT lt.id, lt.time, lt.userid, u.login, lt.module FROM logtransactions lt
             JOIN logmessages lm ON lm.transactionid = lt.id
             LEFT JOIN users u ON u.id = lt.userid ' . implode(' ', $joins)
-            . (!empty($where) ? ' WHERE ' . implode(' AND ', $where) : '')
+            . (empty($where) ? '' : ' WHERE ' . implode(' AND ', $where))
             . ' ORDER BY lt.id ' . $order
-            . ' LIMIT ' . $limit . (!empty($offset) ? ' OFFSET ' . $offset : ''),
+            . ' LIMIT ' . $limit . (empty($offset) ? '' : ' OFFSET ' . $offset),
             $args
         );
 
@@ -538,7 +538,7 @@ class SYSLOG
             case 'time':
             case 'sdate':
             case 'cdate':
-                $data['value'] = !empty($data['value']) ? $data['value'] = date('Y.m.d', $data['value']) : $data['value'];
+                $data['value'] = empty($data['value']) ? $data['value'] : ($data['value'] = date('Y.m.d', $data['value']));
                 break;
             case 'at':
                 $data['value'] = strlen($data['value']) > 6 ? date('Y.m.d', $data['value']) : $data['value'];
@@ -577,7 +577,7 @@ class SYSLOG
                 $data['value'] = $LINKTYPES[$data['value']];
                 break;
             case 'linkspeed':
-                $data['value'] = !empty($data['value']) ? $LINKSPEEDS[$data['value']] : '';
+                $data['value'] = empty($data['value']) ? '' : $LINKSPEEDS[$data['value']];
                 break;
             case 'port':
                 $data['value'] = $data['value'] == 0 ? trans('none') : $data['value'];
@@ -592,7 +592,7 @@ class SYSLOG
                 break;
             default:
                 if (isset($data['name']) && strpos($data['name'], 'chkconsent') === 0) {
-                    $data['value'] = !empty($data['value']) ? $data['value'] = date('Y.m.d', $data['value']) : $data['value'];
+                    $data['value'] = empty($data['value']) ? $data['value'] : ($data['value'] = date('Y.m.d', $data['value']));
                 }
         }
         if (isset($data['value'])) {

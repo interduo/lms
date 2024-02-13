@@ -48,7 +48,7 @@ if (isset($_GET['division'])) {
     $selectedDivision = $divisionContext;
 }
 
-$userslist = (!empty($superuser) ? $LMS->GetUserList(array('divisions' => $selectedDivision, 'superuser' => 1)) : $LMS->GetUserList(array('divisions' => $selectedDivision)));
+$userslist = (empty($superuser) ? $LMS->GetUserList(array('divisions' => $selectedDivision)) : $LMS->GetUserList(array('divisions' => $selectedDivision, 'superuser' => 1)));
 unset($userslist['total']);
 
 $SESSION->save('uldiv', $selectedDivision);

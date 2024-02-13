@@ -172,7 +172,7 @@ if ($locations) {
             continue;
         }
 
-        $tmp = strtolower(((!empty($loc['city'])) ? $loc['city'] : '') . "|$city|" . ((!empty($loc['street'])) ? $loc['street'] : $v['location']) . "|$street|$house|$flat");
+        $tmp = strtolower(((empty($loc['city'])) ? '' : $loc['city']) . "|$city|" . ((empty($loc['street'])) ? $v['location'] : $loc['street']) . "|$street|$house|$flat");
 
         if ($v['ownerid'] != 0 && isset($ADDRESSES[$v['ownerid']][$tmp])) {
             $addr_id = $ADDRESSES[$v['ownerid']][$tmp];
@@ -281,7 +281,7 @@ if ($locations) {
         $flat   = ($v['location_flat'])   ? $v['location_flat']  : null;
         $loc    = parse_address($v['location']);
 
-        $tmp = strtolower(((!empty($loc['city'])) ? $loc['city'] : '') . "|$city|" . ((!empty($loc['street'])) ? $loc['street'] : $v['location']) . "|$street|$house|$flat");
+        $tmp = strtolower(((empty($loc['city'])) ? '' : $loc['city']) . "|$city|" . ((empty($loc['street'])) ? $v['location'] : $loc['street']) . "|$street|$house|$flat");
 
         if ($v['ownerid'] != 0 && isset($ADDRESSES[$v['ownerid']][$tmp])) {
             $addr_id = $ADDRESSES[$v['ownerid']][$tmp];
@@ -340,9 +340,9 @@ if ($locations) {
         $countryid = ($v['countryid']) ? $v['countryid']    : null;
 
         $loc    = parse_address($v['address'], false);
-        $street = (!empty($loc['street'])) ? $loc['street'] : $v['address'];
-        $house  = (!empty($loc['house']))  ? $loc['house']  : $v['house'];
-        $flat   = (!empty($loc['flat']))   ? $loc['flat']   : null;
+        $street = (empty($loc['street'])) ? $v['address'] : $loc['street'];
+        $house  = (empty($loc['house']))  ? $v['house']  : $loc['house'];
+        $flat   = (empty($loc['flat']))   ? null   : $loc['flat'];
 
         if (isset($loc['zip'])) {
             $args = array(
@@ -387,7 +387,7 @@ if ($locations) {
         $flat   = ($v['location_flat'])   ? $v['location_flat']  : null;
         $loc    = parse_address($v['location']);
 
-        $tmp = strtolower(((!empty($loc['city'])) ? $loc['city'] : '') . "|$city|" . ((!empty($loc['street'])) ? $loc['street'] : $v['location']) . "|$street|$house|$flat");
+        $tmp = strtolower(((empty($loc['city'])) ? '' : $loc['city']) . "|$city|" . ((empty($loc['street'])) ? $v['location'] : $loc['street']) . "|$street|$house|$flat");
 
         if ($v['ownerid'] != 0 && isset($ADDRESSES[$v['ownerid']][$tmp])) {
             $addr_id = $ADDRESSES[$v['ownerid']][$tmp];

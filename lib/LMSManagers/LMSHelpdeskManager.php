@@ -700,7 +700,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				FROM rtqueues q
 				' . ((ConfigHelper::checkPrivilege('full_access') && $only_accessible)
                     || !ConfigHelper::checkPrivilege('full_access') ? ' JOIN rtrights r ON r.queueid = q.id' : '')
-                . ' WHERE ' . (!$deleted ? 'q.deleted = 0' : (ConfigHelper::checkPrivilege('helpdesk_advanced_operations') ? '1=1' : 'q.deleted = 0'))
+                . ' WHERE ' . ($deleted ? (ConfigHelper::checkPrivilege('helpdesk_advanced_operations') ? '1=1' : 'q.deleted = 0') : ('q.deleted = 0'))
                 . ((ConfigHelper::checkPrivilege('full_access') && $only_accessible)
                     || !ConfigHelper::checkPrivilege('full_access') ? ' AND r.rights <> 0 AND r.userid = ' . $userid : '')
                 . ' ORDER BY name')) {
@@ -1282,7 +1282,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             t.address_id, va.location, t.nodeid, n.name AS node_name, n.location AS node_location,
             t.netnodeid, nn.name AS netnode_name, t.netdevid, nd.name AS netdev_name, va.city_id, va.street_id, va.house,
             t.verifierid, e.name AS verifier_username, t.deadline, openeventcount, t.type, t.service, t.parentid' .
-            (!empty($userid) ? ', (CASE WHEN t.id = w.ticketid AND w.userid = ' . $userid . ' THEN 1 ELSE 0 END) as watching ' : '') . '
+            (empty($userid) ? '' : ', (CASE WHEN t.id = w.ticketid AND w.userid = ' . $userid . ' THEN 1 ELSE 0 END) as watching ') . '
             FROM rttickets t
             LEFT JOIN rtqueues ON (t.queueid = rtqueues.id)
             LEFT JOIN vusers o ON (t.owner = o.id)
@@ -2149,7 +2149,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 			WHERE users.id=userid AND queueid = ? AND email != \'\'
 				AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1'
                 . (!isset($args['user']) || $notify_author ? '' : ' AND users.id <> ?')
-                . (!empty($params['verifierid']) ? ' AND users.id <> ' . intval($params['verifierid']) : '')
+                . (empty($params['verifierid']) ? '' : ' AND users.id <> ' . intval($params['verifierid']))
                 . ' AND (ntype & ?) > 0',
                 array_values($args)
             );
@@ -2218,7 +2218,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				WHERE users.id=userid AND queueid = ? AND phone != \'\'
 					AND (rtrights.rights & ' . RT_RIGHT_NOTICE . ') > 0 AND deleted = 0 AND access = 1'
                     . (!isset($args['user']) || $notify_author ? '' : ' AND users.id <> ?')
-                    . (!empty($params['verifierid']) ? ' AND users.id <> ' . intval($params['verifierid']) : '')
+                    . (empty($params['verifierid']) ? '' : ' AND users.id <> ' . intval($params['verifierid']))
                     . ' AND (ntype & ?) > 0',
                 array_values($args)
             ))) {

@@ -207,7 +207,7 @@ if (isset($_GET['ajax']) && (isset($_POST['what']) || isset($_GET['what']))) {
             $result[] = array(
                 'type' => 'district',
                 'data' => $list ? $list : array(),
-                'selected' => !$what ? $districtid : 0,
+                'selected' => $what ? 0 : $districtid,
             );
         }
 
@@ -216,7 +216,7 @@ if (isset($_GET['ajax']) && (isset($_POST['what']) || isset($_GET['what']))) {
             $result[] = array(
                 'type' => 'city',
                 'data' => $list ? $list : array(),
-                'selected' => !$what ? $cityid : 0,
+                'selected' => $what ? 0 : $cityid,
             );
         }
 
@@ -323,7 +323,7 @@ if (!empty($data['cityid'])) {
 
 $data['varname']   = isset($_GET['name']) ? $_GET['name'] : null;
 $data['formname']  = isset($_GET['form']) ? $_GET['form'] : null;
-$data['boxid']     = ( !empty($_GET['boxid'])) ? $_GET['boxid'] : null;
+$data['boxid']     = ( empty($_GET['boxid'])) ? null : $_GET['boxid'];
 $data['countries'] = $DB->GetAll('SELECT id, name FROM countries');
 
 $SMARTY->assign('data', $data);

@@ -38,12 +38,12 @@ define('CONFIG_FILE', $CONFIG_FILE);
 $CONFIG = (array) parse_ini_file($CONFIG_FILE, true);
 
 // Check for configuration vars and set default values
-$CONFIG['directories']['sys_dir'] = !isset($CONFIG['directories']['sys_dir']) ? getcwd() : $CONFIG['directories']['sys_dir'];
-$CONFIG['directories']['backup_dir'] = !isset($CONFIG['directories']['backup_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'backups' : $CONFIG['directories']['backup_dir'];
-$CONFIG['directories']['lib_dir'] = !isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib' : $CONFIG['directories']['lib_dir'];
-$CONFIG['directories']['modules_dir'] = !isset($CONFIG['directories']['modules_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'modules' : $CONFIG['directories']['modules_dir'];
-$CONFIG['directories']['smarty_compile_dir'] = !isset($CONFIG['directories']['smarty_compile_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates_c' : $CONFIG['directories']['smarty_compile_dir'];
-$CONFIG['directories']['smarty_templates_dir'] = !isset($CONFIG['directories']['smarty_templates_dir']) ? $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates' : $CONFIG['directories']['smarty_templates_dir'];
+$CONFIG['directories']['sys_dir'] = isset($CONFIG['directories']['sys_dir']) ? $CONFIG['directories']['sys_dir'] : getcwd();
+$CONFIG['directories']['backup_dir'] = isset($CONFIG['directories']['backup_dir']) ? $CONFIG['directories']['backup_dir'] : $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'backups';
+$CONFIG['directories']['lib_dir'] = isset($CONFIG['directories']['lib_dir']) ? $CONFIG['directories']['lib_dir'] : $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'lib';
+$CONFIG['directories']['modules_dir'] = isset($CONFIG['directories']['modules_dir']) ? $CONFIG['directories']['modules_dir'] : $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'modules';
+$CONFIG['directories']['smarty_compile_dir'] = isset($CONFIG['directories']['smarty_compile_dir']) ? $CONFIG['directories']['smarty_compile_dir'] : $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates_c';
+$CONFIG['directories']['smarty_templates_dir'] = isset($CONFIG['directories']['smarty_templates_dir']) ? $CONFIG['directories']['smarty_templates_dir'] : $CONFIG['directories']['sys_dir'] . DIRECTORY_SEPARATOR . 'templates';
 
 define('SYS_DIR', $CONFIG['directories']['sys_dir']);
 define('LIB_DIR', $CONFIG['directories']['lib_dir']);
