@@ -113,7 +113,7 @@ if ($_FORCE_SSL && $_SERVER['HTTPS'] != 'on') {
 
 // EXPERIMENTAL CODE! USE WITH CAUTION ;-)
 
-$_LMSDIR = dirname(__FILE__);
+$_LMSDIR = __DIR__;
 
 $ExecStack = new ExecStack((isset($_GET['m']) ? $_GET['m'] : null), (isset($_GET['a']) ? $_GET['a'] : null), $_LMSDIR . '/modules/');
 

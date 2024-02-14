@@ -266,7 +266,7 @@ final class xajax
     public function __wakeup()
     {
 
-        $sLocalFolder = dirname(__FILE__);
+        $sLocalFolder = __DIR__;
         
 //SkipAIO
         require $sLocalFolder . '/xajaxPluginManager.inc.php';
@@ -760,7 +760,7 @@ final class xajax
         if ($sJsFullFilename) {
             $realJsFile = $sJsFullFilename;
         } else {
-            $realPath = realpath(dirname(dirname(__FILE__)));
+            $realPath = realpath(dirname(__DIR__));
             $realJsFile = $realPath . '/'. $sJsFile;
         }
 
@@ -776,7 +776,7 @@ final class xajax
                 );
             }
             
-            require_once(dirname(__FILE__) . '/xajaxCompress.inc.php');
+            require_once(__DIR__ . '/xajaxCompress.inc.php');
             $javaScript = implode('', file($srcFile));
             $compressedScript = xajaxCompressFile($javaScript);
             $fH = @fopen($realJsFile, 'w');
@@ -797,10 +797,10 @@ final class xajax
     private function _compressSelf($sFolder = null)
     {
         if (null == $sFolder) {
-            $sFolder = dirname(dirname(__FILE__));
+            $sFolder = dirname(__DIR__);
         }
             
-        require_once(dirname(__FILE__) . '/xajaxCompress.inc.php');
+        require_once(__DIR__ . '/xajaxCompress.inc.php');
 
         if ($handle = opendir($sFolder)) {
             while (!(false === ($sName = readdir($handle)))) {
@@ -852,10 +852,10 @@ final class xajax
     public function _compile($sFolder = null, $bWriteFile = true)
     {
         if (null == $sFolder) {
-            $sFolder = dirname(__FILE__);
+            $sFolder = __DIR__;
         }
             
-        require_once(dirname(__FILE__) . '/xajaxCompress.inc.php');
+        require_once(__DIR__ . '/xajaxCompress.inc.php');
         
         $aOutput = array();
 
