@@ -29,7 +29,7 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
 
     public function GetNetNodeList($search, $order)
     {
-        $order = isset($order) ? $order : 'name,asc';
+        $order = $order ?? 'name,asc';
 
         list ($order, $dir) = sscanf($order, '%[^,],%s');
         ($dir == 'desc') ? $dir = 'desc' : $dir = 'asc';
@@ -202,7 +202,7 @@ class LMSNetNodeManager extends LMSManager implements LMSNetNodeManagerInterface
                     . $netnode['location_borough_ident'] . $netnode['location_borough_type'];
                 $netnode['simc'] = empty($netnode['location_city_ident']) ? null : $netnode['location_city_ident'];
                 $netnode['ulic'] = empty($netnode['location_street_ident']) ? null : $netnode['location_street_ident'];
-                $netnode['filecontainers'] = isset($filecontainers[$netnode['id']]) ? $filecontainers[$netnode['id']] : array();
+                $netnode['filecontainers'] = $filecontainers[$netnode['id']] ?? array();
             }
             unset($netnode);
         }
