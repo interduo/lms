@@ -57,7 +57,9 @@ if (!empty($docids)) {
             DOCRIGHT_VIEW,
         )
     )) {
-        $document_type = strtolower(ConfigHelper::getConfig('documents.type', ConfigHelper::getConfig('phpui.document_type', '', true)));
+        $document_type = $_GET['type'] ?
+            ($_GET['type'] == 'pdf' ? 'pdf' : 'html') :
+            strtolower(ConfigHelper::getConfig('documents.type', ConfigHelper::getConfig('phpui.document_type', '', true)));
         $margins = explode(',', ConfigHelper::getConfig('documents.margins', ConfigHelper::getConfig('phpui.document_margins', '10,5,15,5')));
 
         $attachments = isset($_GET['attachments']) || isset($_POST['attachments']);
