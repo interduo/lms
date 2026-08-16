@@ -1,0 +1,37 @@
+name: Find missing translations
+
+on:
+  push:
+    branches:
+      - ci/find-missing-translations
+  workflow_dispatch: {}
+
+jobs:
+  find-missing-translations:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Make script executable
+        run: |
+          ls -la
+          php -v
+
+      - name: Run missing translations script
+        run: |
+          php tools/find-missing-translations.php > missing.txt 2> summary.txt || true
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: missing-translations
+          path: |
+            missing.txt
+            summary.txt
