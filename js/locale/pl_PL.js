@@ -4991,6 +4991,8 @@ $_LANG['Set ticket priority'] = 'Wybierz priorytet zgłoszenia';
 
 $_LANG['Reset ticket priority'] = 'Usuń priorytet zgłoszenia';
 
+$_LANG['Increase ticket priority'] = 'Zwiększ priorytet zgłoszenia';
+
 $_LANG['Availability:'] = 'Dostępność:';
 $_LANG['Availability'] = 'Dostępność';
 
