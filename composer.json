@@ -10,7 +10,29 @@
                 "PKSA-wws7-mr54-jsny"
             ],
             "block-insecure": false
-        }
+        },
+        "platform": {
+            "php": "8.2.33",
+            "ext-mbstring": "8.2.33",
+            "ext-xml": "8.2.33",
+            "ext-sockets": "8.2.33",
+            "ext-json": "8.2.33",
+            "ext-fileinfo": "8.2.33",
+            "ext-bcmath": "8.2.33",
+            "ext-soap": "8.2.33",
+            "ext-openssl": "8.2.33",
+            "ext-zip": "8.2.33",
+            "ext-iconv": "8.2.33",
+            "ext-gd": "8.2.33",
+            "ext-gmp": "8.2.33",
+            "ext-curl": "8.2.33",
+            "ext-intl": "8.2.33",
+            "ext-ctype": "8.2.33",
+            "ext-posix": "8.2.33",
+            "ext-calendar": "8.2.33",
+            "ext-simplexml": "8.2.33"
+	}
+
     },
     "name": "lmsgit/lms",
     "description": "Lan Management System (LMS)",
@@ -107,25 +129,7 @@
         }
     ],
     "require": {
-        "php" : ">=8.1",
-        "ext-mbstring": "*",
-        "ext-xml": "*",
-        "ext-sockets": "*",
-        "ext-json": "*",
-        "ext-fileinfo": "*",
-        "ext-bcmath": "*",
-        "ext-soap": "*",
-        "ext-openssl": "*",
-        "ext-zip": "*",
-        "ext-iconv": "*",
-        "ext-gd": "*",
-        "ext-gmp": "*",
-        "ext-curl": "*",
-        "ext-intl": "*",
-        "ext-ctype": "*",
-        "ext-posix": "*",
-        "ext-calendar": "*",
-        "ext-simplexml": "*",
+        "php" : ">=8.2",
         "phine/observer": "^2",
         "phine/exception": "^1",
         "phpmailer/phpmailer": "^6",
