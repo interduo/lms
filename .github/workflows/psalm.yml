@@ -5,6 +5,9 @@
 
 name: Psalm Security Scan
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [ "master" ]
@@ -12,7 +15,7 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ "master" ]
   schedule:
-    - cron: '35 8 * * *'
+    - cron: '35 8 */2 * *'
 
 permissions:
   contents: read
