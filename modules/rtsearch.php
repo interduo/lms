@@ -256,6 +256,7 @@ function RTSearch($search, $order = 'createtime,desc')
         . (isset($search['offset']) ? ' OFFSET ' . $search['offset'] : ''));
 
     if ($result) {
+/*
         foreach ($result as &$ticket) {
             if (!isset($ticket['custid']) || !$ticket['custid']) {
                 [$ticket['requestor'], $ticket['requestor_mail']] = sscanf($ticket['req'], "%[^<]<%[^>]");
@@ -273,6 +274,7 @@ function RTSearch($search, $order = 'createtime,desc')
         }
         unset($ticket);
     }
+*/
 
     $result['order'] = $order;
     $result['direction'] = $direction;
