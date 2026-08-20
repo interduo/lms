@@ -1,15 +1,9 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 name: Psalm Security Scan
 
 on:
   push:
     branches: [ "master" ]
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [ "master" ]
   schedule:
     - cron: '35 8 */2 * *'
@@ -29,11 +23,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Install dependencies
+      - name: Install project dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Install Psalm
+        run: |
+          mkdir -p /tmp/psalm
+          cd /tmp/psalm
+          composer require --no-interaction vimeo/psalm:6.16.1
+
+      - name: Psalm version
+        run: /tmp/psalm/vendor/bin/psalm --version
+
       - name: Psalm Security Scan
-        run: vendor/bin/psalm --output-format=sarif --taint-analysis --report=results.sarif
+        run: /tmp/psalm/vendor/bin/psalm \
+          --output-format=sarif \
+          --taint-analysis \
+          --report=results.sarif
 
       - name: Upload Security Analysis results to GitHub
         uses: github/codeql-action/upload-sarif@v3
