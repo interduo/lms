@@ -175,8 +175,7 @@
     },
     "require-dev": {
         "phpunit/phpunit": "*",
-        "squizlabs/php_codesniffer": "*",
-        "vimeo/psalm": "6.16.1"
+        "squizlabs/php_codesniffer": "*"
     },
     "autoload": {
         "classmap": ["lib/", "plugins/"]
