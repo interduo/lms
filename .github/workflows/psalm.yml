@@ -29,6 +29,7 @@ jobs:
         with:
           php-version: "8.2"
           coverage: none
+          extensions: imagick,mbstring,xml,sockets,json,fileinfo,bcmath,soap,openssl,zip,iconv,gd,gmp,curl,intl,ctype,posix,calendar,simplexml
 
       - name: Install LMS dependencies
         run: composer install --no-interaction --prefer-dist
