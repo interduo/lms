@@ -5720,6 +5720,11 @@ $_LANG['<!qs>document memo'] = 'notatka na dokumentach';
 $_LANG['Document memo:'] = 'Notatka na dokumentach:';
 
 $_LANG['close event'] = 'zamknij zdarzenie';
+$_LANG['Error: cannot close event(s) - no user permissions'] = 'Błąd: nie można zamknąć zdarzeni(a/ń) - brak uprawnień użytkownika';
+$_LANG['Error: cannot close event(s)'] = 'Błąd: nie można zamknąć zdarzeni(a/ń)';
+$_LANG['Error: cannot open event(s) - no user permissions'] = 'Błąd: nie można otworzyć zdarzeni(a/ń) - brak uprawnień użytkownika';
+$_LANG['Error: cannot open event(s)'] = 'Błąd: nie można otworzyć zdarzeni(a/ń)';
+$_LANG['Error: cannot open event - event not closed'] = 'Nie można otworzyć zdarzenia - zdarzenie nie jest zamknięte';
 
 $_LANG['Tax category:'] = 'GTU:';
 $_LANG['Tax category'] = 'GTU';
@@ -5869,7 +5874,7 @@ $_LANG['$a selected contacts of $b customers'] = '$a wybranych kontaktów spośr
 $_LANG['show customer list'] = 'pokaż listę klientów';
 $_LANG['hide customer list'] = 'ukryj listę klientów';
 
-$_LANG['Cannot open event - event closed too long ago.'] = 'Nie można otworzyć zdarzenia - zostało ono zamknięte zbyt dawno.';
+$_LANG['Error: Cannot open event - event closed too long ago.'] = 'Błąd: Nie można otworzyć zdarzenia - zostało ono zamknięte zbyt dawno.';
 
 $_LANG['Text label:'] = 'Etykieta tekstowa:';
 $_LANG['Text label'] = 'Etykieta tekstowa';
