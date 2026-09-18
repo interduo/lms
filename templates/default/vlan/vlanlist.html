@@ -29,7 +29,7 @@
     </thead>
     <tbody>
         {foreach $vlanlist as $v}
-        <tr class="highlight" data-template-id="{$v.id}">
+        <tr class="highlight" data-template-id="{$v.id}" onClick="open_modify_dialog({$v.id})">
             <td data-order="{$v.id}">
                 {$v.id}
             </td>
@@ -45,9 +45,11 @@
             <td data-template-netnodeid="{$v.netnodeid}" {tip text=$v.netnodename}>
                 <a href="?m=netnodeinfo&id={$v.netnodeid}">{$v.netnodename|truncate:20:"&hellip;":true}</a>
             </td>
-            <td class="buttons">
-                {button type="link" icon="edit" tip="Edit" onclick="open_modify_dialog({$v.id})"}
-                {button type="link" icon="delete" href="?m=vlanlist&action=delete&id={$v.id}" tip="Delete" class="delete-vlan"}
+            <td class="lms-ui-buttons" onClick="event.stopPropagation();">
+                {buttons}
+                    {button type="link" icon="edit" tip="Edit" onclick="open_modify_dialog({$v.id})"}
+                    {button type="link" icon="delete" href="?m=vlanlist&action=delete&id={$v.id}" tip="Delete" class="delete-vlan"}
+                {/buttons}
             </td>
         </tr>
         {/foreach}
