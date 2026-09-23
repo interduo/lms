@@ -173,7 +173,7 @@ if (isset($_POST['ticket'])) {
         $ticket['categories'] = array_flip($ticket['categories']);
     }
 
-    if (!$error) {
+    if (!$error && !$warning) {
         $ticket['contenttype'] = isset($ticket['wysiwyg']) && isset($ticket['wysiwyg']['body']) && ConfigHelper::checkValue($ticket['wysiwyg']['body'])
             ? 'text/html' : 'text/plain';
 
@@ -359,7 +359,7 @@ if (isset($_POST['ticket'])) {
                     array_filter(
                         $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_EMAIL),
                         function ($contact) {
-                            return $contact['type'] & CONTACT_HELPDESK_NOTIFICATIONS;
+                            return ($contact['type'] & (CONTACT_HELPDESK_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_HELPDESK_NOTIFICATIONS;
                         }
                     )
                 );
@@ -551,6 +551,7 @@ if (isset($_POST['ticket'])) {
         $SESSION->redirect('?m=rtticketview&id='.$id);
     }
     $SMARTY->assign('error', $error);
+    $SMARTY->assign('warning', $warning);
 
     $queuelist = $LMS->GetQueueList(array('stats' => false));
 
