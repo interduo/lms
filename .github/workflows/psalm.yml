@@ -34,7 +34,7 @@ jobs:
       - name: Install LMS dependencies
         run: composer install --no-interaction --prefer-dist
 
-      - name: Install Psalm 6.16.1
+      - name: Install Psalm
         run: |
           mkdir -p /tmp/psalm
           cd /tmp/psalm
