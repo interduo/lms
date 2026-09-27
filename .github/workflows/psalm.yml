@@ -39,7 +39,7 @@ jobs:
           mkdir -p /tmp/psalm
           cd /tmp/psalm
           composer init --no-interaction
-          composer require --no-interaction vimeo/psalm:6.16.1
+          composer require --dev vimeo/psalm:dev-7.x
 
       - name: Check Psalm version
         run: /tmp/psalm/vendor/bin/psalm --version
