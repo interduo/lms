@@ -286,7 +286,7 @@ $_LANG['show average speed'] = 'pokaż prędkość średnią';
 $_LANG['show maximum speed'] = 'pokaż prędkość maksymalną';
 
 $_LANG['Positions:'] = 'Pozycje:';
-$_LANG['Positions'] = 'Pozycje';
+$_LANG['positions'] = 'pozycje';
 
 $_LANG['link technologies'] = 'technologie łącza';
 $_LANG['service types'] = 'typy usług';
@@ -1761,6 +1761,7 @@ $_LANG['No configuration options in database.<br>Click <A href="$a">here</A> to 
 $_LANG['Click $a to create.'] = 'Kliknij $a, aby utworzyć.';
 $_LANG['here'] = 'tutaj';
 $_LANG['Node ID:'] = 'ID komputera:';
+$_LANG['Node ID'] = 'ID komputera';
 $_LANG['Node Info: $a'] = 'Informacje o komputerze: $a';
 $_LANG['Node IP address'] = 'Adres IP komputera';
 $_LANG['Node IP address is required!'] = 'Adres IP komputera jest wymagany!';
@@ -1930,6 +1931,7 @@ $_LANG['(please note: it HAVE TO start with http://, otherwise, it will be consi
 $_LANG['Poland'] = 'Polska';
 $_LANG['Ports number:'] = 'Liczba portów:';
 $_LANG['Ports (used):'] = 'Porty (zajęte):';
+$_LANG['Ports (used)'] = 'Porty (zajęte)';
 $_LANG['Ports used:'] = 'Porty zajęte:';
 $_LANG['Ports used'] = 'Zajęte porty';
 $_LANG['Postcode:'] = 'Kod pocztowy:';
@@ -3967,6 +3969,7 @@ $_LANG['<!voip-summary>Incoming cost'] = 'Koszt przychodzących';
 $_LANG['UKE income report ($a) for period $b - $c'] = 'Raport przychodów UKE ($a) za okres $b - $c';
 
 $_LANG['Link speed:'] = 'Szybkość łącza:';
+$_LANG['Link speed'] = 'Szybkość łącza';
 $_LANG['Select link speed'] = 'Wybierz szybkość łącza';
 
 $_LANG['phone'] = 'telefon';
