@@ -535,7 +535,7 @@
 										<div class="customer-contact-wrapper">
 											<input type="hidden" name="message[customers][{$customerid}][emails][{$email.id}]" value="0">
 											<input type="checkbox" name="message[customers][{$customerid}][emails][{$email.id}]"
-												value="{$email.contact}" id="customer-contact-{$email.id}" class="customer-contact"
+												value="{$email.contact|escape}" id="customer-contact-{$email.id}" class="customer-contact"
 												{if !empty($email.checked)}checked{/if}>
 											<label for="customer-contact-{$email.id}">
 												{$email.contact|escape}{if $email.name} ({$email.name|escape}){/if}
@@ -587,7 +587,7 @@
 										<div class="customer-contact-wrapper">
 											<input type="hidden" name="message[customers][{$customerid}][phones][{$phone.id}]" value="0">
 											<input type="checkbox" name="message[customers][{$customerid}][phones][{$phone.id}]"
-												value="{$phone.contact}" id="customer-contact-{$phone.id}" class="customer-contact"
+												value="{$phone.contact|escape}" id="customer-contact-{$phone.id}" class="customer-contact"
 												{if !empty($phone.checked)}checked{/if}>
 											<label for="customer-contact-{$phone.id}">
 												{$phone.contact|escape}{if $phone.name} ({$phone.name|escape}){/if}
@@ -913,7 +913,7 @@
 									{button type="link" icon="trash" class="file-delete" style="{if $deleted} display: none;{/if}"}
 									{button type="link" icon="restore" class="file-restore" visible="false" style="{if !$deleted} display: none;{/if}"}
 									{capture assign="filename"}
-										{$file.filename|escape} ({$file.sizestr})
+										{$file.filename} ({$file.sizestr})
 									{/capture}
 									{documentview
 										id="file-{$file.id}"

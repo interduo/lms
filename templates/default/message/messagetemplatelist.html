@@ -97,7 +97,7 @@
 								<li>
 									{documentview id="template-attachment-{$attachment.id}" type=$attachment.contenttype name=$attachment.filename
 										url="?m=messagetemplatelist&action=attachment-view&id={$attachment.id}" external=true
-										text="{$attachment.filename} ({$attachment.size|size_format}) <i class=\"lms-ui-icon-view{if preg_match('/pdf/',$attachment.contenttype)} pdf{elseif preg_match('/csv|excel|spreadsheet/',$attachment.contenttype)} xls{/if}\"></i>"}
+										text="{$attachment.filename|escape} ({$attachment.size|size_format}) <i class=\"lms-ui-icon-view{if preg_match('/pdf/',$attachment.contenttype)} pdf{elseif preg_match('/csv|excel|spreadsheet/',$attachment.contenttype)} xls{/if}\"></i>"}
 								</li>
 							{/foreach}
 						</ul>

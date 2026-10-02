@@ -80,6 +80,8 @@ function smarty_function_documentview($params, $template)
             return $result;
         }
     }
+    $nameHtml = htmlspecialchars((string)$name, ENT_QUOTES);
+    $typeHtml = htmlspecialchars((string)$type, ENT_QUOTES);
     $external = isset($params['external']) && $params['external'] == 'true';
     $doctype = empty($params['doctype']) ? 0 : intval($params['doctype']);
 
@@ -95,10 +97,10 @@ function smarty_function_documentview($params, $template)
 
     $result .= '<span class="documentview">';
 
-    $result .= '<div class="documentviewdialog" id="documentviewdialog-' . $id . '" title="' . $name . '" style="display: none;"'
+    $result .= '<div class="documentviewdialog" id="documentviewdialog-' . $id . '" title="' . $nameHtml . '" style="display: none;"'
         . ' data-url="' . $url . '"></div>';
 
-    $result .= '<a href="' . $url . '" data-title="' . $name . '" data-name="' . $name . '" data-type="' . $type . '"';
+    $result .= '<a href="' . $url . '" data-title="' . $nameHtml . '" data-name="' . $nameHtml . '" data-type="' . $typeHtml . '"';
     if (empty($preview_type)) {
         $result .=  ' class="lms-ui-button"'
             . (!empty($office2pdf_command) && !empty($office_document) ? ' data-office2pdf="0"' : ($external ? ' rel="external"' : ''));
@@ -123,7 +125,7 @@ function smarty_function_documentview($params, $template)
             }
         }
 
-        $text = $name . ' <i class="' . implode(' ', $icon_classes) . '"></i>';
+        $text = $nameHtml . ' <i class="' . implode(' ', $icon_classes) . '"></i>';
     } else {
         $text = $params['text'];
     }

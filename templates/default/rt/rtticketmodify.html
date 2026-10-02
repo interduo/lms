@@ -130,8 +130,8 @@
 								data-alt-field="#requestor_customer_mail"
 								{tip class="lms-ui-combobox" trigger="requestor_mail"}>
 							{foreach $customercontacts.emails as $item}
-								<option value="{$item.contact}"{if $item.contact == $ticket.requestor_customer_mail} selected{/if}
-									>{$item.contact}{if !empty($item.name)} ({$item.name|escape}){/if}</option>
+								<option value="{$item.contact|escape}"{if $item.contact == $ticket.requestor_customer_mail} selected{/if}
+									>{$item.contact|escape}{if !empty($item.name)} ({$item.name|escape}){/if}</option>
 							{/foreach}
 						</select>
 					</div>
@@ -152,8 +152,8 @@
 							data-alt-field="#requestor_customer_phone"
 							{tip class="lms-ui-combobox" trigger="requestor_phone"}>
 							{foreach $customercontacts.phones as $item}
-								<option value="{$item.contact}"{if $item.contact == $ticket.requestor_customer_phone} selected{/if}
-									>{$item.contact}{if !empty($item.name)} ({$item.name|escape}){/if}</option>
+								<option value="{$item.contact|escape}"{if $item.contact == $ticket.requestor_customer_phone} selected{/if}
+									>{$item.contact|escape}{if !empty($item.name)} ({$item.name|escape}){/if}</option>
 							{/foreach}
 						</select>
 					</div>

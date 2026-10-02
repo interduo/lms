@@ -1977,7 +1977,7 @@ class LMSSmartyPlugins
                     array(
                         'name' => 'copy',
                         'class' => 'lms-ui-button-clipboard',
-                        'data_clipboard_text' => $text,
+                        'data_clipboard_text' => htmlspecialchars((string)$text, ENT_QUOTES),
                     ),
                     $template
                 );

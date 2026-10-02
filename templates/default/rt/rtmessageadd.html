@@ -140,7 +140,7 @@
 						<input type="checkbox" name="message[contacts][mails][{$contact.contact|escape}]" value="{$contact.contact|escape}"
 							class="mail-contact"
 							{if $contact.checked} checked{/if}>
-						{$contact.contact}{if $contact.name} ({$contact.name}){/if}
+						{$contact.contact|escape}{if $contact.name} ({$contact.name|escape}){/if}
 						<input type="hidden" name="message[contacts][mailsources][{$contact.contact|escape}]" value="{$contact.source}">
 						<input type="hidden" name="message[contacts][mailnames][{$contact.contact|escape}]" value="{$contact.name|escape}">
 						<input type="hidden" name="message[contacts][maildisplays][{$contact.contact|escape}]" value="{$contact.display|escape}">
@@ -160,10 +160,10 @@
 			{box_row id="smsnotify-contacts" visible=!empty($message.smsnotify)}
 				{foreach $contacts.phones as $contact}
 					<label>
-						<input type="checkbox" name="message[contacts][phones][{$contact.contact}]" value="{$contact.contact}"
+						<input type="checkbox" name="message[contacts][phones][{$contact.contact|escape}]" value="{$contact.contact|escape}"
 							class="sms-contact"
 							{if $contact.checked} checked{/if}>
-						{$contact.contact}{if $contact.name} ({$contact.name}){/if}
+						{$contact.contact|escape}{if $contact.name} ({$contact.name|escape}){/if}
 					</label>
 				{/foreach}
 			{/box_row}

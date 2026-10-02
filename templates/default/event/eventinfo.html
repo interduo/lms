@@ -208,7 +208,7 @@
 							<br>
 							{foreach $event.phones as $phone}
 								{icon name="phone"}
-								<a href="tel:{$phone.contact}">{$phone.fullname}</a>
+								<a href="tel:{$phone.contact|escape}">{$phone.fullname}</a>
 								{if !$phone@last}
 									<br>
 								{/if}

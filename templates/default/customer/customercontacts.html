@@ -213,7 +213,7 @@
                                     {/if}
                                     <input type="{$properties.ui.inputtype}"
                                            autocomplete="off"
-                                           value="{$item.contact}"
+                                           value="{$item.contact|escape}"
                                            name="{$formelemprefix}[{$type}s][{$key}][contact]" {tip text=$properties.ui.tip trigger="`$type``$key`"}>
                                 </div>
                                 <div class="contactbox-inner-row-cell-checks">
