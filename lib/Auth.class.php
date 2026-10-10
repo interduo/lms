@@ -95,13 +95,9 @@ class Auth
         //$this->_revision = preg_replace('/^.Revision: ([0-9.]+).*/', '\1', $this->_revision);
         $this->_revision = '';
 
-        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-        } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
-            $ip = $_SERVER['HTTP_CLIENT_IP'];
-        } else {
-            $ip = $_SERVER['REMOTE_ADDR'];
-        }
+        // client-supplied X-Forwarded-For / Client-IP must not drive hosts/trustedhosts (2FA skip);
+        // behind a reverse proxy map the verified client address into REMOTE_ADDR
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
         $this->ip = str_replace('::ffff:', '', $ip);
 
@@ -549,10 +545,8 @@ class Auth
                     $this->access = $this->VerifyAccess($user['access']);
                     $this->accessfrom = $this->VerifyAccessFrom($user['accessfrom']);
                     $this->accessto = $this->VerifyAccessTo($user['accessto']);
-                    if ($this->trustedhost || empty($user['twofactorauth']) || empty($user['twofactorauthsecretkey'])) {
-                        $this->islogged = ($this->passverified && $this->hostverified && $this->access && $this->accessfrom && $this->accessto);
-                    } else {
-                        $this->islogged = ($this->hostverified && $this->access && $this->accessfrom && $this->accessto);
+                    $this->islogged = ($this->passverified && $this->hostverified && $this->access && $this->accessfrom && $this->accessto);
+                    if (!$this->trustedhost && !empty($user['twofactorauth']) && !empty($user['twofactorauthsecretkey'])) {
                         $this->SESSION->save('session_passverified', $this->passverified);
                     }
 
