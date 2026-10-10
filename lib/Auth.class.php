@@ -286,9 +286,10 @@ class Auth
             return true;
         }
 
-        if (empty($this->twofactorauth) || empty($this->twofactorauthsecretkey)) {
-            $this->error = trans('Wrong password or login.');
-        }
+        // A wrong password is a failed login even when 2FA is enabled. The TOTP
+        // step is reached only after the password verifies, so show the same
+        // credentials error the non-2FA path shows.
+        $this->error = trans('Wrong password or login.');
 
         return false;
     }
