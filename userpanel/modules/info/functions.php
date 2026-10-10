@@ -476,7 +476,7 @@ function module_updatepin()
             $error['oldpin'] = trans('Incorrect current PIN!');
         }
     } else {
-        if ($userinfo['pin'] != $userdata['oldpin']) {
+        if ($userinfo['pin'] !== $userdata['oldpin']) {
             $error['oldpin'] = trans('Incorrect current PIN!');
         }
     }
