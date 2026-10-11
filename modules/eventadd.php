@@ -391,31 +391,20 @@ if (isset($_POST['event'])) {
                         $sms_customerinfo = "\n" . trans('Customer:') . ' ' . $requestor;
                     }
 
-                    $params = array(
-                        'id' => $event['ticketid'],
-                        'author' => Auth::GetCurrentUserName(),
-                        'queue' => $queuedata['name'],
-                        'customerid' => $ticket['customerid'],
-                        'status' => $ticketdata['status'],
-                        'categories' => $ticketdata['categorynames'],
-                        'priority' => isset($ticketdata['priority']) && is_numeric($ticketdata['priority']) ? $RT_PRIORITIES[$ticketdata['priority']] : trans('undefined'),
-                        'subject' => $ticket['subject'],
-                        'body' => $ticket['body'],
-                    );
-                    $headers['Subject'] = $LMS->ReplaceNotificationSymbols($notification_mail_subject, $params);
-                    $params['customerinfo'] = $mail_customerinfo ?? null;
-                    $body = $LMS->ReplaceNotificationSymbols($notification_mail_body, $params);
-                    $params['customerinfo'] = $sms_customerinfo ?? null;
-                    $sms_body = $LMS->ReplaceNotificationSymbols($notification_sms_body, $params);
-
-                    $LMS->NotifyUsers(array(
-                        'queue' => $ticket['queue'],
+                    $LMS->TicketNotifyUsers([
+                        'type' => 'event',
                         'ticketid' => $event['ticketid'],
-                        'verifierid' => $ticket['verifierid'],
-                        'mail_headers' => $headers,
-                        'mail_body' => $body,
-                        'sms_body' => $sms_body,
-                    ));
+                        'ticket' => $ticket,
+                        'ticketdata' => $ticketdata,
+                        'queueId' => $ticket['queue'],
+                        'queueName' => $queuedata['name'],
+                        'headers' => $headers,
+                        'mailSubjectTemplate' => $notification_mail_subject,
+                        'mailBodyTemplate' => $notification_mail_body,
+                        'smsBodyTemplate' => $notification_sms_body,
+                        'mailCustomerInfo' => $mail_customerinfo ?? null,
+                        'smsCustomerInfo' => $sms_customerinfo ?? null,
+                    ]);
                 }
                 break;
             case 'none':

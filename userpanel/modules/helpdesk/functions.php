@@ -330,35 +330,21 @@ function module_main()
                     }
                 }
 
-                $params = array(
-                    'id' => $id,
+                $LMS->TicketNotifyUsers([
+                    'type' => 'userpanel-new',
+                    'ticketid' => $id,
                     'customerid' => $SESSION->id,
                     'status' => $ticketdata['status'],
                     'categories' => $ticketdata['categorynames'],
-                    'priority' => isset($ticketdata['priority']) && is_numeric($ticketdata['priority']) ? $RT_PRIORITIES[$ticketdata['priority']] : trans('undefined'),
+                    'priority' => $ticketdata['priority'] ?? null,
                     'subject' => $ticket['subject'],
                     'body' => $ticket['body'],
-                );
-
-                // try to use LMS url from userpanel configuration
-                $lms_url = ConfigHelper::getConfig('userpanel.lms_url', '');
-                if (!empty($lms_url)) {
-                    $params['url'] = $lms_url;
-                }
-
-                $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_subject', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject')), $params);
-                $params['customerinfo'] = $mail_customerinfo ?? null;
-                $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_body', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body')), $params);
-                $params['customerinfo'] = $sms_customerinfo ?? null;
-                $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_sms_body', ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body')), $params);
-
-                $LMS->NotifyUsers(array(
-                    'queue' => $ticket['queue'],
-                    'mail_headers' => $headers,
-                    'mail_body' => $body,
-                    'sms_body' => $sms_body,
+                    'headers' => $headers,
+                    'queueId' => $ticket['queue'],
                     'attachments' => $attachments,
-                ));
+                    'mailCustomerInfo' => $mail_customerinfo ?? null,
+                    'smsCustomerInfo' => $sms_customerinfo ?? null,
+                ]);
             }
 
             header('Location: ?m=helpdesk&op=view&id=' . $id);
@@ -446,117 +432,18 @@ function module_main()
                 )
             );
 
-            $user = $LMS->GetUserInfo(ConfigHelper::getConfig('userpanel.default_userid'));
-
-            if ($mailfname = ConfigHelper::getConfig('rt.sender_name', ConfigHelper::getConfig('phpui.helpdesk_sender_name'))) {
-                if ($mailfname == 'queue') {
-                    $mailfname = $ticket['queue']['name'];
-                }
-                if ($mailfname == 'user') {
-                    $mailfname = $user['name'];
-                }
-                $mailfname = '"' . $mailfname . '"';
-            }
-
-            $ticket['email'] = $LMS->GetCustomerEmail($SESSION->id);
-            $ticket['mailfrom'] = $ticket['email'] ?: '';
-
-            $mailfrom = $LMS->DetermineSenderEmail($user['email'], $ticket['queue']['email'], $ticket['mailfrom']);
-
-            $ticketdata = $LMS->GetTicketContents($ticket['id']);
-
-            $headers['Date'] = date('r');
-            $headers['From'] = $mailfname . ' <' . $mailfrom . '>';
-            $headers['Reply-To'] = $headers['From'];
-            if ($ticket['references']) {
-                $headers['References'] = $ticket['references'];
-                $headers['In-Reply-To'] = array_pop(explode(' ', $ticket['references']));
-            }
-            $headers['Message-ID'] = $ticket['messageid'];
-
-            if (ConfigHelper::checkConfig(
-                'rt.notification_customerinfo',
-                ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')
-            )) {
-                $info = $LMS->GetCustomer($SESSION->id, true);
-
-                $emails = array_map(
-                    function ($contact) {
-                        return $contact['fullname'];
-                    },
-                    array_filter(
-                        $LMS->GetCustomerContacts($SESSION->id, CONTACT_EMAIL),
-                        function ($contact) {
-                            return $contact['type'] & CONTACT_HELPDESK_NOTIFICATIONS;
-                        }
-                    )
-                );
-                $phones = array_map(
-                    function ($contact) {
-                        return $contact['fullname'];
-                    },
-                    array_filter(
-                        $LMS->GetCustomerContacts($SESSION->id, CONTACT_LANDLINE | CONTACT_MOBILE),
-                        function ($contact) {
-                            return $contact['type'] & CONTACT_HELPDESK_NOTIFICATIONS;
-                        }
-                    )
-                );
-
-                $params = array(
-                    'id' => $ticket['id'],
-                    'customerid' => $SESSION->id,
-                    'customer' => $info,
-                    'emails' => $emails,
-                    'phones' => $phones,
-                );
-                $mail_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(
-                    ConfigHelper::getConfig(
-                        'rt.notification_mail_body_customerinfo_format',
-                        ConfigHelper::getConfig('phpui.helpdesk_customerinfo_mail_body')
-                    ),
-                    $params
-                );
-                $sms_customerinfo = $LMS->ReplaceNotificationCustomerSymbols(
-                    ConfigHelper::getConfig(
-                        'rt.notification_sms_body_customerinfo_format',
-                        ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body')
-                    ),
-                    $params
-                );
-            }
-
-            $params = array(
-                'id' => $ticket['id'],
-                'messageid' => $msgid ?? null,
-                'customerid' => $SESSION->id,
-                'status' => $ticketdata['status'],
-                'categories' => $ticketdata['categorynames'],
-                'priority' => isset($ticketdata['priority']) && is_numeric($ticketdata['priority']) ? $RT_PRIORITIES[$ticketdata['priority']] : trans('undefined'),
+            $LMS->TicketNotifyUsers([
+                'type' => 'userpanel-reply',
+                'ticketid' => $ticket['id'],
+                'queue' => $ticket['queue'],
                 'subject' => $ticket['subject'],
                 'body' => $ticket['body'],
-                'attachments' => &$attachments,
-            );
-
-            // try to use LMS url from userpanel configuration
-            $lms_url = ConfigHelper::getConfig('userpanel.lms_url', '');
-            if (!empty($lms_url)) {
-                $params['url'] = $lms_url;
-            }
-
-            $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_subject', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject')), $params);
-            $params['customerinfo'] = $mail_customerinfo ?? null;
-            $body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_body', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body')), $params);
-            $params['customerinfo'] = $sms_customerinfo ?? null;
-            $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_sms_body', ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body')), $params);
-
-            $LMS->NotifyUsers(array(
-                'queue' => $ticket['queue']['id'],
-                'mail_headers' => $headers,
-                'mail_body' => $body,
-                'sms_body' => $sms_body,
-                'attachments' => &$attachments,
-            ));
+                'references' => $ticket['references'] ?? null,
+                'messageHeaderId' => $ticket['messageid'],
+                'messageid' => $msgid ?? null,
+                'customerid' => $SESSION->id,
+                'attachments' => $attachments,
+            ]);
 
             header('Location: ?m=helpdesk&op=view&id='.$ticket['id']);
             die;

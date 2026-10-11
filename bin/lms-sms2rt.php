@@ -465,30 +465,22 @@ foreach ($message_files as $message_file) {
                 $sms_customerinfo = "\n" . trans('Customer:') . ' ' . $requestor;
             }
 
-            $params = array(
-                'id' => $tid,
-                'queue' => $queuedata['name'],
+            $LMS->TicketNotifyUsers([
+                'type' => 'sms',
+                'ticketid' => $tid,
+                'queueId' => $queueid,
+                'queueName' => $queuedata['name'],
+                'headers' => $headers,
                 'messageid' => $msgid ?? null,
                 'customerid' => empty($customer) ? null : $customer['cid'],
                 'status' => $RT_STATES[RT_NEW],
                 'categories' => $cats,
-                'subject' => trans('SMS from $a', (empty($phone) ? trans("unknown") : $formatted_phone)),
+                'subject' => trans('SMS from $a', (empty($phone) ? trans('unknown') : $formatted_phone)),
                 'body' => $message,
                 'url' => $lms_url . '?m=rtticketview&id=',
-            );
-            $headers['Subject'] = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_subject', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject')), $params);
-            $params['customerinfo'] = $mail_customerinfo ?? null;
-            $message = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_mail_body', ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body')), $params);
-            $params['customerinfo'] = $sms_customerinfo ?? null;
-            $sms_body = $LMS->ReplaceNotificationSymbols(ConfigHelper::getConfig('rt.notification_sms_body', ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body')), $params);
-
-            $LMS->NotifyUsers(array(
-                'queue' => $queueid,
-                'ticketid' => $tid,
-                'mail_headers' => $headers,
-                'mail_body' => $message,
-                'sms_body' => $sms_body,
-            ));
+                'mailCustomerInfo' => $mail_customerinfo ?? null,
+                'smsCustomerInfo' => $sms_customerinfo ?? null,
+            ]);
         }
     } else {
         die('Message file \'' . $message_file . '\' doesn\'t exist!' . PHP_EOL);
