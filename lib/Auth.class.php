@@ -629,95 +629,150 @@ class Auth
             $des_key,
             true
         );
-        $iv = hash_hmac(
-            'md5',
-            implode("\3\2\3", array($this->logname, $this->twofactorauthsecretkey)),
-            $des_key,
-            true
-        );
         $name = hash_hmac(
             'md5',
             $this->logname,
             $des_key
         );
 
-        return compact('user_agent', 'key', 'iv', 'name', 'des_key');
+        return compact('user_agent', 'key', 'name', 'des_key');
+    }
+
+    private function trustedDeviceSignature($user_agent, $rand, $expires, $des_key)
+    {
+        return hash_hmac(
+            'sha512',
+            implode("\1\0\1", array($this->logname, $this->twofactorauthsecretkey, $user_agent, $rand, $expires)),
+            $des_key,
+            true
+        );
+    }
+
+    private function trustedDevicePlaintextValid($plain_content, $user_agent, $des_key, $name)
+    {
+        if (!is_string($plain_content) || $plain_content === '') {
+            return false;
+        }
+
+        $parts = explode(':', $plain_content, 3);
+        if (count($parts) !== 3) {
+            return false;
+        }
+        [$expires, $rand, $signature] = $parts;
+        if ($expires === '' || $rand === '' || $signature === '') {
+            return false;
+        }
+
+        $signature_verification = $this->trustedDeviceSignature($user_agent, $rand, $expires, $des_key);
+        if (!hash_equals($signature_verification, $signature)) {
+            return false;
+        }
+
+        $now = time();
+        return $this->DB->GetOne(
+            'SELECT COUNT(*) FROM twofactorauthtrusteddevices
+            WHERE userid = ? AND cookiename = ? AND expires = ?',
+            [$this->id, $name, $expires]
+        ) && $expires > $now && ($expires - $now) <= ConfigHelper::getConfig('phpui.two_factor_auth_trust_device_time', 86400);
+    }
+
+    private function trustedDeviceCookieValid($b64_encrypted_content, array $crypto_params)
+    {
+        if (!is_string($b64_encrypted_content) || $b64_encrypted_content === '' || strlen($b64_encrypted_content) % 4 !== 0) {
+            return false;
+        }
+
+        $encrypted_content = base64_decode(strtr($b64_encrypted_content, '-_,', '+/='), true);
+        // Random IV is the first AES block; anything shorter is not a current cookie.
+        if ($encrypted_content === false || strlen($encrypted_content) <= 16) {
+            return false;
+        }
+
+        $plain_content = openssl_decrypt(
+            substr($encrypted_content, 16),
+            'aes-256-cbc',
+            $crypto_params['key'],
+            OPENSSL_RAW_DATA,
+            substr($encrypted_content, 0, 16)
+        );
+
+        return $this->trustedDevicePlaintextValid(
+            $plain_content,
+            $crypto_params['user_agent'],
+            $crypto_params['des_key'],
+            $crypto_params['name']
+        );
+    }
+
+    private function buildTrustedDeviceCookie(array $crypto_params, $expires)
+    {
+        $rand = bin2hex(random_bytes(16));
+        $token_iv = random_bytes(16);
+        $signature = $this->trustedDeviceSignature(
+            $crypto_params['user_agent'],
+            $rand,
+            $expires,
+            $crypto_params['des_key']
+        );
+        $plain_content = sprintf("%d:%s:%s", $expires, $rand, $signature);
+        $encrypted_content = openssl_encrypt(
+            $plain_content,
+            'aes-256-cbc',
+            $crypto_params['key'],
+            OPENSSL_RAW_DATA,
+            $token_iv
+        );
+        if ($encrypted_content === false) {
+            return false;
+        }
+
+        return strtr(base64_encode($token_iv . $encrypted_content), '+/=', '-_,');
     }
 
     // remember option by https://github.com/corrideat/
     public function addTrustedDevice()
     {
         $crypto_params = $this->getTrustedDeviceParams();
-        extract($crypto_params);
+        $expires = time() + (int) ConfigHelper::getConfig('phpui.two_factor_auth_trust_device_time', 86400);
 
-        $expires = time() + ConfigHelper::getConfig('phpui.two_factor_auth_trust_device_time', 86400);
-        $rand = mt_rand();
-        $signature = hash_hmac(
-            'sha512',
-            implode("\1\0\1", array($this->logname, $this->twofactorauthsecretkey, $user_agent, $rand, $expires)),
-            $des_key,
-            true
-        );
-        $plain_content = sprintf("%d:%d:%s", $expires, $rand, $signature);
-        $encrypted_content = openssl_encrypt($plain_content, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
-        if ($encrypted_content !== false) {
-            $b64_encrypted_content = strtr(base64_encode($encrypted_content), '+/=', '-_,');
-            setcookie($name, $b64_encrypted_content, $expires);
-            $this->DB->Execute(
-                'INSERT INTO twofactorauthtrusteddevices (userid, cookiename, useragent, ipaddr, expires) VALUES (?, ?, ?, INET_ATON(?), ?)',
-                array($this->id, $name, filter_input(INPUT_SERVER, 'HTTP_USER_AGENT'), $this->ip, $expires)
-            );
-            return true;
+        try {
+            $cookie_value = $this->buildTrustedDeviceCookie($crypto_params, $expires);
+        } catch (Exception $e) {
+            // CSPRNG failure: do not issue a token, but do not abort the login.
+            return false;
+        }
+        if ($cookie_value === false) {
+            return false;
         }
 
-        return false;
+        // HttpOnly / Secure / SameSite match the admin SID cookie.
+        setcookie($crypto_params['name'], $cookie_value, [
+            'expires' => $expires,
+            'httponly' => true,
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'samesite' => 'Lax',
+        ]);
+        $this->DB->Execute(
+            'INSERT INTO twofactorauthtrusteddevices (userid, cookiename, useragent, ipaddr, expires) VALUES (?, ?, ?, INET_ATON(?), ?)',
+            [$this->id, $crypto_params['name'], filter_input(INPUT_SERVER, 'HTTP_USER_AGENT'), $this->ip, $expires]
+        );
+        return true;
     }
 
     public function isTrustedDevice()
     {
         $crypto_params = $this->getTrustedDeviceParams();
-        extract($crypto_params);
 
         $this->DB->Execute('DELETE FROM twofactorauthtrusteddevices WHERE expires < ?NOW?');
 
         $b64_encrypted_content = filter_input(
             INPUT_COOKIE,
-            $name,
+            $crypto_params['name'],
             FILTER_VALIDATE_REGEXP,
-            array('options' => array('regexp' => '/[a-zA-Z0-9_-]+,{0,3}/'))
+            ['options' => ['regexp' => '/^[a-zA-Z0-9_-]+,{0,3}$/']]
         );
 
-        if (is_string($b64_encrypted_content) && !empty($b64_encrypted_content) && strlen($b64_encrypted_content) % 4 === 0) {
-            $encrypted_content = base64_decode(strtr($b64_encrypted_content, '-_,', '+/='), true);
-            if ($encrypted_content !== false) {
-                $plain_content = openssl_decrypt($encrypted_content, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
-                if ($plain_content !== false) {
-                    $now = time();
-                    [$expires, $rand, $signature] = explode(':', $plain_content, 3);
-                    if ($this->DB->GetOne(
-                        'SELECT COUNT(*) FROM twofactorauthtrusteddevices
-                        WHERE userid = ? AND cookiename = ? AND expires = ?',
-                        array($this->id, $name, $expires)
-                    ) && $expires > $now && ($expires - $now) <= ConfigHelper::getConfig('phpui.two_factor_auth_trust_device_time', 86400)) {
-                        $signature_verification = hash_hmac(
-                            'sha512',
-                            implode("\1\0\1", array($this->logname, $this->twofactorauthsecretkey, $user_agent, $rand, $expires)),
-                            $des_key,
-                            true
-                        );
-                        // constant time
-                        $cmp = strlen($signature) ^ strlen($signature_verification);
-                        $signature = $signature ^ $signature_verification;
-                        for ($i = 0; $i < strlen($signature); $i++) {
-                            $cmp += ord($signature[$i]);
-                        }
-                        return ($cmp === 0);
-                    }
-                }
-            }
-        }
-
-        return false;
+        return $this->trustedDeviceCookieValid($b64_encrypted_content, $crypto_params);
     }
 
     public function removeTrustedDevices($userid = null, $deviceid = null)
