@@ -95,16 +95,9 @@ class Auth
         //$this->_revision = preg_replace('/^.Revision: ([0-9.]+).*/', '\1', $this->_revision);
         $this->_revision = '';
 
+        // client-supplied X-Forwarded-For / Client-IP must not drive hosts/trustedhosts (2FA skip);
+        // behind a reverse proxy map the verified client address into REMOTE_ADDR
         $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        $trusted_proxies = preg_split('/[\s,]+/', ConfigHelper::getConfig('phpui.trusted_proxies', ''), -1, PREG_SPLIT_NO_EMPTY);
-        if (in_array($ip, $trusted_proxies, true) && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            foreach (array_reverse(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']))) as $hop) {
-                if (filter_var($hop, FILTER_VALIDATE_IP) && !in_array($hop, $trusted_proxies, true)) {
-                    $ip = $hop;
-                    break;
-                }
-            }
-        }
 
         $this->ip = str_replace('::ffff:', '', $ip);
 
@@ -293,7 +286,9 @@ class Auth
             return true;
         }
 
-        // Wrong password is an error even with 2FA; a bad TOTP code is reported separately.
+        // A wrong password is a failed login even when 2FA is enabled. The TOTP
+        // step is reached only after the password verifies, so show the same
+        // credentials error the non-2FA path shows.
         $this->error = trans('Wrong password or login.');
 
         return false;
