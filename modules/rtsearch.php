@@ -24,260 +24,77 @@
  *  $Id$
  */
 
-function RTSearch($search, $order = 'createtime,desc')
+function rtQueueSearchParams($search, $order)
 {
-    $DB = LMSDB::getInstance();
+    $params = [
+        'order' => $order,
+        'withMessageId' => true,
+        'parseRequestor' => true,
+    ];
 
-    if (!$order) {
-        $order = 'createtime,desc';
+    if (!empty($search['operator']) && $search['operator'] == 'OR') {
+        $params['operator'] = 'OR';
     }
-
-    $o = explode(',', $order);
-    $order = $o[0];
-
-    (isset($o[1]) && $o[1] == 'desc') ? $direction = 'desc' : $direction = 'asc';
-
-    switch ($order) {
-        case 'ticketid':
-            $sqlord = ' ORDER BY t.id';
-            break;
-        case 'subject':
-            $sqlord = ' ORDER BY t.subject';
-            break;
-        case 'requestor':
-            $sqlord = ' ORDER BY requestor';
-            break;
-        case 'owner':
-            $sqlord = ' ORDER BY ownername';
-            break;
-        case 'lastmodified':
-            $sqlord = ' ORDER BY lastmodified';
-            break;
-        case 'priority':
-            $sqlord = ' ORDER BY priority';
-            break;
-        case 'service':
-                $sqlord = ' ORDER BY t.service';
-            break;
-        case 'type':
-                $sqlord = ' ORDER BY t.type';
-            break;
-        default:
-            $sqlord = ' ORDER BY t.createtime';
-            break;
-    }
-
-    $join = array();
-
-    $op = !empty($search['operator']) && $search['operator'] == 'OR' ? $op = ' OR ' : $op = ' AND ';
-
-    $where = $where_AND = array();
-
     if (!empty($search['owner']) && intval($search['owner'])) {
-        $where[] = 'owner = '.intval($search['owner']);
+        $params['owner'] = intval($search['owner']);
     }
     if (!empty($search['custid'])) {
-        $where[] = 't.customerid = '.intval($search['custid']);
+        $params['cid'] = intval($search['custid']);
     }
     if (!empty($search['subject'])) {
-        $where[] = 't.subject ?LIKE? '.$DB->Escape('%'.$search['subject'].'%');
+        $params['subject'] = $search['subject'];
     }
-    if (isset($search['body']) && !empty($search['body']['pattern'])) {
-        $join[] = ($op == ' OR ' ? 'LEFT ' : '') . 'JOIN (SELECT ticketid,
-			MIN(id) AS messageid FROM rtmessages WHERE type <= ' . RTMESSAGE_NOTE
-            . ' AND ' . (isset($search['body']['regexp']) ? $DB->RegExp('body', $search['body']['pattern'])
-                : 'body ?LIKE? ' . $DB->Escape('%' . $search['body']['pattern'] . '%')) . '
-			GROUP BY ticketid) m3 ON m3.ticketid = t.id';
-    } else {
-        $join[] = 'JOIN (SELECT DISTINCT ticketid, 0 AS messageid FROM rtmessages) m3 ON m3.ticketid = t.id';
+    if (isset($search['body'])) {
+        $params['body'] = $search['body'];
     }
-    if (isset($search['state']) && strlen($search['state'])) {
-        switch ($search['state']) {
-            case '-1':
-                $where[] = 't.state != ' . RT_RESOLVED;
-                break;
-            case '-2':
-                $where_AND[] = 't.state != ' . RT_RESOLVED;
-                break;
-            default:
-                $where[] = 't.state = '.intval($search['state']);
-                break;
-        }
+    if (isset($search['state']) && strlen((string) $search['state']) && (string) $search['state'] !== '-2') {
+        $params['state'] = (string) $search['state'] === '0' ? [0] : $search['state'];
     }
-
-    if (isset($search['source']) && strlen($search['source'])) {
-        $where[] = 't.source = ' . intval($search['source']);
-    }
-
-    if (!empty($search['priority'])) {
-        if ($search['priority'] == '-101') {
-            $where[] = 't.priority IS NULL';
+    if (isset($search['source']) && strlen((string) $search['source'])) {
+        $source = intval($search['source']);
+        if ($source === 0 || $source === -1) {
+            $params['sourceExact'] = $source;
         } else {
-            $where[] = 'priority = ' . intval($search['priority']);
+            $params['source'] = $source;
         }
     }
-    if (!empty($search['email'])) {
-        $where[] = 'requestor_mail ?LIKE? '.$DB->Escape('%' . $search['email'] . '%');
+    if (!empty($search['priority'])) {
+        $params['priority'] = $search['priority'] == '-101' ? ['-101'] : intval($search['priority']);
     }
-    if (!empty($search['phone'])) {
-        $where[] = 'requestor_phone ?LIKE? '.$DB->Escape('%' . $search['phone'] . '%');
-    }
-    if (!empty($search['uptime'])) {
-        $where[] = '(resolvetime-t.createtime > '.intval($search['uptime'])
-            .' OR ('.time().'-t.createtime > '.intval($search['uptime']).' AND resolvetime = 0))';
-    }
-    if (!empty($search['name'])) {
-        $where[] = '(UPPER(requestor) ?LIKE? UPPER('.$DB->Escape('%'.$search['name'].'%').') OR '
-            .$DB->Concat('UPPER(c.lastname)', "' '", 'UPPER(c.name)').' ?LIKE? UPPER('.$DB->Escape('%'.$search['name'].'%').'))';
+    foreach (['email', 'phone', 'name', 'uptime', 'address', 'zip', 'city'] as $key) {
+        if (!empty($search[$key])) {
+            $params[$key] = $search[$key];
+        }
     }
     if (!empty($search['queue'])) {
-        if (is_array($search['queue'])) {
-            $where_queue = '(t.queueid IN (' . implode(',', $search['queue']) . ')';
-        } else {
-            $where_queue = '(t.queueid = ' . intval($search['queue']);
-        }
-        $user_permission_checks = ConfigHelper::checkConfig('rt.additional_user_permission_checks', ConfigHelper::checkConfig('phpui.helpdesk_additional_user_permission_checks'));
-        $userid = Auth::GetCurrentUser();
-        $where[] = $where_queue . ($user_permission_checks ? ' OR t.owner = ' . $userid . ' OR t.verifierid = ' . $userid : '') . ')';
+        $params['queue'] = $search['queue'];
     }
-    if (isset($search['catids'])) {
-        $where[] = 'tc.categoryid IN ('.implode(',', $search['catids']).')';
+    if (!empty($search['catids'])) {
+        $params['catids'] = $search['catids'];
     }
-
-    if (!ConfigHelper::checkPrivilege('helpdesk_advanced_operations')) {
-        $where_AND[] = 't.deleted = 0';
-    } else {
-        if (!empty($search['removed'])) {
-            if ($search['removed'] == '-1') {
-                $where_AND[] = 't.deleted = 0';
-            } else {
-                $where_AND[] = 't.deleted = 1';
-            }
-        }
+    if (!empty($search['removed']) && ($search['removed'] == '-1' || $search['removed'] == '1')) {
+        $params['removed'] = $search['removed'];
     }
-
     if (!empty($search['netnodeid'])) {
-        $where[] = 't.netnodeid = '.intval($search['netnodeid']);
+        $params['netnodeids'] = intval($search['netnodeid']);
     }
-
     if (!empty($search['netdevid'])) {
-        $where[] = 't.netdevid = '.intval($search['netdevid']);
+        $params['netdevids'] = intval($search['netdevid']);
     }
-
     if (!empty($search['verifierid'])) {
-        $where[] = 't.verifierid = '.intval($search['verifierid']);
+        $params['verifierids'] = intval($search['verifierid']);
     }
-
     if (!empty($search['expired'])) {
-        $where[] = 't.deadline < ?NOW?';
+        $params['deadline'] = -2;
     }
-
     if (!empty($search['service'])) {
-            $where[] = 't.service = '.intval($search['service']);
+        $params['serviceids'] = intval($search['service']);
     }
-
     if (!empty($search['type'])) {
-            $where[] = 't.type = '.intval($search['type']);
+        $params['typeids'] = intval($search['type']);
     }
 
-    if (!empty($search['address']) || !empty($search['zip']) || !empty($search['city'])) {
-        $where[] = '('
-            . (empty($search['address']) ? '1=1' : 'UPPER(va.address) ?LIKE? UPPER(' . $DB->Escape('%' . $search['address'] . '%') . ')')
-            . ' AND '
-            . (empty($search['zip']) ? '1=1' : 'UPPER(va.zip) ?LIKE? UPPER(' . $DB->Escape('%' . $search['zip'] . '%') . ')')
-            . ' AND '
-            . (empty($search['city']) ? '1=1' : 'UPPER(va.city) ?LIKE? UPPER(' . $DB->Escape('%' . $search['city'] . '%') . ')')
-            . ')';
-    }
-
-    if ($search['count']) {
-        return $DB->GetOne(
-            'SELECT COUNT(DISTINCT t.id)
-            FROM rttickets t
-            JOIN rtrights r ON r.queueid = t.queueid AND r.userid = ' . Auth::GetCurrentUser() . '
-            ' . implode(' ', $join) . '
-            LEFT JOIN (SELECT MAX(createtime) AS lastmodified, ticketid FROM rtmessages GROUP BY ticketid) m ON m.ticketid = t.id
-            LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
-            LEFT JOIN rtqueues ON (rtqueues.id = t.queueid)
-            LEFT JOIN vusers ON (t.owner = vusers.id)
-            LEFT JOIN vusers AS e ON (t.verifierid = vusers.id)
-            LEFT JOIN customeraddressview c ON c.id = t.customerid
-            LEFT JOIN vaddresses va ON va.id = t.address_id
-            WHERE '
-            . (!empty($where) ? '(' . implode($op, $where) . ')' : '1 = 1')
-            . (!empty($where_AND) ? ' AND (' . implode($op, $where_AND) . ')' : '')
-        );
-    }
-
-    $result = $DB->GetAll('SELECT DISTINCT t.id, t.customerid, t.subject, t.state, t.owner AS ownerid, t.service, t.type,
-		t.address_id, va.name AS vaname, va.city AS vacity, va.street, va.house, va.flat, c.address, c.city,
-		vusers.name AS ownername, rtqueues.name as name, CASE WHEN t.customerid IS NULL THEN t.requestor ELSE '
-        .$DB->Concat('UPPER(c.lastname)', "' '", 'c.name').'
-		END AS requestor, t.requestor AS req, t.createtime,
-		(CASE WHEN m.lastmodified IS NULL THEN 0 ELSE m.lastmodified END) AS lastmodified, t.deleted, t.deltime,
-		t.priority, t.verifierid, t.deadline,
-        eventcountopened, eventcountclosed, 
-		m3.messageid, COUNT(m2.id) AS delcount,
-		ti.imagecount
-		FROM rttickets t
-		LEFT JOIN rtmessages m2 ON m2.ticketid = t.id AND m2.deleted = 1
-		' . implode(' ', $join) . '
-		LEFT JOIN (SELECT MAX(createtime) AS lastmodified, ticketid FROM rtmessages GROUP BY ticketid) m ON m.ticketid = t.id
-		LEFT JOIN rtticketcategories tc ON t.id = tc.ticketid
-		LEFT JOIN rtqueues ON (rtqueues.id = t.queueid)
-		LEFT JOIN vusers ON (t.owner = vusers.id)
-		LEFT JOIN vusers AS e ON (t.verifierid = vusers.id)
-		LEFT JOIN customeraddressview c ON c.id = t.customerid
-		LEFT JOIN vaddresses va ON va.id = t.address_id
-        LEFT JOIN (
-            SELECT ticketid, COUNT(*) AS imagecount
-            FROM rtattachments a
-            JOIN rtmessages ON rtmessages.id = a.messageid
-            WHERE a.contenttype ?LIKE? ' . $DB->Escape('image/%') . '
-            GROUP BY ticketid
-        ) ti ON ti.ticketid = t.id
-        LEFT JOIN (
-            SELECT SUM(CASE WHEN closed = 0 THEN 1 ELSE 0 END) AS eventcountopened,
-                SUM(CASE WHEN closed = 1 THEN 1 ELSE 0 END) AS eventcountclosed,
-                ticketid FROM events
-            WHERE ticketid IS NOT NULL
-            GROUP BY ticketid
-        ) ev ON ev.ticketid = t.id
-        WHERE '
-        . (!empty($where) ? '(' . implode($op, $where) . ')' : '1 = 1')
-        . (!empty($where_AND) ? ' AND (' . implode($op, $where_AND) . ')' : '')
-        . ' GROUP BY t.id, t.customerid, t.subject, t.state, t.owner, t.service, t.type,
-			t.address_id, va.name, va.city, va.street, va.house, va.flat, c.address, c.city,
-			vusers.name, rtqueues.name,
-			t.requestor, c.lastname, c.name, t.createtime, m.lastmodified, t.deleted, t.deltime, t.priority,
-			t.verifierid, t.deadline, eventcountopened, eventcountclosed, m3.messageid, ti.imagecount '
-        . ($sqlord !='' ? $sqlord . ' ' . $direction : '')
-        . (isset($search['limit']) ? ' LIMIT ' . $search['limit'] : '')
-        . (isset($search['offset']) ? ' OFFSET ' . $search['offset'] : ''));
-
-    if ($result) {
-        foreach ($result as &$ticket) {
-            if (!isset($ticket['custid']) || !$ticket['custid']) {
-                [$ticket['requestor'], $ticket['requestor_mail']] = sscanf($ticket['req'], "%[^<]<%[^>]");
-            } else {
-                [$ticket['requestor_mail']] = sscanf($ticket['req'], "<%[^>]");
-            }
-
-            if (!empty($ticket['deadline'])) {
-                $ticket['deadline_diff'] = $ticket['deadline']-time();
-                $days = floor(($ticket['deadline_diff']/86400));
-                $hours = round(($ticket['deadline_diff']-($days*86400))/3600);
-                $ticket['deadline_days'] = abs($days);
-                $ticket['deadline_hours'] = abs($hours);
-            }
-        }
-        unset($ticket);
-    }
-
-    $result['order'] = $order;
-    $result['direction'] = $direction;
-
-    return $result;
+    return $params;
 }
 
 $categories = $LMS->GetUserCategories(Auth::GetCurrentUser());
@@ -347,7 +164,9 @@ if (isset($search) || isset($_GET['s'])) {
 
     if (!$error) {
         $search['count'] = true;
-        $search['total'] = intval(RTSearch($search, $o));
+        $queueParams = rtQueueSearchParams($search, $o);
+        $queueParams['count'] = true;
+        $search['total'] = intval($LMS->GetQueueContents($queueParams));
 
         $search['page'] = intval((! isset($_GET['page']) ? 1 : $_GET['page']));
         $search['limit'] = intval(ConfigHelper::getConfig(
@@ -357,7 +176,10 @@ if (isset($search) || isset($_GET['s'])) {
         $search['offset'] = ($search['page'] - 1) * $search['limit'];
 
         $search['count'] = false;
-        $queue = RTSearch($search, $o);
+        $queueParams['count'] = false;
+        $queueParams['limit'] = $search['limit'];
+        $queueParams['offset'] = $search['offset'];
+        $queue = $LMS->GetQueueContents($queueParams);
 
         $pagination = LMSPaginationFactory::getPagination(
             $search['page'],
@@ -370,8 +192,24 @@ if (isset($search) || isset($_GET['s'])) {
         $search['direction'] = $queue['direction'];
         $search['queue'] = $search['queue'] ?? 0;
 
-        unset($queue['order']);
-        unset($queue['direction']);
+        unset(
+            $queue['total'],
+            $queue['state'],
+            $queue['order'],
+            $queue['direction'],
+            $queue['owner'],
+            $queue['removed'],
+            $queue['priority'],
+            $queue['source'],
+            $queue['deadline'],
+            $queue['service'],
+            $queue['type'],
+            $queue['unread'],
+            $queue['rights'],
+            $queue['fromdate'],
+            $queue['todate'],
+            $queue['watching']
+        );
 
         $SESSION->save('rtp', $page ?? 0);
         $SESSION->save('rtsearch', $search);

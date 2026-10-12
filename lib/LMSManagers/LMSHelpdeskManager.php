@@ -148,6 +148,12 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 ${$var} = null;
             }
         }
+        foreach (array('operator', 'body', 'email', 'phone', 'name', 'uptime', 'address', 'zip', 'city', 'queue',
+            'sourceExact', 'withMessageId', 'parseRequestor') as $var) {
+            if (!isset(${$var})) {
+                ${$var} = null;
+            }
+        }
         if (!isset($order) || !$order) {
             $order = 'createtime,desc';
         }
@@ -466,9 +472,105 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             }
         }
 
+        $operatorOr = $operator === 'OR';
+
+        $emailfilter = '';
+        if (!empty($email)) {
+            $emailfilter = ' AND t.requestor_mail ?LIKE? ' . $this->db->Escape('%' . $email . '%');
+        }
+
+        $phonefilter = '';
+        if (!empty($phone)) {
+            $phonefilter = ' AND t.requestor_phone ?LIKE? ' . $this->db->Escape('%' . $phone . '%');
+        }
+
+        $namefilter = '';
+        if (!empty($name)) {
+            $namefilter = ' AND (UPPER(t.requestor) ?LIKE? UPPER(' . $this->db->Escape('%' . $name . '%') . ') OR '
+                . $this->db->Concat('UPPER(c.lastname)', "' '", 'UPPER(c.name)') . ' ?LIKE? UPPER(' . $this->db->Escape('%' . $name . '%') . '))';
+        }
+
+        $uptimefilter = '';
+        if (!empty($uptime)) {
+            $uptime = intval($uptime);
+            $uptimefilter = ' AND (t.resolvetime-t.createtime > ' . $uptime
+                . ' OR (' . time() . '-t.createtime > ' . $uptime . ' AND t.resolvetime = 0))';
+        }
+
+        $addressfilter = '';
+        if (!empty($address) || !empty($zip) || !empty($city)) {
+            $addressfilter = ' AND ('
+                . (empty($address) ? '1=1' : 'UPPER(va.address) ?LIKE? UPPER(' . $this->db->Escape('%' . $address . '%') . ')')
+                . ' AND '
+                . (empty($zip) ? '1=1' : 'UPPER(va.zip) ?LIKE? UPPER(' . $this->db->Escape('%' . $zip . '%') . ')')
+                . ' AND '
+                . (empty($city) ? '1=1' : 'UPPER(va.city) ?LIKE? UPPER(' . $this->db->Escape('%' . $city . '%') . ')')
+                . ')';
+        }
+
+        $sourceexactfilter = '';
+        if ($sourceExact !== null && $sourceExact !== '') {
+            $sourceexactfilter = ' AND t.source = ' . intval($sourceExact);
+        }
+
+        $queuefilter = '';
+        if (!empty($queue)) {
+            if (is_array($queue)) {
+                $queuefilter = ' AND (t.queueid IN (' . implode(',', $queue) . ')';
+            } else {
+                $queuefilter = ' AND (t.queueid = ' . intval($queue);
+            }
+            $queuefilter .= ($user_permission_checks ? ' OR t.owner = ' . $userid . ' OR t.verifierid = ' . $userid : '') . ')';
+        }
+
+        $countJoins = '';
+        if (!empty($name)) {
+            $countJoins .= ' LEFT JOIN customeraddressview c ON (t.customerid = c.id)';
+        }
+        if (!empty($address) || !empty($zip) || !empty($city)) {
+            $countJoins .= ' LEFT JOIN vaddresses va ON (t.address_id = va.id)';
+        }
+
+        $bodyJoin = '';
+        $messageSelect = '';
+        if (is_array($body) && !empty($body['pattern'])) {
+            $bodyJoin = ($operatorOr ? ' LEFT' : '') . ' JOIN (SELECT ticketid, MIN(id) AS messageid FROM rtmessages WHERE type <= ' . RTMESSAGE_NOTE
+                . ' AND ' . (isset($body['regexp']) ? $this->db->RegExp('body', $body['pattern'])
+                    : 'body ?LIKE? ' . $this->db->Escape('%' . $body['pattern'] . '%'))
+                . ' GROUP BY ticketid) mb ON mb.ticketid = t.id';
+            $messageSelect = ', mb.messageid';
+        } elseif (!empty($withMessageId)) {
+            $bodyJoin = ' JOIN (SELECT DISTINCT ticketid, 0 AS messageid FROM rtmessages) mb ON mb.ticketid = t.id';
+            $messageSelect = ', mb.messageid';
+        }
+
+        $orGroup = '';
+        if ($operatorOr) {
+            $orParts = [];
+            foreach ([
+                $ownerfilter, $cidfilter, $subjectfilter, $statefilter, $sourcefilter, $sourceexactfilter,
+                $priorityfilter, $emailfilter, $phonefilter, $uptimefilter, $namefilter, $queuefilter,
+                $categoriesfilter, $netnodeidsfilter, $netdevidsfilter, $verifieridsfilter, $deadlinefilter,
+                $serviceidsfilter, $typeidsfilter, $addressfilter,
+            ] as $part) {
+                if ($part !== '') {
+                    $orParts[] = preg_replace('/^\s*AND\s+/', '', $part);
+                }
+            }
+            if ($orParts) {
+                $orGroup = ' AND (' . implode(' OR ', $orParts) . ')';
+            }
+            $ownerfilter = $cidfilter = $subjectfilter = $statefilter = $sourcefilter = $sourceexactfilter = '';
+            $priorityfilter = $emailfilter = $phonefilter = $uptimefilter = $namefilter = $queuefilter = '';
+            $categoriesfilter = $netnodeidsfilter = $netdevidsfilter = $verifieridsfilter = $deadlinefilter = '';
+            $serviceidsfilter = $typeidsfilter = $addressfilter = '';
+        }
+
         if ($count) {
             return $this->db->GetOne('SELECT COUNT(DISTINCT t.id)
-				FROM rttickets t
+				FROM rttickets t'
+                . $countJoins
+                . $bodyJoin . '
 				LEFT JOIN rtticketcategories tc ON (t.id = tc.ticketid)
 				LEFT JOIN rtticketlastview lv ON lv.ticketid = t.id AND lv.userid = ?
 				LEFT JOIN rtticketwatchers tw ON (t.id = tw.ticketid) AND tw.userid = ?
@@ -513,7 +615,15 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 . $fromdatefilter
                 . $todatefilter
                 . $watchingfilter
-                . $typeidsfilter, array($userid, $userid));
+                . $typeidsfilter
+                . $emailfilter
+                . $phonefilter
+                . $namefilter
+                . $uptimefilter
+                . $addressfilter
+                . $queuefilter
+                . $sourceexactfilter
+                . $orGroup, array($userid, $userid));
         }
 
         if ($result = $this->db->GetAll(
@@ -528,7 +638,8 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 				(CASE WHEN t.state <> ' . RT_RESOLVED . ' AND (lv.ticketid IS NULL OR lv.vdate < t.modtime) THEN 1 ELSE 0 END) AS unread,
 				(CASE WHEN t.state <> ' . RT_RESOLVED . ' THEN m3.firstunread ELSE 0 END) as firstunread,
 				(CASE WHEN t.id = tw.ticketid AND tw.userid = ? THEN 1 ELSE 0 END) as watching,
-				ti.imagecount
+				ti.imagecount'
+                . $messageSelect . '
 			FROM rttickets t
 			LEFT JOIN rtticketcategories tc ON (t.id = tc.ticketid)
 			LEFT JOIN vusers ON (owner = vusers.id)
@@ -580,7 +691,8 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 WHERE a.contenttype ?LIKE? ?
                     AND a.cid IS NULL
                 GROUP BY ticketid
-            ) ti ON ti.ticketid = t.id
+            ) ti ON ti.ticketid = t.id'
+            . $bodyJoin . '
 			WHERE 1=1 '
             . ($rights ? ' AND (t.queueid IN (
 					SELECT q.id FROM rtqueues q
@@ -624,6 +736,14 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             . $todatefilter
             . $watchingfilter
             . $typeidsfilter
+            . $emailfilter
+            . $phonefilter
+            . $namefilter
+            . $uptimefilter
+            . $addressfilter
+            . $queuefilter
+            . $sourceexactfilter
+            . $orGroup
             . ($sqlord != '' ? $sqlord . ' ' . $direction : '')
             . (isset($limit) ? ' LIMIT ' . $limit : '')
             . (isset($offset) ? ' OFFSET ' . $offset : ''),
@@ -653,6 +773,14 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                     $hours = round(($ticket['deadline_diff']-($days*86400))/3600);
                     $ticket['deadline_days'] = abs($days);
                     $ticket['deadline_hours'] = abs($hours);
+                }
+
+                if (!empty($parseRequestor)) {
+                    if (!isset($ticket['custid']) || !$ticket['custid']) {
+                        [$ticket['requestor'], $ticket['requestor_mail']] = sscanf($ticket['req'], "%[^<]<%[^>]");
+                    } else {
+                        [$ticket['requestor_mail']] = sscanf($ticket['req'], "<%[^>]");
+                    }
                 }
             }
             unset($ticket);
