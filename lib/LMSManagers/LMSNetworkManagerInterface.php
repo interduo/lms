@@ -96,4 +96,6 @@ interface LMSNetworkManagerInterface
     public function DeleteVlan($id);
 
     public function UpdateVlan($args);
+
+    public function getSidusisRanges(array $projectIds = []);
 }

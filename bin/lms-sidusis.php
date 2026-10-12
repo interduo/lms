@@ -81,7 +81,7 @@ $did = in_array('division', $options) ? intval($options['division']) : $sidusisS
 
 function getSidusisRangesReport($divisionid)
 {
-    global $LMS, $DB, $SIDUSIS_LINKTECHNOLOGIES, $sidusisOperatorOfferUrl, $sidusisOperatorPhone;
+    global $LMS, $SIDUSIS_LINKTECHNOLOGIES, $sidusisOperatorOfferUrl, $sidusisOperatorPhone;
 
     $division = $LMS->GetDivision($divisionid) ?? die();
 
@@ -96,42 +96,7 @@ function getSidusisRangesReport($divisionid)
         die('Division email or phone should be not empty at least!');
     }
 
-    $buildings = $DB->GetAll(
-        'SELECT b.*,
-            r.id AS netrangeid,
-            r.linktype,
-            r.linktechnology,
-            r.downlink,
-            r.uplink,
-            r.type,
-            r.services,
-            r.invprojectid,
-            p.name AS invprojectname,
-            p.cdate AS invprojectcdate,
-            ls.ident AS state_ident,
-            ld.ident AS district_ident,
-            lb.ident AS borough_ident,
-            lb.type AS borough_type,
-            lc.name AS city_name,
-            lc.ident AS city_ident,
-            lst.name AS street_name,
-            lst.name2 AS street_name2,
-            (CASE WHEN lst.name2 IS NOT NULL THEN ' . $DB->Concat('lst.name', "' '", 'lst.name2') . ' ELSE lst.name END) AS street_label,
-            (CASE WHEN lst.name2 IS NOT NULL THEN ' . $DB->Concat('lst.name2', "' '", 'lst.name') . ' ELSE lst.name END) AS street_rlabel,
-            t.name AS street_typename,
-            lst.ident AS street_ident
-        FROM location_buildings b
-            JOIN netranges r ON r.buildingid = b.id
-            LEFT JOIN invprojects p ON p.id = r.invprojectid
-            JOIN location_cities lc ON lc.id = b.city_id
-            JOIN location_boroughs lb ON lb.id = lc.boroughid
-            JOIN location_districts ld ON ld.id = lb.districtid
-            JOIN location_states ls ON ls.id = ld.stateid
-            LEFT JOIN location_streets lst ON lst.id = b.street_id
-            LEFT JOIN location_street_types t ON t.id = lst.typeid
-        WHERE '
-        . (empty($projects) ? 'r.invprojectid IS NULL' : 'r.invprojectid IN (' . implode(',', $projects) . ')')
-    );
+    $buildings = $LMS->getSidusisRanges();
 
     if (empty($buildings)) {
         die('Network range database is empty!');

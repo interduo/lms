@@ -1994,6 +1994,12 @@ class LMS
         return $manager->UpdateVlan($args);
     }
 
+    public function getSidusisRanges(array $projectIds = [])
+    {
+        $manager = $this->getNetworkManager();
+        return $manager->getSidusisRanges($projectIds);
+    }
+
     /*
      *   Network Devices
      */
