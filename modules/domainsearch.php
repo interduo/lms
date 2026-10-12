@@ -67,6 +67,7 @@ function GetDomainList($search, $customer = '', $order = 'name,asc')
             .$where
             .($sqlord != '' ? $sqlord : ''));
 
+    $list = $list ?: [];
     $list['total'] = count($list);
     $list['order'] = $order;
     $list['direction'] = $direction;

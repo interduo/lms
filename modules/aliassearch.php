@@ -72,6 +72,7 @@ function GetAliasList($search, $customer = '', $domain = '', $order = 'login,asc
             .$where
                     .($sqlord != '' ? $sqlord : ''));
 
+    $list = $list ?: [];
     $list['total'] = count($list);
     $list['order'] = $order;
     $list['direction'] = $direction;
