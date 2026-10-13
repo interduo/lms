@@ -23,8 +23,6 @@
         <UndefinedFunction errorLevel="suppress" />
         <UnusedVariable errorLevel="suppress" />
         <UnusedForeachValue errorLevel="suppress" />
-        <TaintedInput errorLevel="suppress" />
-        <TaintedSql errorLevel="suppress" />
         <TaintedHtml errorLevel="suppress" />
     </issueHandlers>
 </psalm>
