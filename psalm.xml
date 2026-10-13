@@ -1,5 +1,5 @@
 <psalm
-    errorLevel="4"
+    errorLevel="2"
     resolveFromConfigFile="true"
     allFunctionsGlobal="true"
     allConstantsGlobal="true"
@@ -18,11 +18,4 @@
         <file name="psalm-stub.php" />
     </stubs>
 
-    <!-- These are intentionally tolerated in this legacy codebase. -->
-    <issueHandlers>
-        <UndefinedFunction errorLevel="suppress" />
-        <UnusedVariable errorLevel="suppress" />
-        <UnusedForeachValue errorLevel="suppress" />
-        <TaintedHtml errorLevel="suppress" />
-    </issueHandlers>
 </psalm>
