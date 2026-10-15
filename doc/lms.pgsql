@@ -4045,7 +4045,7 @@ CREATE OR REPLACE FUNCTION get_invoice_contents(integer) RETURNS TABLE (
     LEFT JOIN documents d2 ON d2.id = d.reference
     LEFT JOIN invoicecontents ic2 ON ic2.docid = d2.id AND ic2.itemid = ic.itemid
     WHERE $1 IS NULL OR d.customerid = $1
-$$ LANGUAGE SQL IMMUTABLE;
+$$ LANGUAGE SQL STABLE;
 
 CREATE VIEW vinvoicecontents AS
     SELECT * FROM get_invoice_contents(NULL);
@@ -4754,6 +4754,6 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2026101502');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2026101503');
 
 COMMIT;
