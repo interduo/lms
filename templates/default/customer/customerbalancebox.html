@@ -7,6 +7,13 @@
 {$default_taxlabel = ConfigHelper::getConfig('phpui.default_taxlabel')}
 {$notification = ConfigHelper::checkConfig('finances.customer_notify', true)}
 {$offline_support = ConfigHelper::checkConfig('ksef.offline_support')}
+{if isset($customerinfo.customername)}
+	{$sendInvoiceCustomerName = $customerinfo.customername|escape:"html"}
+{elseif isset($customername)}
+	{$sendInvoiceCustomerName = $customername|escape:"html"}
+{else}
+	{$sendInvoiceCustomerName = ""}
+{/if}
 
 <FORM name="addbalance" method="POST" id="addbalance-form" action="?m=balanceadd&id={$balancelist.customerid}">
 </FORM>
@@ -137,6 +144,8 @@
 					{/if}
 				{/if}
 				<TR{if $item.docid} data-published="{$item.published}" data-doctype="{$item.doctype}"
+					data-customerid="{$balancelist.customerid}"
+					data-customername="{$sendInvoiceCustomerName}"
 					data-senddate="{if $item.senddate}{$item.senddate|date_format:"Y-m-d H:i"}{else}{$item.senddate}{/if}"
 					data-refdocs="{if empty($item.documentreferenced)}0{else}1{/if}"
 					data-ksef="{if empty($item.ksefhash)}0{else}1{/if}"
@@ -653,6 +662,7 @@
 	</div>
 </div>
 
+<script src="js/lms-ui-invoice-recipients-dialog.js"></script>
 <script>
 
 {if !$limit}
@@ -864,43 +874,30 @@
 	});
 	{/if}
 
-	$('.send-invoice').click(function(e) {
-		var senddate = $(this).closest('tr').attr('data-senddate');
-		if (parseInt(senddate) === 0) {
-			confirmDialog($t('Are you sure, you want to send invoice to customer \'$a\'?', '{$customerinfo.customername|escape:"javascript"|escape:"html"}'), this)
-				.done(function() {
-					var add = "";
-					var which = 0;
-					$('[form="addbalance-form"][name^="which"]:checked').each(function() {
-						which += parseInt($(this).val());
-					});
-					add += "&which=" + which;
-					if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
-						var duplicate_date = parseInt($('[name="duplicate-date"]').val());
-						if (duplicate_date > 0) {
-							add += "&duplicate-date=" + duplicate_date;
-						}
-					}
-					window.open($(this).attr('href') + add);
-				});
-		} else {
-			confirmDialog($t("Invoice was sent to customer '$a' already on $b. Are you sure, you want to send invoice again?", '{$customerinfo.customername|escape:"javascript"|escape:"html"}', senddate), this)
-			.done(function() {
-					var add = "";
-					var which = 0;
-					$('[form="addbalance-form"][name^="which"]:checked').each(function() {
-						which += parseInt($(this).val());
-					});
-					add += "&which=" + which;
-					if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
-						var duplicate_date = parseInt($('[name="duplicate-date"]').val());
-						if (duplicate_date > 0) {
-							add += "&duplicate-date=" + duplicate_date;
-						}
-					}
-					window.open($(this).attr('href') + add);
-				});
-		}
+	$('.send-invoice').click(function() {
+		var row = $(this).closest('tr');
+		var href = $(this).attr('href');
+		var docIdMatch = href.match(/[?&]id=(\d+)/);
+		invoiceRecipientsDialog({
+			docId: docIdMatch ? docIdMatch[1] : 0,
+			customerId: row.attr('data-customerid'),
+			customerName: row.attr('data-customername') || '',
+			sendDate: row.attr('data-senddate')
+		}, this).done(function(result) {
+			var add = "";
+			var which = 0;
+			$('[form="addbalance-form"][name^="which"]:checked').each(function() {
+				which += parseInt($(this).val());
+			});
+			add += "&which=" + which;
+			if (which & {$smarty.const.DOC_ENTITY_DUPLICATE}) {
+				var duplicate_date = parseInt($('[name="duplicate-date"]').val());
+				if (duplicate_date > 0) {
+					add += "&duplicate-date=" + duplicate_date;
+				}
+			}
+			submitInvoiceSend(appendInvoiceSendRecipients($(this).attr('href') + add, result.recipients, result.extra), result.body);
+		});
 		return false;
 	});
 

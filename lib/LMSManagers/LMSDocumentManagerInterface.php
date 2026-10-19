@@ -108,6 +108,8 @@ interface LMSDocumentManagerInterface
 
     public function getDocumentType($docid);
 
+    public function getDocumentCustomerId($docid);
+
     public function getDocumentFullNumber($docid);
 
     public function checkDocumentPermission($docType, $permission);

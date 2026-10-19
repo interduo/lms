@@ -3876,6 +3876,12 @@ class LMS
         return $manager->getDocumentType($docid);
     }
 
+    public function getDocumentCustomerId($docid)
+    {
+        $manager = $this->getDocumentManager();
+        return $manager->getDocumentCustomerId($docid);
+    }
+
     public function getDocumentFullNumber($docid)
     {
         $manager = $this->getDocumentManager();
@@ -5258,6 +5264,10 @@ class LMS
             $financial_history_item_description_format = '%comment';
         }
 
+        if (!isset($mail_body_raw)) {
+            $mail_body_raw = false;
+        }
+
         $month = sprintf('%02d', intval(date('m', $currtime)));
         $day = sprintf('%02d', intval(date('d', $currtime)));
         $year = sprintf('%04d', intval(date('Y', $currtime)));
@@ -5287,9 +5297,16 @@ class LMS
             }
 
             $custemail = (!empty($debug_email) ? $debug_email : $doc['email']);
+            $recipientEmails = [];
+            foreach (explode(',', (string) $custemail) as $recipientEmail) {
+                $recipientEmail = trim($recipientEmail);
+                if ($recipientEmail !== '') {
+                    $recipientEmails[] = $recipientEmail;
+                }
+            }
             $invoice_number = (!empty($doc['template']) ? $doc['template'] : '%N/LMS/%Y');
             if (!is_null($mail_body)) {
-                if (is_readable($mail_body) && ($mail_body[0] == DIRECTORY_SEPARATOR)) {
+                if (!$mail_body_raw && is_readable($mail_body) && ($mail_body[0] == DIRECTORY_SEPARATOR)) {
                     $body = file_get_contents($mail_body);
                 } else {
                     $body = $mail_body;
@@ -5443,7 +5460,7 @@ class LMS
 
             $mailto = array();
             $mailto_qp_encoded = array();
-            foreach (explode(',', $custemail) as $email) {
+            foreach ($recipientEmails as $email) {
                 $mailto[] = $doc['name'] . " <$email>";
                 $mailto_qp_encoded[] = qp_encode($doc['name']) . " <$email>";
             }
@@ -5581,7 +5598,7 @@ class LMS
                 $headers = $data['headers'];
 
                 $messages = array();
-                foreach (explode(',', $custemail) as $email) {
+                foreach ($recipientEmails as $email) {
                     $mailSubject = $subject;
                     $headers['Subject'] = $mailSubject;
 
@@ -5590,9 +5607,9 @@ class LMS
                         'SELECT ccp.name AS name, ccp.value AS value
                         FROM customercontacts cc
                         LEFT JOIN customercontactproperties ccp ON cc.id = ccp.contactid
-                        WHERE cc.contact = ?',
+                        WHERE cc.customerid = ? AND cc.contact = ?',
                         'name',
-                        array($email)
+                        [$doc['customerid'], $email]
                     );
 
                     if ($emailProperties && isset($emailProperties['email-subject'])) {

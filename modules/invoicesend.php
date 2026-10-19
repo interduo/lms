@@ -26,6 +26,120 @@
 
 use \Lms\KSeF\KSeF;
 
+function invoiceSendCollectRecipients($customerId, $requested, $extra)
+{
+    global $LMS;
+
+    $allowed = [];
+    foreach ($LMS->GetCustomerContacts($customerId, CONTACT_EMAIL) as $contact) {
+        if (($contact['type'] & CONTACT_DISABLED) == CONTACT_DISABLED) {
+            continue;
+        }
+        $email = trim($contact['contact']);
+        if ($email === '') {
+            continue;
+        }
+        $allowed[strtolower($email)] = $email;
+    }
+
+    if (!is_array($requested)) {
+        $requested = ($requested === null || $requested === '') ? [] : [$requested];
+    }
+
+    $chosen = [];
+    foreach ($requested as $email) {
+        $email = trim((string) $email);
+        if ($email === '') {
+            continue;
+        }
+        $key = strtolower($email);
+        if (!isset($allowed[$key])) {
+            return false;
+        }
+        $chosen[$key] = $allowed[$key];
+    }
+
+    $extra = trim((string) $extra);
+    if ($extra !== '') {
+        $key = strtolower($extra);
+        if (isset($allowed[$key])) {
+            $chosen[$key] = $allowed[$key];
+        } elseif (!check_email($extra)) {
+            return false;
+        } elseif (!isset($chosen[$key])) {
+            $chosen[$key] = $extra;
+        }
+    }
+
+    return array_values($chosen);
+}
+
+function invoiceSendTemplateBody($divisionId)
+{
+    ConfigHelper::setFilter($divisionId);
+    $body = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
+    if (!is_string($body)) {
+        return '';
+    }
+    if ($body !== '' && $body[0] === DIRECTORY_SEPARATOR && is_readable($body)) {
+        $contents = file_get_contents($body);
+        if ($contents !== false) {
+            $body = $contents;
+        }
+    }
+    return $body;
+}
+
+function invoiceSendSanitizeBody($body, $format)
+{
+    if ($format != 'html') {
+        return $body;
+    }
+    $eol = 'LMS_INVOICE_EOL_PLACEHOLDER';
+    return str_replace($eol, '<eol>', Utils::removeInsecureHtml(str_replace('<eol>', $eol, $body)));
+}
+
+if (isset($_GET['action']) && $_GET['action'] == 'get-recipients') {
+    header('Content-Type: application/json');
+
+    $docId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    $customerId = $docId ? $LMS->getDocumentCustomerId($docId) : null;
+    $docType = $docId ? (int) $LMS->getDocumentType($docId) : 0;
+    $sendableTypes = [DOC_INVOICE, DOC_CNOTE, DOC_INVOICE_PRO, DOC_DNOTE];
+
+    if (empty($customerId) || !in_array($docType, $sendableTypes, true)) {
+        die(json_encode(['error' => trans('Access denied!')]));
+    }
+
+    if (isset($_GET['customerid']) && $_GET['customerid'] !== '' && intval($_GET['customerid']) !== intval($customerId)) {
+        die(json_encode(['error' => trans('Access denied!')]));
+    }
+
+    if (empty($LMS->GetCustomer($customerId, true))) {
+        die(json_encode(['error' => trans('Access denied!')]));
+    }
+
+    $contacts = [];
+    foreach ($LMS->GetCustomerContacts($customerId, CONTACT_EMAIL) as $contact) {
+        if (($contact['type'] & CONTACT_DISABLED) == CONTACT_DISABLED) {
+            continue;
+        }
+        $email = trim($contact['contact']);
+        if ($email === '') {
+            continue;
+        }
+        $contacts[] = [
+            'email' => $email,
+            'name' => (string) $contact['name'],
+            'checked' => ($contact['type'] & CONTACT_INVOICES) == CONTACT_INVOICES,
+        ];
+    }
+
+    $divisionId = $DB->GetOne('SELECT divisionid FROM documents WHERE id = ?', [$docId]);
+
+    die(json_encode(['contacts' => $contacts, 'body' => invoiceSendTemplateBody($divisionId ?: null)]));
+}
+
 $layout['pagetitle'] = trans('Invoice send');
 
 $SMARTY->display('header.html');
@@ -129,6 +243,34 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
         );
 
         if (!empty($docs)) {
+            $singleSend = isset($_GET['id']) && count($ids) === 1;
+            $postedMailBody = ($singleSend && isset($_POST['body'])) ? (string) $_POST['body'] : null;
+            if ($singleSend && (isset($_GET['recipients']) || isset($_GET['extra']))) {
+                $customerId = (int) $docs[0]['customerid'];
+                if (empty($LMS->GetCustomer($customerId, true))) {
+                    echo '<span class="red">' . trans('Access denied!') . '</span><br>';
+                    $docs = [];
+                } else {
+                    $chosenEmails = invoiceSendCollectRecipients(
+                        $customerId,
+                        $_GET['recipients'] ?? [],
+                        $_GET['extra'] ?? ''
+                    );
+                    if ($chosenEmails === false) {
+                        echo '<span class="red">' . trans('Incorrect email address!') . '</span><br>';
+                        $docs = [];
+                    } elseif (empty($chosenEmails)) {
+                        echo '<span class="red">' . trans('Unable to send message. No recipients selected!') . '</span><br>';
+                        $docs = [];
+                    } else {
+                        foreach ($docs as &$doc) {
+                            $doc['email'] = implode(',', $chosenEmails);
+                        }
+                        unset($doc);
+                    }
+                }
+            }
+
             $which = isset($_GET['which']) ? intval($_GET['which']) : 0;
             if ($which & DOC_ENTITY_DUPLICATE) {
                 $duplicate_date = isset($_GET['duplicate-date']) ? intval($_GET['duplicate-date']) : 0;
@@ -178,6 +320,11 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
                 $mail_subject = ConfigHelper::getConfig('sendinvoices.mail_subject', 'Invoice No. %invoice');
                 $mail_body = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
                 $mail_format = ConfigHelper::getConfig('sendinvoices.mail_format', 'text');
+                $mail_body_raw = false;
+                if ($postedMailBody !== null) {
+                    $mail_body = invoiceSendSanitizeBody($postedMailBody, $mail_format);
+                    $mail_body_raw = true;
+                }
                 $invoice_filename = ConfigHelper::getConfig('sendinvoices.invoice_filename', 'invoice_%docid');
                 $dnote_filename = ConfigHelper::getConfig('sendinvoices.debitnote_filename', 'dnote_%docid');
                 $notify_email = ConfigHelper::getConfig('sendinvoices.notify_email', '', true);
@@ -228,6 +375,7 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
                         'dnote_filename',
                         'debug_email',
                         'mail_body',
+                        'mail_body_raw',
                         'mail_subject',
                         'mail_format',
                         'currtime',

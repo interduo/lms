@@ -4226,6 +4226,9 @@ $_LANG['Send invoice'] = 'Wyślij fakturę';
 $_LANG['Send invoice again'] = 'Wyślij fakturę ponownie';
 $_LANG['(already sent on $a)'] = '(już wysłane w dniu $a)';
 $_LANG['Are you sure, you want to send invoice to customer \'$a\'?'] = 'Jesteś pewien, że chcesz wysłać fakturę do klienta \'$a\'?';
+$_LANG['Additional e-mail address:'] = 'Dodatkowy adres e-mail:';
+$_LANG['There are no e-mail contacts to choose from.'] = 'Brak kontaktów e-mail do wyboru.';
+$_LANG['Unable to load invoice recipients.'] = 'Nie można wczytać odbiorców faktury.';
 $_LANG['Invoice was sent to customer \'$a\' already on $b. Are you sure, you want to send invoice again?'] = 'Faktura została już wysłana do klienta \'$a\' w dniu $b. Jesteś pewien, że chcesz wysłać fakturę ponownie?';
 $_LANG['Document was sent to customer already on $a. Are you sure, you want to send document again?'] = 'Dokument został już wysłany do klienta w dniu $a. Jesteś pewien, że chcesz wysłać dokument ponownie?';
 

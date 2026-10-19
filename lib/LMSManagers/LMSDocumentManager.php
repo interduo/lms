@@ -3958,6 +3958,11 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
         return $this->db->GetOne('SELECT type FROM documents WHERE id = ?', array($docid));
     }
 
+    public function getDocumentCustomerId($docid)
+    {
+        return $this->db->GetOne('SELECT customerid FROM documents WHERE id = ?', [$docid]);
+    }
+
     public function getDocumentFullNumber($docid)
     {
         return $this->db->GetOne('SELECT fullnumber FROM documents WHERE id = ?', array($docid));
