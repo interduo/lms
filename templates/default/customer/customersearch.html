@@ -659,10 +659,10 @@
 		</TD>
 		<TD>
 			<span>{trans("from")}</span>
-			<input type="text" name="search[{$speedFilter.from}]" value="{$search[$speedFilter.from]|escape}" size="6"
+			<input type="number" min="0" step="any" name="search[{$speedFilter.from}]" value="{$search[$speedFilter.from]|escape}" size="6"
 				{tip text=$speedFilter.fromtip}>
 			<span>{trans("to")}</span>
-			<input type="text" name="search[{$speedFilter.to}]" value="{$search[$speedFilter.to]|escape}" size="6"
+			<input type="number" min="0" step="any" name="search[{$speedFilter.to}]" value="{$search[$speedFilter.to]|escape}" size="6"
 				{tip text=$speedFilter.totip}>
 			Mbit/s
 		</TD>
