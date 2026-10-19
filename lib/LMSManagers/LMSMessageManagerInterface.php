@@ -53,4 +53,6 @@ interface LMSMessageManagerInterface
     public function updateMessageItems(array $params);
 
     public function getSingleMessage($id, $details = false);
+
+    public function attachLastDocumentSendDestinations(array &$rows, $docIdField = 'docid', $customerIdField = 'customerid');
 }

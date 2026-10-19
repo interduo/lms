@@ -5649,10 +5649,22 @@ class LMS
                         } else {
                             $msgid = $messages[$mailSubject]['msgid'];
                         }
+                        $itemAttributes = [
+                            'docid' => (int) $doc['id'],
+                        ];
+                        if (isset($currtime)) {
+                            $itemAttributes['sendtime'] = (int) $currtime;
+                        }
                         $this->DB->Execute(
-                            'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status)
-                            VALUES (?, ?, ?, ?NOW?, ?)',
-                            array($msgid, $doc['customerid'], $email, MSG_NEW)
+                            'INSERT INTO messageitems (messageid, customerid, destination, lastdate, status, attributes)
+                            VALUES (?, ?, ?, ?NOW?, ?, ?)',
+                            [
+                                $msgid,
+                                $doc['customerid'],
+                                $email,
+                                MSG_NEW,
+                                serialize($itemAttributes),
+                            ]
                         );
                         $msgitemid = $this->DB->GetLastInsertID('messageitems');
                         if (!isset($msgitems[$doc['customerid']])) {

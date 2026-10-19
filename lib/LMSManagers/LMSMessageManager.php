@@ -821,4 +821,100 @@ class LMSMessageManager extends LMSManager implements LMSMessageManagerInterface
 
         return $message;
     }
+
+    public function attachLastDocumentSendDestinations(array &$rows, $docIdField = 'docid', $customerIdField = 'customerid')
+    {
+        if (!ConfigHelper::checkConfig('sendinvoices.add_message') || empty($rows)) {
+            return;
+        }
+
+        $docIds = [];
+        $customerIds = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || empty($row[$docIdField])) {
+                continue;
+            }
+            $docIds[] = (int) $row[$docIdField];
+            if ($customerIdField !== null && !empty($row[$customerIdField])) {
+                $customerIds[] = (int) $row[$customerIdField];
+            }
+        }
+
+        $destinations = $this->getLastDocumentSendDestinations($docIds, $customerIds);
+        if (empty($destinations)) {
+            return;
+        }
+
+        foreach ($rows as &$row) {
+            if (!is_array($row) || empty($row[$docIdField])) {
+                continue;
+            }
+            $docId = (int) $row[$docIdField];
+            if (!empty($destinations[$docId])) {
+                $row['lastsendto'] = implode(', ', $destinations[$docId]);
+            }
+        }
+        unset($row);
+    }
+
+    private function getLastDocumentSendDestinations(array $docIds, array $customerIds)
+    {
+        $docIds = array_values(array_unique(array_filter(array_map('intval', $docIds))));
+        $customerIds = array_values(array_unique(array_filter(array_map('intval', $customerIds))));
+        if (empty($docIds) || empty($customerIds)) {
+            return [];
+        }
+
+        $wanted = array_flip($docIds);
+        $rows = $this->db->GetAll(
+            'SELECT mi.destination, mi.attributes, mi.lastdate
+            FROM messageitems mi
+            JOIN messages m ON m.id = mi.messageid
+            WHERE mi.customerid IN (' . implode(',', $customerIds) . ')
+                AND mi.status = ?
+                AND m.type = ?
+                AND mi.attributes ?LIKE? ?
+            ORDER BY mi.lastdate, mi.id',
+            [
+                MSG_SENT,
+                MSG_MAIL,
+                '%s:5:"docid";i:%',
+            ]
+        );
+        if (empty($rows)) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            if (!is_string($row['attributes']) || strpos($row['attributes'], 's:5:"docid";') === false) {
+                continue;
+            }
+            $attributes = @unserialize($row['attributes'], ['allowed_classes' => false]);
+            if (!is_array($attributes) || !isset($attributes['docid']) || !isset($wanted[(int) $attributes['docid']])) {
+                continue;
+            }
+            $destination = trim((string) $row['destination']);
+            if ($destination === '') {
+                continue;
+            }
+            $docId = (int) $attributes['docid'];
+            $sendTime = isset($attributes['sendtime']) ? (int) $attributes['sendtime'] : (int) $row['lastdate'];
+            if (!isset($grouped[$docId]) || $sendTime > $grouped[$docId]['sendtime']) {
+                $grouped[$docId] = [
+                    'sendtime' => $sendTime,
+                    'destinations' => [$destination => $destination],
+                ];
+            } elseif ($sendTime === $grouped[$docId]['sendtime']) {
+                $grouped[$docId]['destinations'][$destination] = $destination;
+            }
+        }
+
+        $result = [];
+        foreach ($grouped as $docId => $group) {
+            $result[$docId] = array_values($group['destinations']);
+        }
+
+        return $result;
+    }
 }

@@ -2456,6 +2456,10 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     $invoice['refdocs'] = $document_manager->getDocumentReferences($invoice['id']);
                 }
             }
+            unset($invoice);
+
+            $messageManager = new LMSMessageManager($this->db, $this->auth, $this->cache, $this->syslog);
+            $messageManager->attachLastDocumentSendDestinations($invoicelist, 'id', 'customerid');
         }
 
         $invoicelist['order'] = $order;

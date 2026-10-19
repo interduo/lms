@@ -441,6 +441,9 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             if ($direction == 'DESC') {
                 $result['list'] = array_reverse($result['list']);
             }
+
+            $messageManager = new LMSMessageManager($this->db, $this->auth, $this->cache, $this->syslog);
+            $messageManager->attachLastDocumentSendDestinations($result['list'], 'docid', 'customerid');
         }
 
         $result['sendinvoices'] = ($this->db->GetOne('SELECT 1 FROM customercontacts cc
