@@ -964,6 +964,8 @@ $_LANG['Default invoice issuer'] = 'Domyślna osoba tworząca fakturę';
 $_LANG['Default placement of suggestion window (left/right/top/bottom)'] = 'Domyślne umiejscowienie okna sugestii (left/right/top/bottom)';
 $_LANG['Default zip code, city, street, used while inserting new customer. Useful if you add majority of customers with the same street.'] = 'Domyślny kod pocztowy, miasto, ulica pod czas dodawania nowego klienta. Przydatne, gdy mamy wielu klientów na tej samej ulicy.';
 $_LANG['default<!paytime>'] = 'domyślny';
+$_LANG['<!paytype>— default —'] = '— domyślny —';
+$_LANG['<!paytype>— default ($a) —'] = '— domyślny ($a) —';
 $_LANG['Enter default price'] = 'Podaj domyślną cenę';
 $_LANG['Enter default number of units'] = 'Podaj domyślną liczbę jednostek';
 $_LANG['Enter default size of units'] = 'Podaj domyślny rozmiar jednostek';
@@ -1063,6 +1065,12 @@ $_LANG['Downceil:'] = 'Downceil:';
 $_LANG['Downceil'] = 'Downceil';
 $_LANG['Download'] = 'Download';
 $_LANG['Download ceil:'] = 'Download ceil:';
+$_LANG['Maximum download speed:'] = 'Maksymalna prędkość pobierania:';
+$_LANG['Maximum upload speed:'] = 'Maksymalna prędkość wysyłania:';
+$_LANG['Enter minimum tariff download speed in Mbit/s (optional)'] = 'Podaj dolną granicę maksymalnej prędkości pobierania w Mbit/s (opcjonalnie)';
+$_LANG['Enter maximum tariff download speed in Mbit/s (optional)'] = 'Podaj górną granicę maksymalnej prędkości pobierania w Mbit/s (opcjonalnie)';
+$_LANG['Enter minimum tariff upload speed in Mbit/s (optional)'] = 'Podaj dolną granicę maksymalnej prędkości wysyłania w Mbit/s (opcjonalnie)';
+$_LANG['Enter maximum tariff upload speed in Mbit/s (optional)'] = 'Podaj górną granicę maksymalnej prędkości wysyłania w Mbit/s (opcjonalnie)';
 $_LANG['Download rate:'] = 'Download rate:';
 $_LANG['Downrate:'] = 'Downrate:';
 $_LANG['Do you want to remove $a customer?'] = 'Czy chcesz usunąć klienta $a?';
@@ -3257,6 +3265,7 @@ $_LANG['Phone numbers:'] = 'Numery telefonów:';
 $_LANG['Phone numbers'] = 'Numery telefonów';
 $_LANG['No such VoIP accounts in database.'] = 'Brak kont VoIP w bazie.';
 $_LANG['That customer does not own any VoIP account.'] = 'Klient nie posiada kont VoIP.';
+$_LANG['This customer does not have any VoIP accounts matching the filter criteria.'] = 'Klient nie ma przypisanych żadnych kont VoIP spełniających kryteria wskazane filtrem.';
 $_LANG['No such VoIP accounts matching search criteria.'] = 'Brak kont VoIP spełniających zadane kryteria.';
 $_LANG['Find VoIP accounts matching the following search criteria:'] = 'Znajdź konta VoIP spełniające zadane kryteria:';
 $_LANG['Enter phone number or it\'s fragment'] = 'Wprowadź numer telefonu lub jego fragment';
@@ -5881,6 +5890,8 @@ $_LANG['Routed via:'] = 'Trasowana przez:';
 
 $_LANG['$a selected contacts of $b customers'] = '$a wybranych kontaktów spośród $b klientów';
 $_LANG['show customer list'] = 'pokaż listę klientów';
+$_LANG['show assignment names'] = 'pokaż nazwy zobowiązań';
+$_LANG['Assignment names'] = 'Nazwy zobowiązań';
 $_LANG['hide customer list'] = 'ukryj listę klientów';
 
 $_LANG['Error: cannot open event - event closed too long ago'] = 'Błąd: nie można otworzyć zdarzenia - zostało ono zamknięte zbyt dawno';
@@ -6054,6 +6065,7 @@ $_LANG['Assignment from not approved document'] = 'Zobowiązanie z niezatwierdzo
 $_LANG['Show all customer tickets'] = 'Pokaż wszystkie zgłoszenia klienta';
 
 $_LANG['without location address'] = 'bez adresu lokalizacyjnego';
+$_LANG['— without location address —'] = '— bez adresu lokalizacyjnego —';
 
 $_LANG['Group name can contain letters (with national characters), digits, dots, underscores and dashes.'] = 'Nazwa grupy może składać się z liter (wraz ze znakami narodowymi), cyfr, kropek, podkreśleń i myślników.';
 
