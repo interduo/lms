@@ -1006,6 +1006,8 @@ $_LANG['DHCP range:'] = 'Zakres DHCP:';
 $_LANG['DHCP range'] = 'Zakres DHCP';
 $_LANG['Disable'] = 'Wyłącz';
 $_LANG['disabled'] = 'wyłączony';
+$_LANG['Disabled'] = 'Wyłączony';
+$_LANG['Exclude from balance'] = 'Wyklucz z salda';
 $_LANG['Disabled<!plural>:'] = 'Niedostępne<!plural>:';
 $_LANG['Disable notice'] = 'Wyłącz powiadomienie';
 $_LANG['Disable notices'] = 'Wyłącz powiadomienia';
@@ -6487,3 +6489,6 @@ $_LANG['<!uke-income>Tariff'] = 'Taryfa';
 $_LANG['Maximum reason length is 255 characters!'] = 'Maksymalna długość powodu to 255 znaków!';
 
 $_LANG['— select tariff —'] = '— wybierz taryfę —';
+
+$_LANG['import source'] = 'źródło importu';
+$_LANG['cash registry'] = 'rejestr kasowy';
