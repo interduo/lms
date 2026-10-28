@@ -627,29 +627,17 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
                     //$row['endtime'] = 0;
                     $list2[] = $row;
                     if (!$singleday && $forward != -1) {
-                        $dst = date('I', $row['date']);
                         while ($days) {
                             //if ($days == 1) {
                                 $row['endtime'] = $endtime;
                             //}
-                            $row['date'] += 86400;
-                            $newdst = date('I', $row['date']);
-                            if ($newdst != $dst) {
-                                if ($newdst < $dst) {
-                                    $row['date'] += 3600;
-                                } else {
-                                    $row['date'] -= 3600;
-                                }
-                                $newdst = date('I', $row['date']);
-                            }
-                            [$year, $month, $day] = explode('/', date('Y/n/j', $row['date']));
-                            $row['date'] = mktime(0, 0, 0, $month, $day, $year);
-                            $row['enddate'] = $row['date'] + 86400;
+                            $nextDate = strtotime('+1 day', $row['date']);
+                            $row['date'] = $nextDate;
+                            $row['enddate'] = strtotime('+1 day', $nextDate);
                             if ($days > 1 || $endtime) {
                                 $list2[] = $row;
                             }
                             $days--;
-                            $dst = $newdst;
                         }
                     }
                 } else {

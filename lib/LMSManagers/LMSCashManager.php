@@ -264,6 +264,7 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
                         // then we matched customer by source account
                         if (!isset($unique_source_accounts)) {
                             $days = intval(ConfigHelper::getConfig($config_section . '.source_account_match_threshold_days'));
+                            $accountMatchSince = $days ? strtotime('-' . $days . ' days') : 0;
                             $unique_source_accounts = $this->db->GetAll(
                                 'SELECT i.customerid, i.srcaccount
                                 FROM cashimport i
@@ -271,12 +272,12 @@ class LMSCashManager extends LMSManager implements LMSCashManagerInterface
                                     SELECT i2.srcaccount
                                     FROM cashimport i2
                                     WHERE i2.customerid IS NOT NULL AND i2.srcaccount IS NOT NULL
-                                        ' . ($days ? ' AND i2.date >= ?NOW? - ' . $days . ' * 86400' : '') . '
+                                        ' . ($days ? ' AND i2.date >= ' . $accountMatchSince : '') . '
                                     GROUP BY i2.srcaccount
                                     HAVING COUNT(DISTINCT i2.customerid) = 1
                                 ) i3 ON i3.srcaccount = i.srcaccount
                                 WHERE i.customerid IS NOT NULL AND i.srcaccount IS NOT NULL
-                                    ' . ($days ? ' AND i.date >= ?NOW? - ' . $days . ' * 86400' : '')
+                                    ' . ($days ? ' AND i.date >= ' . $accountMatchSince : '')
                             );
                             if (empty($unique_source_accounts)) {
                                 $unique_source_accounts = array();

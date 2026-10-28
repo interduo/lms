@@ -3153,7 +3153,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
 
             $result['taxcategories'] = array_unique($result['taxcategories']);
 
-            $result['pdate'] = $result['cdate'] + ($result['paytime'] * 86400);
+            $result['pdate'] = strtotime($result['paytime'] . ' days', $result['cdate']);
             $result['value'] = $result['total'] - (isset($result['invoice']) && $result['doctype'] == DOC_CNOTE ? $result['invoice']['total'] : 0);
 
             if ($result['value'] < 0) {
@@ -3302,7 +3302,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
                     $where = ' AND number = '.intval($search);
                     break;
                 case 'cdate':
-                    $where = ' AND cdate >= '.intval($search).' AND cdate < '.(intval($search)+86400);
+                    $where = ' AND cdate >= '.intval($search).' AND cdate < '.strtotime('+1 day', intval($search));
                     break;
                 case 'month':
                     $last = mktime(23, 59, 59, date('n', $search) + 1, 0, date('Y', $search));
@@ -3493,7 +3493,7 @@ class LMSFinanceManager extends LMSManager implements LMSFinanceManagerInterface
             $result['paytypename'] = $PAYTYPES[empty($result['paytype']) ? PAYTYPE_TRANSFER : $result['paytype']]['label'];
 
             $result['valuep'] = round(($result['value'] - floor($result['value'])) * 100);
-            $result['pdate'] = $result['cdate'] + ($result['paytime'] * 86400);
+            $result['pdate'] = strtotime($result['paytime'] . ' days', $result['cdate']);
             $result['total'] = $result['value'];
 
             // NOTE: don't waste CPU/mem when printing history is not set:

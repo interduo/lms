@@ -36,7 +36,7 @@ if ($doc = $DB->GetRow('SELECT number, cdate, numberplans.template, extnumber, p
             'ext_num' => $doc['extnumber'],
             'customerid' => $doc['customerid'],
         ));
-        $doc['pdate'] = $doc['cdate'] + ($doc['paytime'] * 86400);
+        $doc['pdate'] = strtotime($doc['paytime'] . ' days', $doc['cdate']);
         $doc['paytypename'] = isset($PAYTYPES[$doc['paytype']]) ? $PAYTYPES[$doc['paytype']]['label'] : trans('undefined');
         $SMARTY->assign('invoice', $doc);
         $SMARTY->display('invoice/invoiceinfoshort.html');

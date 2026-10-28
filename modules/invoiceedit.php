@@ -95,7 +95,7 @@ if (isset($_GET['id']) && ($action == 'edit' || $action == 'init')) {
 
     $invoice['oldcdate'] = $invoice['cdate'];
     $invoice['oldsdate'] = $invoice['sdate'];
-    $invoice['olddeadline'] = $invoice['deadline'] = $invoice['cdate'] + $invoice['paytime'] * 86400;
+    $invoice['olddeadline'] = $invoice['deadline'] = strtotime($invoice['paytime'] . ' days', $invoice['cdate']);
     $invoice['oldnumber'] = $invoice['number'];
     $invoice['oldnumberplanid'] = $invoice['numberplanid'];
     $invoice['oldcustomerid'] = $invoice['customerid'];

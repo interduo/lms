@@ -156,7 +156,7 @@ switch ($action) {
         $invoice['proforma'] = isset($_GET['proforma']) ? 1 : 0;
 
         if (isset($_GET['id'])) {
-            $invoice['deadline'] = $invoice['cdate'] + $invoice['paytime'] * 86400;
+            $invoice['deadline'] = strtotime($invoice['paytime'] . ' days', $invoice['cdate']);
         } else {
             if (isset($customer)) {
                 if ($customer['paytime'] != -1) {
@@ -168,7 +168,7 @@ switch ($action) {
             } else {
                 $paytime = ConfigHelper::getConfig('invoices.paytime');
             }
-            $invoice['deadline'] = $currtime + $paytime * 86400;
+            $invoice['deadline'] = strtotime($paytime . ' days', $currtime);
         }
 
         if (isset($_GET['clone'])) {
@@ -486,7 +486,7 @@ switch ($action) {
 				WHERE id = ?', array($customer['divisionid']))) === null) {
                 $paytime = ConfigHelper::getConfig('invoices.paytime');
             }
-            $invoice['deadline'] = $invoice['cdate'] + $paytime * 86400;
+            $invoice['deadline'] = strtotime($paytime . ' days', $invoice['cdate']);
         }
 
         if ($invoice['deadline'] < $invoice['cdate']) {

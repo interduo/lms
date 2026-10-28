@@ -2674,26 +2674,27 @@ if ($check_invoices) {
 
 if ($delete_old_assignments_after_days) {
     // delete old assignments
+    $oldAssignmentLimit = strtotime('-' . $delete_old_assignments_after_days . ' days', $today);
     $DB->Execute(
         "DELETE FROM liabilities WHERE id IN (
 			SELECT a.liabilityid FROM assignments a
 			JOIN customers c ON c.id = a.customerid
             WHERE " . (empty($customerid) ? '1 = 1' : 'a.customerid IN (' . implode(', ', $customerid) . ')')
                 . ($divisionid ? ' AND c.divisionid = ' . $divisionid : '')
-                . " AND ((a.dateto <> 0 AND a.dateto < $today - ? * 86400
-                    OR (a.period = ? AND a.at < $today - ? * 86400))
+                . " AND ((a.dateto <> 0 AND a.dateto < ?
+                    OR (a.period = ? AND a.at < ?))
                 AND a.liabilityid IS NOT NULL)
 		)",
-        array($delete_old_assignments_after_days, DISPOSABLE, $delete_old_assignments_after_days)
+        array($oldAssignmentLimit, DISPOSABLE, $oldAssignmentLimit)
     );
     $DB->Execute(
         "DELETE FROM assignments
 		WHERE " . (empty($customerid) ? '1 = 1' : 'customerid IN (' . implode(', ', $customerid) . ')')
             . ($divisionid ? ' AND EXISTS (SELECT c.id FROM customers c WHERE c.divisionid = ' . $divisionid . ' AND c.id = customerid)' : '')
             . " AND (tariffid IS NOT NULL OR liabilityid IS NOT NULL)
-            AND ((dateto <> 0 AND dateto < $today - ? * 86400)
-			OR (period = ? AND at < $today - ? * 86400))",
-        array($delete_old_assignments_after_days, DISPOSABLE, $delete_old_assignments_after_days)
+            AND ((dateto <> 0 AND dateto < ?)
+			OR (period = ? AND at < ?))",
+        array($oldAssignmentLimit, DISPOSABLE, $oldAssignmentLimit)
     );
 }
 

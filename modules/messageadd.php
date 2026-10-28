@@ -387,7 +387,7 @@ function GetRecipients($filter, $type = MSG_MAIL)
                 'JOIN (
                     SELECT DISTINCT d.customerid FROM documents d
                     JOIN documentcontents dc ON dc.docid = d.id
-                    WHERE dc.todate >= ?NOW? AND dc.todate <= ?NOW? + 86400 * ' . $contracts_days . '
+                    WHERE dc.todate >= ?NOW? AND dc.todate <= ' . strtotime('+' . intval($contracts_days) . ' days') . '
                         AND type IN (' . DOC_CONTRACT . ',' . DOC_ANNEX . ')'
                     . $archived_document_condition
                     . '
@@ -397,7 +397,7 @@ function GetRecipients($filter, $type = MSG_MAIL)
                     FROM assignments
                     WHERE dateto > 0
                     GROUP BY customerid
-                    HAVING MAX(dateto) >= ?NOW? AND MAX(dateto) <= ?NOW? + 86400 * ' . $contracts_days . '
+                    HAVING MAX(dateto) >= ?NOW? AND MAX(dateto) <= ' . strtotime('+' . intval($contracts_days) . ' days') . '
                 ) ass ON ass.customerid = c.id ') : '')))
         . ($netdevtable ?? '')
         . ($mailtable ?? '')

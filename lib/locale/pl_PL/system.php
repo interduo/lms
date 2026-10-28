@@ -239,7 +239,7 @@ self::addLanguageFunctions(
             if ($date) {
                 $day_of_week = date('N', $date);
                 if ($day_of_week > 5) {
-                    $date -= ($day_of_week - 5) * 86400;
+                    $date = strtotime('-' . ($day_of_week - 5) . ' days', $date);
                 }
             }
 
@@ -250,7 +250,7 @@ self::addLanguageFunctions(
                 if ($result !== false) {
                     break;
                 }
-                $date -= 86400;
+                $date = strtotime('-1 day', (int) $date);
                 $i++;
             } while ($result === false && $i < 5);
             if ($i == 5) {

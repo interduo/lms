@@ -318,7 +318,7 @@ if (isset($_GET['type']) && $_GET['type'] == 'cash') {
                 $line = str_replace('%CLARION_DATE', $clariondate, $line);
                 $line = str_replace('%NUMBER', $number, $line);
                 $line = str_replace('%DATE', $date, $line);
-                $line = str_replace('%DEADLINE', date($date_format, $doc['cdate']+$doc['paytime']*86400), $line);
+                $line = str_replace('%DEADLINE', date($date_format, strtotime($doc['paytime'] . ' days', $doc['cdate'])), $line);
                 $line = str_replace('%CID4', sprintf('%04d', $doc['customerid']), $line);
                 $line = str_replace('%CID', $doc['customerid'], $line);
                 $line = str_replace('%UID4', sprintf('%04d', $doc['userid']), $line);

@@ -5310,7 +5310,7 @@ class LMS
                 'customerid' => $doc['customerid'],
             ));
 
-            $deadline = $doc['cdate'] + $document['document']['paytime'] * 86400;
+            $deadline = strtotime($document['document']['paytime'] . ' days', $doc['cdate']);
 
             $balance = $this->GetCustomerBalance($doc['customerid']);
             $currency = Localisation::getCurrentCurrency();

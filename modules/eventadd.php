@@ -126,7 +126,7 @@ if (isset($_POST['event'])) {
                 $error['begin'] = trans('Events which begin in the past are not allowed!');
             }
 
-            if ($distant_event_restriction != 'none' && $distant_event_day_trigger && $date >= $now + $distant_event_day_trigger * 86400) {
+            if ($distant_event_restriction != 'none' && $distant_event_day_trigger && $date >= strtotime('+' . $distant_event_day_trigger . ' days', $now)) {
                 switch ($distant_event_restriction) {
                     case 'error':
                         $error['begin'] = trans('Event too distant in time!');

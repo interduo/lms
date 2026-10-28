@@ -740,7 +740,7 @@ function parse_customer_data($data, $format, $row)
     if (isset($row['deadline'])) {
         $deadline = $row['deadline'];
     } elseif (isset($row['cdate'], $row['paytime'])) {
-        $deadline = $row['cdate'] + $row['paytime'] * 86400;
+        $deadline = strtotime($row['paytime'] . ' days', $row['cdate']);
     }
 
     [$now_y, $now_m] = explode('/', date('Y/m'));

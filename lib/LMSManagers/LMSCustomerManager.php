@@ -1442,7 +1442,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             default:
                 if ($as > 0) {
                     $assignment = 'SELECT DISTINCT(a.customerid) FROM assignments a WHERE
-                        a.suspended = 0 AND a.commited = 1 AND a.dateto > ' . time() . ' AND a.dateto <= ' . (time() + (intval($as) * 86400))
+                        a.suspended = 0 AND a.commited = 1 AND a.dateto > ' . time() . ' AND a.dateto <= ' . strtotime('+' . intval($as) . ' days')
                         . ' AND NOT EXISTS (SELECT 1 FROM assignments aa WHERE aa.customerid = a.customerid AND aa.datefrom > a.dateto LIMIT 1)';
                 } else {
                     $assignment = null;
@@ -2194,7 +2194,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
                         'JOIN (
 							SELECT DISTINCT d.customerid FROM documents d
 							JOIN documentcontents dc ON dc.docid = d.id
-							WHERE dc.todate >= ?NOW? AND dc.todate <= ?NOW? + 86400 * ' . $contracts_days . '
+							WHERE dc.todate >= ?NOW? AND dc.todate <= ' . strtotime('+' . intval($contracts_days) . ' days') . '
 								AND type IN (' . DOC_CONTRACT . ',' . DOC_ANNEX . ')'
                                 . $archived_document_condition
                             . '
@@ -2204,7 +2204,7 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
 							FROM assignments
 							WHERE dateto > 0
 							GROUP BY customerid
-							HAVING MAX(dateto) >= ?NOW? AND MAX(dateto) <= ?NOW? + 86400 * ' . $contracts_days . '
+							HAVING MAX(dateto) >= ?NOW? AND MAX(dateto) <= ' . strtotime('+' . intval($contracts_days) . ' days') . '
 						) ass ON ass.customerid = c.id') :
                 ($contracts == 4 ? 'JOIN (
                             SELECT DISTINCT d.customerid FROM documents d

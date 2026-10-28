@@ -2185,7 +2185,7 @@ if (isset($_GET['l']) && sprintf('%d', $_GET['l']) > 0 && sprintf('%d', $_GET['l
         $inv['paytype'] = PAYTYPE_CASH;
         $inv['numberplanid'] = $numberplanid;
         $inv['type'] = DOC_INVOICE;
-        $inv['cdate'] = time() - ($_GET['i']+1) * 86400;
+        $inv['cdate'] = strtotime('-' . ($_GET['i'] + 1) . ' days');
         $contents['prodid'] = '';
         $contents['tariffid'] = 0;
         $contents['jm'] = trans(ConfigHelper::getConfig('payments.default_unit_name'));
@@ -2202,7 +2202,7 @@ if (isset($_GET['l']) && sprintf('%d', $_GET['l']) > 0 && sprintf('%d', $_GET['l
                 $contents['pdiscount'] = 0;
                 $contents['vdiscount'] = 0;
                 $contents['taxcategory'] = 0;
-                $inv['cdate'] += 86400;
+                $inv['cdate'] = strtotime('+1 day', $inv['cdate']);
 
                 foreach ($customers as $c) {
                     $inv['number']++;
