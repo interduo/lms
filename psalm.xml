@@ -1,0 +1,21 @@
+<psalm
+    errorLevel="2"
+    resolveFromConfigFile="true"
+    allFunctionsGlobal="true"
+    allConstantsGlobal="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="." />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <stubs>
+        <file name="psalm-stub.php" />
+    </stubs>
+
+</psalm>
