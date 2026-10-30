@@ -304,7 +304,12 @@ function getThroughput($ip)
         return $result;
     }
 
-    $cmd = str_replace('%i', $ip, $cmd);
+    $addressArg = escapeshellarg($ip);
+    $cmd = strtr($cmd, array(
+        '"%i"' => $addressArg,
+        "'%i'" => $addressArg,
+        '%i' => $addressArg,
+    ));
     exec($cmd, $output);
     if (!is_array($output) && count($output) != 1) {
         return $result;
