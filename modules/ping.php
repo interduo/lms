@@ -62,11 +62,27 @@ function refresh($params)
             $reply_detailed_regexp = '/^([0-9]+).+icmp_[rs]eq=([0-9]+).+ttl=([0-9]+).+time=([0-9\.]+.+)$/';
             break;
     }
-    if (preg_match('/^[a-zA-Z0-9\.:]+$/', $iface)) {
-        $cmd = preg_replace('/%if/', $iface, $cmd);
+    if (strpos($cmd, '%if') !== false) {
+        if (!preg_match('/^[a-zA-Z0-9\.:]+$/', (string) $iface)) {
+            return $objResponse;
+        }
+        $interfaceArg = escapeshellarg($iface);
+        $cmd = strtr($cmd, array(
+            '"%if"' => $interfaceArg,
+            "'%if'" => $interfaceArg,
+            '%if' => $interfaceArg,
+        ));
     }
-    if (check_ip($ipaddr)) {
-        $cmd = preg_replace('/%i/', $ipaddr, $cmd);
+    if (strpos($cmd, '%i') !== false) {
+        if (!check_ip($ipaddr)) {
+            return $objResponse;
+        }
+        $addressArg = escapeshellarg($ipaddr);
+        $cmd = strtr($cmd, array(
+            '"%i"' => $addressArg,
+            "'%i'" => $addressArg,
+            '%i' => $addressArg,
+        ));
     }
     exec($cmd, $output);
     $sent = preg_grep($summary_regexp, $output);
