@@ -119,6 +119,8 @@ interface LMSHelpdeskManagerInterface
 
     public function NotifyUsers(array $params);
 
+    public function TicketNotifyUsers(array $params);
+
     public function CleanupTicketLastView();
 
     public function MarkQueueAsRead($queueid);
@@ -135,7 +137,7 @@ interface LMSHelpdeskManagerInterface
 
     public function GetTicketRequestorPhone($ticketid);
 
-    public function CheckTicketAccess($ticketid);
+    public function CheckTicketAccess($ticketid, $rights = 0, $requireAll = false);
 
     public function GetRelatedTickets($ticketid);
 

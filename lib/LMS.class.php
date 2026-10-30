@@ -2555,6 +2555,12 @@ class LMS
         return $manager->NotifyUsers($params);
     }
 
+    public function TicketNotifyUsers(array $params)
+    {
+        $manager = $this->getHelpdeskManager();
+        return $manager->TicketNotifyUsers($params);
+    }
+
     public function CleanupTicketLastView()
     {
         $manager = $this->getHelpdeskManager();
@@ -2603,10 +2609,10 @@ class LMS
         return $manager->GetTicketRequestorPhone($ticketid);
     }
 
-    public function CheckTicketAccess($ticketid)
+    public function CheckTicketAccess($ticketid, $rights = 0, $requireAll = false)
     {
         $manager = $this->getHelpdeskManager();
-        return $manager->CheckTicketAccess($ticketid);
+        return $manager->CheckTicketAccess($ticketid, $rights, $requireAll);
     }
 
     public function GetRelatedTickets($ticketid)

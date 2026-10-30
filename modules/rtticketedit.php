@@ -47,11 +47,11 @@ if (!empty($_GET['action'])) {
 
 if (is_array($id)) {
     foreach ($id as $ticketid) {
-        if (!($LMS->CheckTicketAccess($ticketid) & RT_RIGHT_WRITE)) {
+        if (!$LMS->CheckTicketAccess($ticketid, RT_RIGHT_WRITE)) {
             access_denied();
         }
     }
-} elseif (!($LMS->CheckTicketAccess($id) & RT_RIGHT_WRITE)) {
+} elseif (!$LMS->CheckTicketAccess($id, RT_RIGHT_WRITE)) {
     access_denied();
 }
 
@@ -60,6 +60,9 @@ if ($id && !isset($_POST['ticket'])) {
         switch ($action) {
             case 'queuechange':
                 $dstqueue = intval($_GET['queueid']);
+                if (!($LMS->GetUserRightsRT($userid, $dstqueue) & RT_RIGHT_WRITE)) {
+                    access_denied();
+                }
                 $LMS->TicketChange($id, array('queueid' => $dstqueue));
                 $SESSION->redirect('?m=rtticketview&id=' . $id);
                 break;
@@ -231,6 +234,24 @@ if ($id && !isset($_POST['ticket'])) {
                 }
                 $SESSION->redirect('?m=rtqueueview'
                     . ($SESSION->is_set('backid') ? '#' . $SESSION->get('backid') : ''));
+                break;
+            case 'fastnote':
+                $fastNoteBody = trim($_POST['fastnote'] ?? '');
+                if ($fastNoteBody === '') {
+                    break;
+                }
+                $fastNoteMessageId = $LMS->TicketMessageAdd([
+                    'ticketid' => $id,
+                    'body' => $fastNoteBody,
+                    'type' => RTMESSAGE_NOTE,
+                ]);
+                $LMS->TicketNotifyUsers([
+                    'type' => 'note',
+                    'ticketid' => $id,
+                    'body' => $fastNoteBody,
+                    'messageid' => $fastNoteMessageId,
+                    'notify' => true,
+                ]);
                 break;
             case 'resolve':
                 $notification_options_by_division_ids = array(

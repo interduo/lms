@@ -203,7 +203,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 break;
         }
 
-        if (empty($state) || $state == -2) {
+        if ($state === null || $state === '' || $state === array() || $state == -2) {
             $statefilter = '';
         } elseif (is_array($state)) {
             $statefilter = ' AND t.state IN (' . implode(',', $state) . ')';
@@ -433,6 +433,10 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             $parentfilter = '';
         }
 
+        if (!empty($catids) && !is_array($catids)) {
+            $catids = array($catids);
+        }
+
         if (!empty($catids) && !in_array('all', $catids)) {
             if (in_array(-1, $catids)) {
                 if (count($catids) > 1) {
@@ -570,7 +574,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                         : ($user_permission_checks ? ' AND (t.queueid IS NOT NULL OR t.owner = ' . $userid . ' OR t.verifierid = ' . $userid . ')' : ''))
                     . str_replace('t.', 't2.', $statefilter)
                     . str_replace('t.', 't2.', $removedfilter)
-                    . ' AND lv2.vdate < t2.modtime
+                    . ' AND (lv2.ticketid IS NULL OR m4.createtime > lv2.vdate) AND m4.deleted = 0
 				GROUP BY m4.ticketid
 			) m3 ON m3.ticketid = t.id
             LEFT JOIN (
@@ -731,7 +735,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 . ' ORDER BY name')) {
             if ($stats) {
                 foreach ($result as &$row) {
-                    $stats = $this->GetQueueStats($row['id'], $deleted_tickets);
+                    $stats = $this->GetQueueStats($row['id'], $deleted_tickets ?? true);
                     if ($stats) {
                         $row = array_merge($row, $stats);
                     }
@@ -972,7 +976,9 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 }
             }
             foreach ($result as $idx => $category) {
-                $result[$idx]['owners'] = $this->db->GetAll('SELECT u.id, name FROM rtcategoryusers cu
+                $result[$idx]['owners'] = $this->db->GetAll('SELECT u.id, name, u.deleted,
+				(CASE WHEN u.access = 1 AND u.accessfrom <= ?NOW? AND (u.accessto >= ?NOW? OR u.accessto = 0) THEN 1 ELSE 0 END) AS access
+				FROM rtcategoryusers cu
 				LEFT JOIN vusers u ON cu.userid = u.id
 				WHERE categoryid = ?', array($category['id']));
             }
@@ -1372,7 +1378,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             LEFT JOIN vusers o ON (t.owner = o.id)
             LEFT JOIN vusers c ON (t.creatorid = c.id)
             LEFT JOIN vusers d ON (t.requestor_userid = d.id)
-            LEFT JOIN rtticketwatchers w ON (t.id = w.ticketid)
+            LEFT JOIN rtticketwatchers w ON (t.id = w.ticketid' . (!empty($userid) ? ' AND w.userid = ' . $userid : '') . ')
             LEFT JOIN customers ON (customers.id = t.customerid)
             LEFT JOIN vaddresses va ON va.id = t.address_id
             LEFT JOIN vnodes n ON n.id = t.nodeid
@@ -1545,16 +1551,21 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
 
             $references = array();
             $reply = $message;
-            while ($reply['inreplyto']) {
-                if ($reply['messageid']) {
+            $visited = array();
+            while (!empty($reply['inreplyto']) && !isset($visited[$reply['inreplyto']])) {
+                $visited[$reply['inreplyto']] = true;
+                if (!empty($reply['messageid'])) {
                     $references[] = $reply['messageid'];
                 }
                 $reply = $this->db->GetRow(
                     'SELECT messageid, inreplyto FROM rtmessages WHERE id = ?',
                     array($reply['inreplyto'])
                 );
+                if (empty($reply)) {
+                    break;
+                }
             }
-            if ($reply['messageid']) {
+            if (!empty($reply['messageid']) && (empty($reply['inreplyto']) || !isset($visited[$reply['inreplyto']]))) {
                 $references[] = $reply['messageid'];
             }
             $message['references'] = array_reverse($references);
@@ -2268,6 +2279,391 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         return $text;
     }
 
+    public function TicketNotifyUsers(array $params)
+    {
+        if (($params['type'] ?? '') === 'note') {
+            $this->ticketNoteNotify($params);
+            return;
+        }
+
+        if (($params['type'] ?? '') === 'message') {
+            return $this->ticketMessageNotify($params);
+        }
+    }
+
+    private function ticketNoteNotify(array $params)
+    {
+        global $LMS, $RT_PRIORITIES, $RT_MAIL_PRIORITIES;
+
+        $ticketId = $params['ticketid'];
+        $noteBody = $params['body'];
+        $messageId = $params['messageid'] ?? null;
+        $notify = $params['notify'] ?? false;
+        $attachments = $params['attachments'] ?? null;
+
+        $ticket = $this->GetTicketContents($ticketId);
+
+        $divisionId = LMSDivisionManager::getCurrentDivision();
+        $ticketDivisionId = $this->getDivisionIdByTicketId($ticketId);
+        $divisionChanged = false;
+        if (!empty($ticketDivisionId) && $ticketDivisionId != $divisionId) {
+            ConfigHelper::setFilter($ticketDivisionId, Auth::GetCurrentUser());
+            $divisionChanged = true;
+        }
+
+        $senderName = ConfigHelper::getConfig(
+            'rt.sender_name',
+            ConfigHelper::getConfig('phpui.helpdesk_sender_name')
+        );
+        $customerInfoEnabled = ConfigHelper::checkConfig(
+            'rt.notification_customerinfo',
+            ConfigHelper::checkConfig('phpui.helpdesk_customerinfo')
+        );
+        $mailCustomerInfoFormat = ConfigHelper::getConfig(
+            'rt.notification_mail_body_customerinfo_format',
+            ConfigHelper::getConfig('phpui.helpdesk_customerinfo_mail_body')
+        );
+        $smsCustomerInfoFormat = ConfigHelper::getConfig(
+            'rt.notification_sms_body_customerinfo_format',
+            ConfigHelper::getConfig('phpui.helpdesk_customerinfo_sms_body')
+        );
+        $mailSubjectTemplate = ConfigHelper::getConfig(
+            'rt.notification_mail_subject',
+            ConfigHelper::getConfig('phpui.helpdesk_notification_mail_subject')
+        );
+        $mailBodyTemplate = ConfigHelper::getConfig(
+            'rt.notification_mail_body',
+            ConfigHelper::getConfig('phpui.helpdesk_notification_mail_body')
+        );
+        $smsBodyTemplate = ConfigHelper::getConfig(
+            'rt.notification_sms_body',
+            ConfigHelper::getConfig('phpui.helpdesk_notification_sms_body')
+        );
+        $noteSendReInSubject = ConfigHelper::checkConfig('rt.note_send_re_in_subject');
+        $smtpOptions = $this->GetRTSmtpOptions();
+
+        $noteUser = $LMS->GetUserInfo(Auth::GetCurrentUser());
+        $noteQueue = $this->GetQueueByTicketId($ticketId);
+
+        $mailFromName = '';
+        if (!empty($senderName)) {
+            $mailFromName = $senderName;
+            if ($mailFromName == 'queue') {
+                $mailFromName = $noteQueue['name'];
+            } elseif ($mailFromName == 'user') {
+                $mailFromName = $noteUser['name'];
+            }
+            $mailFromName = '"' . $mailFromName . '"';
+        }
+
+        $mailFrom = $this->DetermineSenderEmail(
+            $noteUser['email'],
+            $noteQueue['email'],
+            $ticket['requestor_mail']
+        );
+
+        $mailHeaders = [];
+        $mailHeaders['From'] = $mailFromName . ' <' . $mailFrom . '>';
+        $mailHeaders['Reply-To'] = $mailHeaders['From'];
+
+        if (array_key_exists('references', $params)) {
+            $references = $params['references'];
+        } else {
+            $firstMessage = $this->GetFirstMessage($ticketId);
+            $references = '';
+            if (!empty($firstMessage) && !empty($firstMessage['references'])) {
+                $references = implode(' ', $firstMessage['references']);
+            }
+        }
+        if ($references) {
+            $referenceList = explode(' ', $references);
+            $mailHeaders['References'] = $referenceList;
+            $inReplyTo = $referenceList;
+            $mailHeaders['In-Reply-To'] = array_pop($inReplyTo);
+        }
+
+        $mailCustomerInfo = null;
+        $smsCustomerInfo = null;
+        if ($customerInfoEnabled) {
+            if ($ticket['customerid']) {
+                $customer = $LMS->GetCustomer($ticket['customerid'], true);
+                $customerEmails = array_map(
+                    function ($contact) {
+                        return $contact['fullname'];
+                    },
+                    array_filter(
+                        $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_EMAIL),
+                        function ($contact) {
+                            return ($contact['type'] & (CONTACT_HELPDESK_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_HELPDESK_NOTIFICATIONS;
+                        }
+                    )
+                );
+                $customerPhones = array_map(
+                    function ($contact) {
+                        return $contact['fullname'];
+                    },
+                    array_filter(
+                        $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_LANDLINE | CONTACT_MOBILE),
+                        function ($contact) {
+                            return $contact['type'] & CONTACT_HELPDESK_NOTIFICATIONS;
+                        }
+                    )
+                );
+                $customerInfoParams = [
+                    'id' => $ticketId,
+                    'customerid' => $ticket['customerid'],
+                    'customer' => $customer,
+                    'emails' => $customerEmails,
+                    'phones' => $customerPhones,
+                ];
+                $mailCustomerInfo = $this->ReplaceNotificationCustomerSymbols(
+                    $mailCustomerInfoFormat,
+                    $customerInfoParams
+                );
+                $smsCustomerInfo = $this->ReplaceNotificationCustomerSymbols(
+                    $smsCustomerInfoFormat,
+                    $customerInfoParams
+                );
+            } else {
+                $mailCustomerInfo = "\n\n-- \n" . trans('Customer:') . ' ' . $ticket['requestor'];
+                $smsCustomerInfo = "\n" . trans('Customer:') . ' ' . $ticket['requestor'];
+            }
+        }
+
+        $notificationParams = [
+            'id' => $ticketId,
+            'author' => Auth::GetCurrentUserName(),
+            'queue' => $noteQueue['name'],
+            'messageid' => $messageId,
+            'customerid' => $ticket['customerid'],
+            'status' => $ticket['status'],
+            'categories' => $ticket['categorynames'],
+            'priority' => isset($ticket['priority']) && is_numeric($ticket['priority'])
+                ? $RT_PRIORITIES[$ticket['priority']]
+                : '',
+            'deadline' => $ticket['deadline'],
+            'subject' => $ticket['subject'],
+            'body' => $noteBody,
+            'attachments' => $attachments,
+        ];
+
+        if (isset($ticket['priority'])) {
+            $mailHeaders['X-Priority'] = $RT_MAIL_PRIORITIES[$ticket['priority']];
+        }
+
+        if ($noteSendReInSubject) {
+            $notificationParams['subject'] = 'Re: ' . $this->cleanupTicketSubject($ticket['subject']);
+        }
+
+        $mailHeaders['Subject'] = $this->ReplaceNotificationSymbols($mailSubjectTemplate, $notificationParams);
+        $notificationParams['customerinfo'] = $mailCustomerInfo;
+        $mailBody = $this->ReplaceNotificationSymbols($mailBodyTemplate, $notificationParams);
+        $notificationParams['customerinfo'] = $smsCustomerInfo;
+        $smsBody = $this->ReplaceNotificationSymbols($smsBodyTemplate, $notificationParams);
+
+        $verifierId = array_key_exists('verifierid', $params)
+            ? $params['verifierid']
+            : ($ticket['verifierid'] ?? null);
+        $authorNotify = ConfigHelper::checkConfig('rt.author_notify');
+        $currentUser = Auth::GetCurrentUser();
+        if (empty($verifierId) || !$authorNotify || $verifierId == $currentUser) {
+            $verifierId = null;
+        }
+
+        $this->NotifyUsers([
+            'queue' => $noteQueue['id'],
+            'ticketid' => $ticketId,
+            'verifierid' => $verifierId,
+            'mail_headers' => $mailHeaders,
+            'mail_body' => $mailBody,
+            'sms_body' => $smsBody,
+            'attachments' => $attachments,
+            'recipients' => ($notify ? RT_NOTIFICATION_USER : 0)
+                | (empty($verifierId) ? 0 : RT_NOTIFICATION_VERIFIER),
+            'smtp_options' => $smtpOptions,
+        ]);
+
+        if ($divisionChanged) {
+            ConfigHelper::setFilter($divisionId, Auth::GetCurrentUser());
+        }
+    }
+
+    private function ticketMessageNotify(array $params)
+    {
+        global $LMS, $RT_PRIORITIES, $RT_MAIL_PRIORITIES;
+
+        $ticketId = $params['ticketid'];
+        $queue = $params['queue'];
+        $user = $params['user'];
+        $headers = $params['headers'];
+        $verifierId = $params['verifierid'] ?? null;
+        $notifyUsers = !empty($params['notifyUsers']);
+        $customerInfoEnabled = $params['customerInfoEnabled'] ?? false;
+        $mailCustomerInfo = $params['mailCustomerInfo'] ?? null;
+        $smsCustomerInfo = $params['smsCustomerInfo'] ?? null;
+        $attachments = $params['attachments'] ?? null;
+
+        $mailFromName = '';
+        $senderName = $params['senderName'] ?? '';
+        if (!empty($senderName)) {
+            $mailFromName = $senderName;
+            if ($mailFromName == 'queue') {
+                $mailFromName = $queue['name'];
+            } elseif ($mailFromName == 'user') {
+                $mailFromName = $user['name'];
+            }
+            $mailFromName = '"' . $mailFromName . '"';
+        }
+
+        $mailFrom = $this->DetermineSenderEmail(
+            $user['email'],
+            $queue['email'],
+            $params['requestorMail'] ?? null,
+            $params['senderEmail'] ?? null
+        );
+        $ticket = $this->GetTicketContents($ticketId);
+
+        $headers['From'] = $mailFromName . ' <' . $mailFrom . '>';
+        $headers['Reply-To'] = $headers['From'];
+
+        if ($ticket['customerid']) {
+            $customer = $LMS->GetCustomer($ticket['customerid'], true);
+            $emails = array_map(
+                function ($contact) {
+                    return $contact['fullname'];
+                },
+                array_filter(
+                    $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_EMAIL),
+                    function ($contact) {
+                        return ($contact['type'] & (CONTACT_HELPDESK_NOTIFICATIONS | CONTACT_DISABLED)) == CONTACT_HELPDESK_NOTIFICATIONS;
+                    }
+                )
+            );
+            $allPhones = array_filter(
+                $LMS->GetCustomerContacts($ticket['customerid'], CONTACT_LANDLINE | CONTACT_MOBILE),
+                function ($contact) {
+                    return $contact['type'] & CONTACT_HELPDESK_NOTIFICATIONS;
+                }
+            );
+            $phones = array_map(function ($contact) {
+                return $contact['fullname'];
+            }, $allPhones);
+            $mobilePhones = array_filter($allPhones, function ($contact) {
+                return ($contact['type'] & (CONTACT_MOBILE | CONTACT_DISABLED)) == CONTACT_MOBILE;
+            });
+
+            if (($notifyUsers || !empty($verifierId)) && $customerInfoEnabled) {
+                $customerInfoParams = [
+                    'id' => $ticketId,
+                    'customerid' => $ticket['customerid'],
+                    'customer' => $customer,
+                    'emails' => $emails,
+                    'phones' => $phones,
+                ];
+                $mailCustomerInfo = $this->ReplaceNotificationCustomerSymbols(
+                    $params['mailCustomerInfoFormat'],
+                    $customerInfoParams
+                );
+                $smsCustomerInfo = $this->ReplaceNotificationCustomerSymbols(
+                    $params['smsCustomerInfoFormat'],
+                    $customerInfoParams
+                );
+            }
+        } elseif (($notifyUsers || !empty($verifierId)) && $customerInfoEnabled) {
+            $mailCustomerInfo = "\n\n-- \n" . trans('Customer:') . ' ' . $ticket['requestor'];
+            $smsCustomerInfo = "\n" . trans('Customer:') . ' ' . $ticket['requestor'];
+        }
+
+        if ($notifyUsers) {
+            $contentType = $params['contenttype'] ?? 'text/plain';
+            $notificationParams = [
+                'id' => $ticketId,
+                'author' => Auth::GetCurrentUserName(),
+                'queue' => $queue['name'],
+                'messageid' => $params['messageid'] ?? null,
+                'customerid' => empty($params['customerid']) ? $ticket['customerid'] : $params['customerid'],
+                'status' => $ticket['status'],
+                'categories' => $ticket['categorynames'],
+                'priority' => isset($ticket['priority']) && is_numeric($ticket['priority'])
+                    ? $RT_PRIORITIES[$ticket['priority']]
+                    : trans('undefined'),
+                'deadline' => $ticket['deadline'],
+                'subject' => $this->cleanupTicketSubject($params['subject']),
+                'body' => $params['body'],
+                'attachments' => $attachments,
+            ];
+            if ($ticket['priority']) {
+                $headers['X-Priority'] = $RT_MAIL_PRIORITIES[$ticket['priority']];
+            }
+            $headers['Subject'] = $this->ReplaceNotificationSymbols(
+                $params['mailSubjectTemplate'],
+                $notificationParams
+            );
+
+            $notificationParams['customerinfo'] = isset($mailCustomerInfo)
+                ? ($contentType == 'text/html'
+                    ? str_replace("\n", '<br>', $mailCustomerInfo)
+                    : $mailCustomerInfo)
+                : null;
+            $notificationParams['contenttype'] = $contentType;
+            $mailBody = $this->ReplaceNotificationSymbols(
+                $params['mailBodyTemplate'],
+                $notificationParams
+            );
+
+            if ($contentType == 'text/html') {
+                $notificationParams['body'] = trans('(HTML content has been omitted)');
+                $headers['X-LMS-Format'] = 'html';
+            }
+
+            $notificationParams['customerinfo'] = $smsCustomerInfo ?? null;
+            $notificationParams['contenttype'] = 'text/plain';
+            $smsBody = $this->ReplaceNotificationSymbols(
+                $params['smsBodyTemplate'],
+                $notificationParams
+            );
+
+            // Don't notify verifier adding message
+            $currentUser = Auth::GetCurrentUser();
+            if (empty($verifierId)
+                || !$params['authorNotify']
+                || ($params['propsVerifierid'] ?? null) == $currentUser
+                || $verifierId == $currentUser
+            ) {
+                $verifierId = null;
+            }
+
+            $this->NotifyUsers([
+                'queue' => $queue['id'],
+                'ticketid' => $ticketId,
+                'verifierid' => $verifierId,
+                'mail_headers' => $headers,
+                'mail_body' => $mailBody,
+                'sms_body' => $smsBody,
+                'contenttype' => $contentType,
+                'attachments' => $attachments,
+                'recipients' => ($params['notify'] ? RT_NOTIFICATION_USER : 0)
+                    | (empty($verifierId) ? 0 : RT_NOTIFICATION_VERIFIER),
+                'smtp_options' => $params['smtpOptions'],
+            ]);
+        }
+
+        $result = [
+            'ticket' => $ticket,
+            'headers' => $headers,
+            'mailCustomerInfo' => $mailCustomerInfo,
+            'smsCustomerInfo' => $smsCustomerInfo,
+            'verifierid' => $verifierId,
+        ];
+        if ($ticket['customerid']) {
+            $result['customer'] = $customer;
+            $result['emails'] = $emails;
+            $result['mobilePhones'] = $mobilePhones;
+        }
+
+        return $result;
+    }
+
     public function NotifyUsers(array $params)
     {
         global $LMS;
@@ -2611,7 +3007,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         );
 
         if (ConfigHelper::checkPrivilege('helpdesk_operation') || ConfigHelper::checkPrivilege('helpdesk_administration')) {
-            $result = array(
+            $result = array_merge($result, array(
                     'critical' => $this->GetQueueContents(array('count' => true, 'priority' => RT_PRIORITY_CRITICAL, 'state' => -3, 'rights' => RT_RIGHT_INDICATOR)),
                     'urgent' => $this->GetQueueContents(array('count' => true, 'priority' => RT_PRIORITY_URGENT, 'state' => -3, 'rights' => RT_RIGHT_INDICATOR)),
                     'unread' => $this->GetQueueContents(array('count' => true, 'state' => -1, 'unread' => 1, 'rights' => RT_RIGHT_INDICATOR)),
@@ -2620,7 +3016,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                     'verify' => $this->GetQueueContents(array('count' => true, 'state' => RT_VERIFIED, 'verifierids' => $userid, 'rights' => RT_RIGHT_INDICATOR)),
                     'left' => $this->GetQueueContents(array('count' => true, 'state' => -1, 'owner' => $userid, 'rights' => RT_RIGHT_INDICATOR)),
                     'watching' => $this->GetQueueContents(array('count' => true, 'watching' => 1, 'rights' => RT_RIGHT_INDICATOR)),
-            );
+            ));
         }
 
         if (ConfigHelper::CheckPrivilege('timetable_management')) {
@@ -2655,8 +3051,10 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                     break;
                 }
             } elseif ($attribute == 'ticket') {
-                $mailfrom = $ticket_email;
-                break;
+                if ($ticket_email) {
+                    $mailfrom = $ticket_email;
+                    break;
+                }
             } else {
                 $mailfrom = $attribute;
                 break;
@@ -2704,7 +3102,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         }
     }
 
-    public function CheckTicketAccess($ticketid)
+    public function CheckTicketAccess($ticketid, $rights = 0, $requireAll = false)
     {
         $userid = Auth::GetCurrentUser();
 
@@ -2712,7 +3110,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         $allow_empty_categories = ConfigHelper::checkConfig('rt.allow_empty_categories', ConfigHelper::checkConfig('phpui.helpdesk_allow_empty_categories'));
 
         if ($user_permission_checks) {
-            return $this->db->GetOne(
+            $access = $this->db->GetOne(
                 'SELECT (CASE WHEN r.rights IS NULL THEN '
                     . (RT_RIGHT_READ | RT_RIGHT_WRITE | RT_RIGHT_DELETE) . ' ELSE r.rights END) FROM rttickets t
 				LEFT JOIN rtrights r ON r.queueid = t.queueid AND r.userid = ?
@@ -2731,7 +3129,7 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 array($userid, $ticketid, $userid, $userid, $userid, $ticketid)
             );
         } else {
-            return $this->db->GetOne(
+            $access = $this->db->GetOne(
                 'SELECT rights FROM rtrights r
 				JOIN rttickets t ON t.queueid = r.queueid
 				WHERE r.userid = ? AND t.id = ?
@@ -2749,6 +3147,17 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
                 array($userid, $ticketid, $userid, $ticketid)
             );
         }
+
+        if (empty($rights)) {
+            return $access;
+        }
+
+        $access = intval($access);
+        if ($requireAll) {
+            return ($access & $rights) == $rights;
+        }
+
+        return ($access & $rights) != 0;
     }
 
     public function GetRelatedTickets($ticketid)
