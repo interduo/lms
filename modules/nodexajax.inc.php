@@ -221,7 +221,12 @@ function getThroughput($ip)
         return '';
     }
 
-    $cmd = str_replace('%i', $ip, $cmd);
+    $addressArg = escapeshellarg($ip);
+    $cmd = strtr($cmd, array(
+        '"%i"' => $addressArg,
+        "'%i'" => $addressArg,
+        '%i' => $addressArg,
+    ));
     exec($cmd, $output);
     if (!is_array($output) || count($output) != 1) {
         return '';
@@ -349,20 +354,18 @@ if (isset($_GET['action'])) {
             $nasip = long2ip($nodesession['nasipaddr']);
 
             $username = empty($nodeinfo['login']) ? $nodeinfo['name'] : $nodeinfo['login'];
+            if (!check_ip($nodeinfo['ip']) || !check_ip($nasip)) {
+                die;
+            }
 
-            $cmd = str_replace(
-                array(
-                    '%ip%',
-                    '%nasip%',
-                    '%username%',
-                ),
-                array(
-                    $nodeinfo['ip'],
-                    $nasip,
-                    $username,
-                ),
-                $session_state_helper
-            );
+            $usernameArg = escapeshellarg((string) $username);
+            $cmd = strtr($session_state_helper, array(
+                '"%username%"' => $usernameArg,
+                "'%username%'" => $usernameArg,
+                '%username%' => $usernameArg,
+                '%ip%' => $nodeinfo['ip'],
+                '%nasip%' => $nasip,
+            ));
 
             $output = '';
             $ret = 0;
