@@ -41,22 +41,24 @@ switch ($_GET['action']) {
             )));
         }
 
-        $cmd = ConfigHelper::getConfig('phpui.radius_disconnect_command', "echo 'Framed-IP-Address=\"%ip%\"' |radclient %nasip%:3799 disconnect '%secret%'");
-        $cmd = str_replace(
-            array(
-                '%ip%',
-                '%nasip%',
-                '%nassessionid%',
-                '%secret%',
-            ),
-            array(
-                $nodesession['ip'],
-                $nodesession['nasip'],
-                $nodesession['nassessionid'],
-                $nodesession['secret'],
-            ),
-            $cmd
-        );
+        $cmd = ConfigHelper::getConfig('phpui.radius_disconnect_command', 'echo Framed-IP-Address=%ip% | radclient %nasip%:3799 disconnect %secret%');
+        if (!check_ip($nodesession['ip']) || !check_ip($nodesession['nasip'])) {
+            die(json_encode(array(
+                'error' => trans('RADIUS disconnect failed!'),
+            )));
+        }
+        $sessionArg = escapeshellarg((string) $nodesession['nassessionid']);
+        $secretArg = escapeshellarg((string) $nodesession['secret']);
+        $cmd = strtr($cmd, array(
+            '"%nassessionid%"' => $sessionArg,
+            "'%nassessionid%'" => $sessionArg,
+            '%nassessionid%' => $sessionArg,
+            '"%secret%"' => $secretArg,
+            "'%secret%'" => $secretArg,
+            '%secret%' => $secretArg,
+            '%ip%' => $nodesession['ip'],
+            '%nasip%' => $nodesession['nasip'],
+        ));
         $result = null;
         $output = null;
         exec($cmd, $output, $result);
