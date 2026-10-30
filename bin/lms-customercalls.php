@@ -309,34 +309,16 @@ foreach ($dirs as $dir) {
                 die('Fatal error: error during file ' . $src_file . ' rename!' . PHP_EOL);
             }
         } else {
-            $cmd = str_replace(
-                array('%i', '%o'),
-                array(
-                    str_replace(
-                        array(
-                            '(',
-                            ')',
-                        ),
-                        array(
-                            '\\(',
-                            '\\)',
-                        ),
-                        $src_file
-                    ),
-                    str_replace(
-                        array(
-                            '(',
-                            ')',
-                        ),
-                        array(
-                            '\\(',
-                            '\\)',
-                        ),
-                        $dst_file
-                    ),
-                ),
-                $convert_command
-            );
+            $srcArg = escapeshellarg($src_file);
+            $dstArg = escapeshellarg($dst_file);
+            $cmd = strtr($convert_command, array(
+                '"%i"' => $srcArg,
+                "'%i'" => $srcArg,
+                '%i' => $srcArg,
+                '"%o"' => $dstArg,
+                "'%o'" => $dstArg,
+                '%o' => $dstArg,
+            ));
             $ret = 0;
             $output = array();
             $res = exec($cmd, $output, $ret);
@@ -355,34 +337,16 @@ foreach ($dirs as $dir) {
             if (empty($duration_command)) {
                 echo 'Warning: cannot find duration field for file \'' . $src_file_name . '\'!' . PHP_EOL;
             } else {
-                $cmd = str_replace(
-                    array('%i', '%o'),
-                    array(
-                        str_replace(
-                            array(
-                                '(',
-                                ')',
-                            ),
-                            array(
-                                '\\(',
-                                '\\)',
-                            ),
-                            $src_file
-                        ),
-                        str_replace(
-                            array(
-                                '(',
-                                ')',
-                            ),
-                            array(
-                                '\\(',
-                                '\\)',
-                            ),
-                            $dst_file
-                        ),
-                    ),
-                    $duration_command
-                );
+                $srcArg = escapeshellarg($src_file);
+                $dstArg = escapeshellarg($dst_file);
+                $cmd = strtr($duration_command, array(
+                    '"%i"' => $srcArg,
+                    "'%i'" => $srcArg,
+                    '%i' => $srcArg,
+                    '"%o"' => $dstArg,
+                    "'%o'" => $dstArg,
+                    '%o' => $dstArg,
+                ));
                 $ret = 0;
                 $output = array();
                 $res = exec($cmd, $output, $ret);
