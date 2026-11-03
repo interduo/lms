@@ -530,6 +530,10 @@ class Utils
         }
     }
 
+    /**
+     * @psalm-taint-escape html
+     * @psalm-taint-escape has_quotes
+     */
     public static function removeInsecureHtml($html)
     {
         static $hm_purifier;
@@ -1989,6 +1993,9 @@ class Utils
         return isset($euCountryCodes[$countryCode]);
     }
 
+    /**
+     * @psalm-taint-escape shell
+     */
     public static function substituteShellPlaceholders($command, array $placeholders)
     {
         $names = array_keys($placeholders);

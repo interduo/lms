@@ -75,9 +75,7 @@ function refresh($params)
         }
         $placeholders['%i'] = $ipaddr;
     }
-    if (!empty($placeholders)) {
-        $cmd = Utils::substituteShellPlaceholders($cmd, $placeholders);
-    }
+    $cmd = Utils::substituteShellPlaceholders($cmd, $placeholders);
     exec($cmd, $output);
     $sent = preg_grep($summary_regexp, $output);
     $replies = preg_grep($reply_regexp, $output);

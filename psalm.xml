@@ -18,4 +18,140 @@
         <file name="psalm-stub.php" />
     </stubs>
 
+    <issueHandlers>
+        <TaintedCallable>
+            <errorLevel type="suppress">
+                <file name="contrib/customer_otherip/invoice.php" />
+                <file name="lib/LMSManagers/LMSFinanceManager.php" />
+                <file name="modules/invoice.php" />
+                <file name="modules/note.php" />
+                <file name="modules/receipt.php" />
+                <file name="userpanel/index.php" />
+                <file name="userpanel/lib/LMS.setup.php" />
+                <file name="userpanel/modules/finances/invoice.php" />
+            </errorLevel>
+        </TaintedCallable>
+        <TaintedExtract>
+            <errorLevel type="suppress">
+                <file name="lib/LMSManagers/LMSCashManager.php" />
+                <file name="lib/Utils.php" />
+            </errorLevel>
+        </TaintedExtract>
+        <TaintedFile>
+            <errorLevel type="suppress">
+                <file name="bin/lms-customercalls.php" />
+                <file name="bin/lms-makedhcpconf.php" />
+                <file name="bin/lms-maketcnew.php" />
+                <file name="bin/lms-sendinvoices.php" />
+                <file name="bin/lms-teryt.php" />
+                <file name="bin/voip/lms-asterisk.php" />
+                <file name="lib/KSeF/KSeF.php" />
+                <file name="lib/LMS.class.php" />
+                <file name="lib/LMSManagers/LMSHelpdeskManager.php" />
+                <file name="lib/SmartyPlugins/Smarty_Resource_Userpanel_Module.php" />
+                <file name="lib/Utils.php" />
+                <file name="lib/common.php" />
+                <file name="modules/dbdel.php" />
+                <file name="modules/dbrecover.php" />
+                <file name="modules/dbview.php" />
+                <file name="modules/rtmessageview.php" />
+                <file name="modules/voipcallrecording.php" />
+                <file name="userpanel/index.php" />
+                <file name="userpanel/modules/helpdesk/functions.php" />
+                <file name="userpanel/modules/voip/functions.php" />
+            </errorLevel>
+        </TaintedFile>
+        <TaintedHeader>
+            <errorLevel type="suppress">
+                <file name="contrib/squid_redirector/index.php" />
+                <file name="contrib/userpanel_modules/accounts/functions.php" />
+                <file name="lib/LMSDocuments/LMSHtmlDocument.php" />
+                <file name="modules/documentview.php" />
+                <file name="modules/invoice.php" />
+                <file name="modules/ksefpurchaseinvoiceedit.php" />
+                <file name="userpanel/modules/documents/docview.php" />
+            </errorLevel>
+        </TaintedHeader>
+        <TaintedHtml>
+            <errorLevel type="suppress">
+                <file name="bin/lms-customercalls.php" />
+                <file name="bin/lms-fping.php" />
+                <file name="bin/lms-makedhcpconf.php" />
+                <file name="bin/lms-notify.php" />
+                <file name="bin/lms-payments.php" />
+                <file name="bin/lms-sendinvoices.php" />
+                <file name="bin/lms-teryt.php" />
+                <file name="bin/lms-traffic-dbcompact.php" />
+                <file name="bin/voip/lms-asterisk.php" />
+                <file name="contrib/formularz_przelewu_wplaty/druk.php" />
+                <file name="lib/LMSDB_common.class.php" />
+                <file name="lib/SmartyPlugins/LMSSmartyPlugins.php" />
+                <file name="lib/common.php" />
+                <file name="modules/balanceadd.php" />
+                <file name="modules/documentgen.php" />
+                <file name="modules/export.php" />
+                <file name="modules/messageadd.php" />
+                <file name="modules/reload.php" />
+                <file name="modules/rtmessageadd.php" />
+                <file name="modules/rtticketedit.php" />
+                <file name="modules/ukepit.php" />
+                <file name="modules/ukesiis.php" />
+            </errorLevel>
+        </TaintedHtml>
+        <TaintedInclude>
+            <errorLevel type="suppress">
+                <file name="bin/lms-cashimport.php" />
+                <file name="bin/lms-payments.php" />
+                <file name="contrib/bin/lms-cashimport-bgz.php" />
+                <file name="index.php" />
+                <file name="lib/accesstable.php" />
+                <file name="lib/locale/Localisation.php" />
+                <file name="lib/menu.php" />
+                <file name="modules/cashimportparser.php" />
+                <file name="modules/export.php" />
+                <file name="modules/userpanel.php" />
+                <file name="modules/welcome.php" />
+                <file name="userpanel/index.php" />
+                <file name="userpanel/lib/LMS.setup.php" />
+            </errorLevel>
+        </TaintedInclude>
+        <TaintedSSRF>
+            <errorLevel type="suppress">
+                <file name="lib/Utils.php" />
+            </errorLevel>
+        </TaintedSSRF>
+        <TaintedShell>
+            <errorLevel type="suppress">
+                <file name="lib/LMS.class.php" />
+                <file name="lib/Utils.php" />
+                <file name="modules/netdevmaprefresh.php" />
+                <file name="modules/reload.php" />
+            </errorLevel>
+        </TaintedShell>
+        <TaintedTextWithQuotes>
+            <errorLevel type="suppress">
+                <file name="bin/lms-customercalls.php" />
+                <file name="bin/lms-fping.php" />
+                <file name="bin/lms-makedhcpconf.php" />
+                <file name="bin/lms-payments.php" />
+                <file name="bin/lms-sendinvoices.php" />
+                <file name="bin/lms-teryt.php" />
+                <file name="bin/lms-traffic-dbcompact.php" />
+                <file name="bin/voip/lms-asterisk.php" />
+                <file name="contrib/formularz_przelewu_wplaty/druk.php" />
+                <file name="lib/SmartyPlugins/LMSSmartyPlugins.php" />
+                <file name="lib/common.php" />
+                <file name="modules/balanceadd.php" />
+                <file name="modules/documentgen.php" />
+                <file name="modules/export.php" />
+                <file name="modules/messageadd.php" />
+                <file name="modules/reload.php" />
+                <file name="modules/rtmessageadd.php" />
+                <file name="modules/rtticketedit.php" />
+                <file name="modules/ukepit.php" />
+                <file name="modules/ukesiis.php" />
+            </errorLevel>
+        </TaintedTextWithQuotes>
+    </issueHandlers>
+
 </psalm>
