@@ -59,7 +59,11 @@ $LMS->setPluginManager($plugin_manager);
 
 $lmsUrl = ConfigHelper::getConfig('rt.lms_url', 'http://localhost/lms');
 $apiAuthToken = ConfigHelper::getConfig('sidusis.api_token');
-$apiHost = ConfigHelper::getConfig('sidusis.api_host', 'https://internet.gov.pl');
+$apiHost = (string) ConfigHelper::getConfig('sidusis.api_host', 'https://internet.gov.pl');
+if (!preg_match('#\A(https?://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/[A-Za-z0-9._~+\-]*)*)/?\z#', $apiHost, $apiHostMatch)) {
+    die('Error: sidusis.api_host must be an http or https URL.' . PHP_EOL);
+}
+$apiHost = $apiHostMatch[1];
 $sidusisMapUrl = ConfigHelper::getConfig('sidusis.map_url', 'https://internet.gov.pl/map/?center=');
 $sidusisZoomFactor = ConfigHelper::getConfig('sidusis.zoom_factor', 20);
 
@@ -77,7 +81,7 @@ $sidusisOperatorPhone = ConfigHelper::getConfig('uke.sidusis_operator_phone', Co
 $internet_demands_queueid = ConfigHelper::getConfig('sidusis.internet_demands_queueid', 1);
 $internet_demands_categoryids = ConfigHelper::getConfig('sidusis.internet_demands_categoryids');
 
-$did = in_array('division', $options) ? intval($options['division']) : $sidusisSelectedDivision;
+$did = array_key_exists('division', $options) ? intval($options['division']) : $sidusisSelectedDivision;
 
 function getSidusisRangesReport($divisionid)
 {
@@ -264,7 +268,8 @@ if (array_key_exists('import-demands', $options)) {
                     echo 'Utworzyłem zgłoszenie: ' . $ticketid . PHP_EOL;
                 }
                 $curl_options[CURLOPT_CUSTOMREQUEST] = 'PATCH';
-                $ch = curl_init($apiHost . str_replace('%id', $res['id'], $apiEndPoints['mark-demand-as-read']));
+                $demandId = intval($res['id']);
+                $ch = curl_init($apiHost . str_replace('%id', (string) $demandId, $apiEndPoints['mark-demand-as-read']));
                 curl_setopt_array($ch, $curl_options);
                 curl_exec($ch);
                 curl_close($ch);

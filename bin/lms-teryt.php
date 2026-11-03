@@ -514,9 +514,14 @@ if (isset($options['fetch'])) {
 
     foreach ($teryt_files as $file) {
         $filename = $teryt_dir . DIRECTORY_SEPARATOR . $file['name'] . $teryt_filename_suffix . '.zip';
-        echo $file['name'] . $teryt_filename_suffix . '.zip' . PHP_EOL;
+        if (!$quiet) {
+            echo $file['name'] . $teryt_filename_suffix . '.zip' . PHP_EOL;
+        }
         if ($zip->open($filename) === true) {
-            $zip->extractTo($teryt_dir . DIRECTORY_SEPARATOR, array($file['archived_name'] . '_' . date('Y-m-d') . '.xml'));
+            if (!$zip->extractTo($teryt_dir . DIRECTORY_SEPARATOR, array($file['archived_name'] . '_' . date('Y-m-d') . '.xml'))) {
+                fwrite($stderr, 'Error: Can\'t extract ' . $file['archived_name'] . '_' . date('Y-m-d') . '.xml from ' . $file['name'] . '!' . PHP_EOL);
+                exit(1);
+            }
             rename(
                 $teryt_dir . DIRECTORY_SEPARATOR . $file['archived_name'] . '_' . date('Y-m-d') . '.xml',
                 $teryt_dir . DIRECTORY_SEPARATOR . $file['name'] . '.xml'
@@ -579,7 +584,7 @@ if (isset($options['fetch'])) {
                 if ($st['comp_method'] === ZipArchive::CM_DEFLATE64) {
                     $output = array();
                     $result = null;
-                    exec('unzip -o -d ' . $teryt_dir . ' ' . $teryt_dir . DIRECTORY_SEPARATOR . $building_base_provider['filename'] . ' ' . $filename . ' 2>&1', $output, $result);
+                    exec('unzip -o -d ' . escapeshellarg($teryt_dir) . ' ' . escapeshellarg($teryt_dir . DIRECTORY_SEPARATOR . $building_base_provider['filename']) . ' ' . escapeshellarg($filename) . ' 2>&1', $output, $result);
                     if (!empty($result)) {
                         die('Fatal error: failed to run \'unzip\' command! Maybe \'unzip\' utility is not installed in your system?' . PHP_EOL);
                     }

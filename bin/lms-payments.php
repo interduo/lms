@@ -207,7 +207,7 @@ if (empty($fakedate)) {
 $today = strtotime('today', $currtime);
 $issuetime = isset($issuedate) ? strtotime($issuedate) : $currtime;
 [$year, $month, $dom] = explode('/', date('Y/n/j', $currtime));
-[$backward_year, $backward_month] = explode('/', date('Y/m', strtotime($year . '/' . $month. '/' . $dom . ' - 1 month')));
+[$backward_year, $backward_month] = explode('/', date('Y/m', mktime(0, 0, 0, $month - 1, 1, $year)));
 $weekday = date('N', $currtime);
 $yearday = date('z', $currtime) + 1;
 $last_dom = date('j', mktime(0, 0, 0, $month + 1, 0, $year)) == date('j', $currtime);
@@ -682,7 +682,7 @@ $query = "SELECT
 			" . ($empty_billings ? 'LEFT ' : '') . "JOIN (
 				SELECT ROUND(sum(price), 2) AS value,
 					SUM(vc.billedtime) AS totaltime,
-					" . ($billing_invoice_separate_fractions ? ' COUNT(vc.*) AS call_count, vc.fraction AS call_fraction, ' : '')
+					" . ($billing_invoice_separate_fractions ? ' COUNT(*) AS call_count, vc.fraction AS call_fraction, ' : '')
                     . "va.ownerid AS customerid,
 					a2.id AS assignmentid
 				FROM voip_cdr vc
@@ -2278,7 +2278,7 @@ foreach ($assigns as $assign) {
 
                             $error = $LMS->AddDocumentFileAttachments($files);
 
-                            if (file_exists($file)) {
+                            if (!empty($file) && file_exists($file)) {
                                 @unlink($file);
                             }
                         } else {
