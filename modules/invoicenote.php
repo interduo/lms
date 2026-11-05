@@ -45,6 +45,33 @@ function cleanUpValue($value)
 
 $action = $_GET['action'] ?? null;
 
+$formTabId = $_GET['form_tab_id'] ?? null;
+if (!is_string($formTabId) || !preg_match('/^[0-9]{1,32}$/D', $formTabId)) {
+    $formTabId = null;
+}
+
+// Establish the destination tab before storing any credit note data.
+if (isset($_GET['id']) && $action == 'init' && $formTabId === null) {
+    $SESSION->close();
+    header('Cache-Control: no-store');
+    echo <<<'HTML'
+<!doctype html>
+<meta charset="utf-8">
+<title>LMS</title>
+<script>
+let tabId = sessionStorage.getItem('tabId');
+if (!tabId) {
+    tabId = String(Date.now()) + String(crypto.getRandomValues(new Uint32Array(1))[0]).padStart(10, '0');
+    sessionStorage.setItem('tabId', tabId);
+}
+const url = new URL(window.location.href);
+url.searchParams.set('form_tab_id', tabId);
+window.location.replace(url.toString());
+</script>
+HTML;
+    exit;
+}
+
 if (isset($_GET['id']) && $action == 'init') {
     $docid = $LMS->GetDocumentLastReference($_GET['id']);
     $invoice = $LMS->GetInvoiceContent($docid);
@@ -170,6 +197,12 @@ $SESSION->restore('invoicecontents', $contents, true);
 $SESSION->restore('invoice', $invoice, true);
 $SESSION->restore('cnote', $cnote, true);
 $SESSION->restore('cnoteerror', $error, true);
+
+if (!is_array($invoice)
+    || !is_array($cnote)
+    || !isset($invoice['customerid'], $cnote['cdate'])) {
+    $SESSION->redirect('?m=invoicelist');
+}
 
 $args = array(
     'doctype' => DOC_CNOTE,
@@ -1073,7 +1106,8 @@ $SMARTY->assign('tariffs', $LMS->GetTariffs());
 
 if ($action && !$error && !$warning) {
     // redirect, to not prevent from invoice break with the refresh
-    $SESSION->redirect('?m=invoicenote');
+    $SESSION->redirect('?m=invoicenote'
+        . ($formTabId !== null ? '&form_tab_id=' . $formTabId : ''));
 }
 
 $hook_data = array(
