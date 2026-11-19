@@ -441,7 +441,7 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
      */
     public function _driver_regexp($field, $regexp)
     {
-        return $field . ' REGEXP \'' . $regexp . '\'';
+        return $field . ' REGEXP ' . $this->_quote_value($regexp);
     }
 
     /**
@@ -453,7 +453,7 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
      */
     public function _driver_substringbyregexp($field, $regexp)
     {
-        return 'REGEXP_SUBSTR(' . $field . ', \'' . $regexp . '\')';
+        return 'REGEXP_SUBSTR(' . $field . ', ' . $this->_quote_value($regexp) . ')';
     }
 
     /**
@@ -466,7 +466,7 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
      */
     public function _driver_regexpreplace($field, $pattern, $replacement)
     {
-        return 'REGEXP_REPLACE(' . $field . ', \'' . $pattern . '\', \'' . $replacement . '\')';
+        return 'REGEXP_REPLACE(' . $field . ', ' . $this->_quote_value($pattern) . ', ' . $this->_quote_value($replacement) . ')';
     }
 
     /**
