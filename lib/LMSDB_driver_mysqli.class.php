@@ -83,6 +83,7 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
      */
     public function _driver_connect($dbhost, $dbuser, $dbpasswd, $dbname)
     {
+        mysqli_report(MYSQLI_REPORT_OFF);
         $this->_dblink = @mysqli_connect($dbhost, $dbuser, $dbpasswd, $dbname);
         if ($this->_dblink) {
             $this->_dbhost = $dbhost;
