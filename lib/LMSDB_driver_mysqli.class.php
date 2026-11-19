@@ -91,6 +91,7 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
             $this->_loaded = true;
         } else {
             $this->_error = true;
+            $this->_connection_error = mysqli_connect_error();
         }
 
         return $this->_dblink;
