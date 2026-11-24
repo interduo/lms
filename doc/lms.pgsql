@@ -657,6 +657,23 @@ CREATE TABLE documentattachments (
 CREATE INDEX documentattachments_md5sum_idx ON documentattachments (md5sum);
 
 /* ---------------------------------------------------
+ Structure of table "cashsources"
+------------------------------------------------------*/
+DROP SEQUENCE IF EXISTS cashsources_id_seq;
+CREATE SEQUENCE cashsources_id_seq;
+DROP TABLE IF EXISTS cashsources CASCADE;
+CREATE TABLE cashsources (
+	id integer      	DEFAULT nextval('cashsources_id_seq'::text) NOT NULL,
+	name varchar(32)    DEFAULT '' NOT NULL,
+	description text	DEFAULT NULL,
+	account varchar(48) NOT NULL DEFAULT '',
+	deleted smallint	NOT NULL DEFAULT 0,
+	isdefault smallint NOT NULL DEFAULT 0,
+	PRIMARY KEY (id),
+	UNIQUE (name)
+);
+
+/* ---------------------------------------------------
  Structure of table "cashregs"
 ------------------------------------------------------*/
 DROP SEQUENCE IF EXISTS cashregs_id_seq;
@@ -671,7 +688,9 @@ CREATE TABLE cashregs (
 	out_numberplanid 	integer 	DEFAULT NULL
 		CONSTRAINT cashregs_out_numberplanid_fkey REFERENCES numberplans (id) ON DELETE SET NULL ON UPDATE CASCADE,
 	disabled 		smallint	DEFAULT 0 NOT NULL,
-    balanceexclude  smallint    DEFAULT 0 NOT NULL,
+	balanceexclude  smallint    DEFAULT 0 NOT NULL,
+	cashsourceid integer DEFAULT NULL
+		CONSTRAINT cashregs_cashsourceid_fkey REFERENCES cashsources (id) ON DELETE RESTRICT ON UPDATE CASCADE,
 	PRIMARY KEY (id),
 	UNIQUE (name)
 );
@@ -1221,23 +1240,6 @@ CREATE TABLE debitnotecontents (
 	description text 	DEFAULT '' NOT NULL,
 	PRIMARY KEY (id),
 	CONSTRAINT debitnotecontents_docid_key UNIQUE (docid, itemid)
-);
-
-/* ---------------------------------------------------
- Structure of table "cashsources"
-------------------------------------------------------*/
-DROP SEQUENCE IF EXISTS cashsources_id_seq;
-CREATE SEQUENCE cashsources_id_seq;
-DROP TABLE IF EXISTS cashsources CASCADE;
-CREATE TABLE cashsources (
-	id integer      	DEFAULT nextval('cashsources_id_seq'::text) NOT NULL,
-	name varchar(32)    DEFAULT '' NOT NULL,
-	description text	DEFAULT NULL,
-	account varchar(48) NOT NULL DEFAULT '',
-	deleted smallint	NOT NULL DEFAULT 0,
-	isdefault smallint NOT NULL DEFAULT 0,
-	PRIMARY KEY (id),
-	UNIQUE (name)
 );
 
 /* ---------------------------------------------------
@@ -5011,6 +5013,6 @@ INSERT INTO netdevicemodels (name, alternative_name, netdeviceproducerid) VALUES
 ('XR7', 'XR7 MINI PCI PCBA', 2),
 ('XR9', 'MINI PCI 600MW 900MHZ', 2);
 
-INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2026111903');
+INSERT INTO dbinfo (keytype, keyvalue) VALUES ('dbversion', '2026112400');
 
 COMMIT;
