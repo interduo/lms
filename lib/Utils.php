@@ -127,33 +127,16 @@ class Utils
         $hextab  = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         $tabsize = strlen($hextab);
 
-        // Use PHP7 true random generator
-        if ($raw && function_exists('random_bytes')) {
+        if ($raw) {
             return random_bytes($length);
         }
 
-        if (!$raw && function_exists('random_int')) {
-            $result = '';
-            while ($length-- > 0) {
-                $result .= $hextab[random_int(0, $tabsize - 1)];
-            }
-
-            return $result;
+        $result = '';
+        while ($length-- > 0) {
+            $result .= $hextab[random_int(0, $tabsize - 1)];
         }
 
-        $random = openssl_random_pseudo_bytes($length);
-
-        if ($random === false && $length > 0) {
-            throw new Exception("Failed to get random bytes");
-        }
-
-        if (!$raw) {
-            for ($x = 0; $x < $length; $x++) {
-                $random[$x] = $hextab[ord($random[$x]) % $tabsize];
-            }
-        }
-
-        return $random;
+        return $result;
     }
 
     public static function isAllowedIP($ip, $allow_from)
@@ -1326,11 +1309,7 @@ class Utils
 
             switch ($dest) {
                 case 'D':
-                    if (function_exists('mb_convert_encoding')) {
-                        $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
-                    } else {
-                        $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
-                    }
+                    $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
                     $html2pdf->Output($filename . '.pdf', 'D');
                     break;
                 case 'S':
@@ -1372,11 +1351,7 @@ class Utils
                         );
                     }
 
-                    if (function_exists('mb_convert_encoding')) {
-                        $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
-                    } else {
-                        $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
-                    }
+                    $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
 
                     switch ($dest) {
                         case 'D':
@@ -1521,11 +1496,7 @@ class Utils
                     );
                 }
 
-                if (function_exists('mb_convert_encoding')) {
-                    $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
-                } else {
-                    $filename = iconv("UTF-8", "ISO-8859-2//TRANSLIT", $title);
-                }
+                $filename = mb_convert_encoding($title, "ISO-8859-2", "UTF-8");
                 $filename = preg_replace('/[^[:alnum:]_\-\.]/i', '_', $filename);
 
                 switch ($dest) {
