@@ -1525,7 +1525,6 @@ $_LANG['You have to specify event day!'] = 'Turite pasirinkti įrašo dieną!';
 $_LANG['Your/company name or whatever you want to put here:'] = 'Pavadinimas/pavardė vardas arba kažką kitą:';
 $_LANG['Your installation is unregistered!'] = 'Jūsų instaliacija neregistruota!';
 $_LANG['Your PHP does not support GD library required for map generation!'] = 'Jūsų PHP versija neaptarnauja grafinės bibliotekos GD reikalingos žemėlapio sudarymui!';
-$_LANG['Your PHP does not support Ming library required for map generation!'] = 'Jūsų PHP versija neaptarnauja Ming bibliotekos reikalingos žemėlapio sudarymui!';
 $_LANG['Your unique installation ID:'] = 'Tavo unikalus registracijos Nr.:';
 $_LANG['You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.'] = 'Tikriausiai su šia programa gavai ir  Visuotinės Viešos Licencijos GNU egzempliorių, jei ne – rašyk į Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.';
 $_LANG['Zip:'] = 'Kodas:';

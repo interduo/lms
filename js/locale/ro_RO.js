@@ -1395,7 +1395,6 @@ $_LANG['You have to specify event day!'] = 'Trebuie să specificaţi ziua evenim
 $_LANG['Your/company name or whatever you want to put here:'] = 'Nume/Nume Firmă sau orice ai vrea sa adaugi aici:';
 $_LANG['Your installation is unregistered!'] = 'Instalarea dvs. nu e înregistrată!';
 $_LANG['Your PHP does not support GD library required for map generation!'] = 'Your PHP does not support GD library required for map generation!';
-$_LANG['Your PHP does not support Ming library required for map generation!'] = 'Your PHP does not support Ming library required for map generation!';
 $_LANG['Your unique installation ID:'] = 'Your unique installation ID:';
 $_LANG['You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.'] = 'You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.';
 $_LANG['Zip:'] = 'Cod Poştal:';

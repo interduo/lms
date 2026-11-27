@@ -1440,7 +1440,6 @@ $_LANG['You have to specify event day!'] = 'Musíte špecifikovať deň vykonani
 $_LANG['Your/company name or whatever you want to put here:'] = 'Názov Vašej spoločnosti alebo čokolvek čo chcete zadať:';
 $_LANG['Your installation is unregistered!'] = 'Vaša inštalácia nieje registrovaná!';
 $_LANG['Your PHP does not support GD library required for map generation!'] = 'Váš PHP server nepodporuje knižnicu GD potrebnú pre generovanie mapy!';
-$_LANG['Your PHP does not support Ming library required for map generation!'] = 'Váš PHP server nepodporuje knižnicu Ming potrebnú pre generovanie mapy!';
 $_LANG['Your unique installation ID:'] = 'Vaše unikátne inštalačné ID:';
 $_LANG['You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.'] = 'Mali by ste obdržať kópiu GNU - General Public License spoločne s týmto programom; pokiaľ sa tak nestane, napíšte si o ňu na adresu Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.';
 $_LANG['Zip:'] = 'PSČ:';
