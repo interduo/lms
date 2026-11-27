@@ -252,10 +252,6 @@ function netdevmap_refresh(live) {
 			}, lastonline_limit * 1000);
 }
 
-function close_popup(id) {
-	map.removePopup(id)
-}
-
 function ping_host(id, ip, type) {
 	//removeInvisiblePopups();
 

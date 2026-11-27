@@ -375,10 +375,6 @@ function updateAdvancedSelects(selector) {
 	});
 }
 
-function activateAdvancedSelect(selector) {
-	$(selector).trigger('chosen:activate');
-}
-
 function initAdvancedSelectsTest(selector) {
 	$(selector).each(function () {
 		var that = this;
