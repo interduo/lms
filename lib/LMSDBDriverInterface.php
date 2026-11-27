@@ -44,8 +44,6 @@ interface LMSDBDriverInterface extends LMSDBInterface
 
     public function _driver_disconnect();
 
-    public function _driver_selectdb($dbname);
-
     public function _driver_execute($query);
 
     public function _driver_multi_execute($query);

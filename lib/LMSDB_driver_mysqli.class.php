@@ -136,21 +136,6 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
     }
 
     /**
-     * Selects database.
-     *
-     * @param string $dbname
-     * @return bool
-     */
-    public function _driver_selectdb($dbname)
-    {
-        $result = mysqli_select_db($dbname, $this->_dblink);
-        if ($result) {
-            $this->_dbname = $dbname;
-        }
-        return $result;
-    }
-
-    /**
      * Executes query.
      *
      * @param string $query

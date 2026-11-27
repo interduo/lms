@@ -729,17 +729,6 @@ abstract class LMSDB_common implements LMSDBInterface
     }
 
     /**
-     * Returns revision.
-     *
-     * @return string
-     */
-    public function GetRevision()
-    {
-
-        return $this->_revision;
-    }
-
-    /**
      * Returns driver load state.
      *
      * If driver is loaded returns true otherwise returns false.
@@ -750,17 +739,6 @@ abstract class LMSDB_common implements LMSDBInterface
     {
 
         return $this->_loaded;
-    }
-
-    /**
-     * Returns database engine type.
-     *
-     * @return string
-     */
-    public function GetDbType()
-    {
-
-        return $this->_dbtype;
     }
 
     /**
@@ -799,17 +777,6 @@ abstract class LMSDB_common implements LMSDBInterface
     public function GetConnectionError()
     {
         return $this->_connection_error;
-    }
-
-    /**
-     * Sets errors.
-     *
-     * @param array $errors
-     */
-    public function SetErrors(array $errors = array())
-    {
-
-        $this->errors = $errors;
     }
 
     /**

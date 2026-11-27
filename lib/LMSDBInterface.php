@@ -102,19 +102,13 @@ interface LMSDBInterface
 
     public function GetVersion();
 
-    public function GetRevision();
-
     public function IsLoaded();
-
-    public function GetDbType();
 
     public function GetDbLink();
 
     public function GetResult();
 
     public function &GetErrors();
-
-    public function SetErrors(array $errors = array());
 
     public function SetDebug($debug = true);
 

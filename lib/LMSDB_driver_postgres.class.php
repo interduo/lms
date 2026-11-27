@@ -138,17 +138,6 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
     }
 
     /**
-     * Selects database.
-     *
-     * @param string $dbname
-     * @throws Exception
-     */
-    public function _driver_selectdb($dbname)
-    {
-        throw new Exception('PostgreSQL driver cannot change dbname. Sorry...');
-    }
-
-    /**
      * Returns errors.
      *
      * @return string
