@@ -379,31 +379,6 @@ function writesyslog($message, $type)
     return true;
 }
 
-// Creates directories tree
-function rmkdir($dir)
-{
-    if ($dir[0]!= DIRECTORY_SEPARATOR) {
-        $dir = getcwd() . DIRECTORY_SEPARATOR . $dir;
-    }
-    $directories = explode(DIRECTORY_SEPARATOR, $dir);
-    $makedirs = 0;
-    for ($i=1; $i<count($directories); $i++) {
-        $cdir = '';
-        for ($j=1; $j<$i+1; $j++) {
-            $cdir .= DIRECTORY_SEPARATOR . $directories[$j];
-        }
-        if (!is_dir($cdir)) {
-            $result = mkdir($cdir);
-            $makedirs ++;
-        }
-    }
-    if (!$result && $makedirs) {
-        return $result;
-    } else {
-        return $makedirs;
-    }
-}
-
 // Deletes directory and all subdirs and files in it
 function rrmdir($dir)
 {
@@ -704,24 +679,6 @@ function qp_encode($string)
     return '=?UTF-8?Q?'.$encoded.'?=';
 }
 
-// escape quotes and backslashes, newlines, etc.
-function escape_js($string)
-{
-        return strtr($string, array('\\'=>'\\\\',"'"=>"\\'",'"'=>'\\"',"\r"=>'\\r',"\n"=>'\\n','</'=>'<\/'));
-}
-
-function lms_ucwords($str)
-{
-    $result = array();
-    $arr = preg_split('/\s+/', $str);
-
-    foreach ($arr as $word) {
-        $result[] = mb_strlen($word) > 1 ? mb_convert_case($word, MB_CASE_TITLE) : $word;
-    }
-
-    return implode(' ', $result);
-}
-
 // replace national character with ASCII equivalent
 function clear_utf($str)
 {
@@ -845,16 +802,6 @@ function document_address($data)
     }
 
     return $lines;
-}
-
-function set_timer($label = 0)
-{
-    $GLOBALS['lms_timer'][$label] = microtime(true);
-}
-
-function get_timer($label = 0)
-{
-    return sprintf('%.4f', microtime(true) - $GLOBALS['lms_timer'][$label]);
 }
 
 function html2pdf($content, $subject = null, $title = null, $type = null, $id = null, $orientation = 'P', $margins = array(5, 10, 5, 10), $dest = 'I', $copy = false, $md5sum = '')
