@@ -204,8 +204,6 @@ switch ($type) {
                 $SESSION->close();
 
                 die;
-
-                break;
         }
 
         unset($nodelist['total']);

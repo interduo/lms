@@ -327,7 +327,6 @@ if (isset($_GET['action'])) {
                 die;
             }
             die(getNodeStats($_GET['id']));
-            break;
         case 'get_throughput':
             header('Content-type: text/html');
 
@@ -335,7 +334,6 @@ if (isset($_GET['action'])) {
                 die;
             }
             die(getThroughput($_GET['ip']));
-            break;
         case 'session_state':
             header('Content-type: text/html');
 
@@ -389,8 +387,6 @@ if (isset($_GET['action'])) {
             }
 
             die($result);
-
-            break;
         case 'get_netdev_ports':
             header('Content-type: application/json');
 
@@ -406,8 +402,6 @@ if (isset($_GET['action'])) {
             $ports = $LMS->GetNetDevPorts($netdev);
 
             die(json_encode($ports));
-
-            break;
     }
 }
 

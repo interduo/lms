@@ -45,8 +45,6 @@ if (isset($_GET['oper'])) {
             }
 
             die();
-
-            break;
         case 'srcnetdevchange':
             header('Content-type: application/json');
 
@@ -69,8 +67,6 @@ if (isset($_GET['oper'])) {
             $radiosectors = $LMS->GetRadioSectors($srcnetdev, $technology);
 
             die(json_encode(compact('ports', 'radiosectors')));
-
-            break;
     }
 }
 

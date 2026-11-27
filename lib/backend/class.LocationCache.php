@@ -94,7 +94,6 @@ class LocationCache
                 }
 
                 return $this->city_by_ident[$terc . '|' . $simc] ?? null;
-                break;
 
             case self::LOAD_ONE:
                 if (isset($this->city_by_ident[ $terc . '|' . $simc ])) {
@@ -137,7 +136,6 @@ class LocationCache
                 }
 
                 return $this->city_by_ident[$terc . '|' . $simc] ?? null;
-                break;
 
             case self::LOAD_ONE:
                 if (isset($this->city_by_ident[ $terc . '|' . $simc ])) {

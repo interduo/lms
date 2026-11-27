@@ -3226,10 +3226,8 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
                     switch ($type) {
                         case 'frontend':
                             die('<span class="red">' . trans("Fatal error: sender_email unset! Can't continue, exiting.") . '</span>' . $eol);
-                            break;
                         case 'backend':
                             die(trans("Fatal error: sender_email unset! Can't continue, exiting.") . $eol);
-                            break;
                         default:
                             $errors[] = trans("Fatal error: sender_email unset! Can't continue, exiting.");
                     }
@@ -3239,10 +3237,8 @@ class LMSDocumentManager extends LMSManager implements LMSDocumentManagerInterfa
                     switch ($type) {
                         case 'frontend':
                             die('<span class="red">' . trans("Fatal error: smtp_auth value not supported! Can't continue, exiting.") . '</span>' . $eol);
-                            break;
                         case 'backend':
                             die(trans("Fatal error: smtp_auth value not supported! Can't continue, exiting.") . $eol);
-                            break;
                         default:
                             $errors[] = trans("Fatal error: smtp_auth value not supported! Can't continue, exiting.");
                     }

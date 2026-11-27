@@ -55,7 +55,6 @@ if (isset($_GET['action'])) {
             }
 
             die(json_encode($sensitive_data));
-            break;
     }
 
     die('[]');

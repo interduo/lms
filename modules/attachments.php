@@ -138,7 +138,6 @@ if (isset($_GET['attachmentaction'])) {
             }
             echo @file_get_contents($file['filepath']);
             die;
-            break;
 
         case 'downloadzippedcontainer':
             if (!$LMS->checkFileContainerPermission($containerType, $containerId)) {
@@ -147,7 +146,6 @@ if (isset($_GET['attachmentaction'])) {
 
             $LMS->GetZippedFileContainer($containerId);
             die;
-            break;
     }
     if (!empty($_GET['restore'])) {
         $SESSION->redirect('?' . $SESSION->remove_history_entry() . '&restore=1&resourceid=' . $_GET['resourceid']);

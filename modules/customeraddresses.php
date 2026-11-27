@@ -40,7 +40,6 @@ switch (strtolower($_GET['action'])) {
         $caddr = $LMS->getCustomerAddresses(intval($_GET['id']), true);
         $LMS->determineDefaultCustomerAddress($caddr);
         die(json_encode($caddr));
-    break;
 
     /*!
      * \brief Returns html code with function.location_box.php.
@@ -82,7 +81,6 @@ switch (strtolower($_GET['action'])) {
 
         smarty_function_location_box_expandable($params, $SMARTY);
         die();
-    break;
 
     case 'geocode':
         if (!empty($_GET['address'])) {

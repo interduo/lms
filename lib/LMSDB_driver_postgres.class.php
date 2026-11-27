@@ -515,7 +515,6 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
 					WHERE table_catalog=? AND table_name=? AND table_type=? AND table_schema = current_schema()',
                     array($this->_dbname, $name, $table_type)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_COLUMN:
                 [$table_name, $column_name] = explode('.', $name);
                 return $this->GetOne(
@@ -523,20 +522,17 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
 					WHERE table_catalog = ? AND table_name = ? AND column_name = ? AND table_schema = current_schema()',
                     array($this->_dbname, $table_name, $column_name)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_CONSTRAINT:
                 return $this->GetOne(
                     'SELECT COUNT(*) FROM information_schema.table_constraints
 					WHERE table_catalog = ? AND constraint_name = ? AND constraint_schema = current_schema()',
                     array($this->_dbname, $name)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_INDEX:
                 return $this->GetOne(
                     'SELECT COUNT(*) FROM pg_indexes WHERE indexname = ? AND schemaname = current_schema()',
                     array($name)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_COLUMN_TYPE:
                 [$table_name, $column_name, $column_type] = explode('.', $name);
                 if (preg_match('/^(?<type>[^\(]+)(?:\((?<length>[0-9]+(?:\s*,\s*[0-9]+)?)\))?$/', $column_type, $m)) {
@@ -584,7 +580,6 @@ class LMSDB_driver_postgres extends LMSDB_common implements LMSDBDriverInterface
                         AND trigger_name = ? AND trigger_schema = current_schema()',
                     array($this->_dbname, $name)
                 ) > 0;
-                break;
         }
     }
 }

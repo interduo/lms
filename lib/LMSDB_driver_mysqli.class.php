@@ -488,7 +488,6 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
 					WHERE table_schema = ? AND table_name = ? AND table_type = ?',
                     array($this->_dbname, $name, $type)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_COLUMN:
                 [$table_name, $column_name] = explode('.', $name);
                 return $this->GetOne(
@@ -496,7 +495,6 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
 					WHERE table_schema = ? AND table_name = ? AND column_name = ?',
                     array($this->_dbname, $table_name, $column_name)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_CONSTRAINT:
                 if (strpos($name, '.') !== false) {
                     [$table_name, $constraint_name] = explode('.', $name);
@@ -519,7 +517,6 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
                     WHERE table_schema = ? AND index_name = ?',
                     array($this->_dbname, $name)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_COLUMN_TYPE:
                 [$table_name, $column_name, $column_type] = explode('.', $name);
                 return $this->GetOne(
@@ -527,14 +524,12 @@ class LMSDB_driver_mysqli extends LMSDB_common implements LMSDBDriverInterface
                     WHERE table_schema = ? AND table_name = ? AND column_name = ? AND column_type = ?',
                     array($this->_dbname, $table_name, $column_name, $column_type)
                 ) > 0;
-                break;
             case LMSDB::RESOURCE_TYPE_TRIGGER:
                 return $this->GetOne(
                     'SELECT COUNT(*) FROM information_schema.triggers
                     WHERE trigger_schema = ? AND trigger_name = ?',
                     array($this->_dbname, $name)
                 ) > 0;
-                break;
         }
     }
 }

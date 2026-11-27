@@ -38,6 +38,5 @@ if (!empty($_GET['action'])) {
 
             header('Content-Type: application/json');
             die(json_encode($result));
-            break;
     }
 }

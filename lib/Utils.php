@@ -1314,7 +1314,6 @@ class Utils
                     break;
                 case 'S':
                     return $html2pdf->Output('', 'S');
-                    break;
                 default:
                     $html2pdf->Output();
                     break;

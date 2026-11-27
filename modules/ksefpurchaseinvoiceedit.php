@@ -343,8 +343,6 @@ switch ($action) {
         header('Content-Length: ' . strlen($output));
 
         die($output);
-
-        break;
     default:
         die(json_encode([
             'error' => 'Unsupported action!',

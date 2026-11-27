@@ -95,14 +95,11 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         switch ($customer_deleted) {
             case '0':
                 return true;
-                break;
             case '1':
                 return -1;
-                break;
             case '':
             default:
                 return false;
-                break;
         }
     }
 

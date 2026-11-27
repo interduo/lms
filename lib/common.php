@@ -373,7 +373,6 @@ function writesyslog($message, $type)
             break;
         default:
             return false;
-        break;
     }
 
     return true;
