@@ -1983,8 +1983,6 @@ if ($report_type == 'full') {
                 echo '<br>';
             }
             die;
-
-            return;
         }
 
         if (!$same_netnode) {

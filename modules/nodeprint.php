@@ -91,9 +91,6 @@ switch ($type) {
                 $layout['pagetitle'] = trans('Nodes List for Customers In Debt');
 
                 $order=$_POST['order'].','.$_POST['direction'];
-                if ($order=='') {
-                    $order='name,asc';
-                }
 
                 [$order, $direction] = explode(',', $order);
 
