@@ -131,64 +131,81 @@ if ($invoiceSendPreview) {
         )));
     }
 
-    $doc = $docs[count($docs) - 1];
+    $doc = reset($docs);
+    $mixedTemplates = false;
+    $subject = $body = $mail_format = null;
+
+    foreach ($docs as $docItem) {
+        ConfigHelper::setFilter($docItem['divisionid']);
+        $itemSubject = ConfigHelper::getConfig('sendinvoices.mail_subject', 'Invoice No. %invoice');
+        $itemBody = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
+        if (!empty($itemBody) && $itemBody[0] == DIRECTORY_SEPARATOR && is_readable($itemBody)) {
+            $itemBody = file_get_contents($itemBody);
+        }
+        $itemFormat = ConfigHelper::getConfig('sendinvoices.mail_format', 'text');
+        if (!isset($subject)) {
+            $doc = $docItem;
+            $subject = $itemSubject;
+            $body = $itemBody;
+            $mail_format = $itemFormat;
+        } elseif ($itemSubject !== $subject || $itemBody !== $body || $itemFormat !== $mail_format) {
+            $mixedTemplates = true;
+            break;
+        }
+    }
 
     ConfigHelper::setFilter($doc['divisionid']);
 
-    $mail_subject = ConfigHelper::getConfig('sendinvoices.mail_subject', 'Invoice No. %invoice');
-    $mail_body = ConfigHelper::getConfig('sendinvoices.mail_body', ConfigHelper::getConfig('mail.sendinvoice_mail_body'));
-    $mail_format = ConfigHelper::getConfig('sendinvoices.mail_format', 'text');
-    $aggregate_documents = ConfigHelper::checkConfig('sendinvoices.aggregate_documents');
-    $financial_history_reverse_order = ConfigHelper::checkConfig(
-        'sendinvoices.financial_history_reverse_order',
-        ConfigHelper::checkConfig(
-            'finances.history_reverse_order',
-            true
-        )
-    );
-    $financial_history_item_description_format = ConfigHelper::getConfig(
-        'sendinvoices.financial_history_item_description_format',
-        ConfigHelper::getConfig(
-            'finances.history_item_description_format',
-            '%comment'
-        )
-    );
+    if (count($docs) == 1) {
+        $aggregate_documents = ConfigHelper::checkConfig('sendinvoices.aggregate_documents');
+        $financial_history_reverse_order = ConfigHelper::checkConfig(
+            'sendinvoices.financial_history_reverse_order',
+            ConfigHelper::checkConfig(
+                'finances.history_reverse_order',
+                true
+            )
+        );
+        $financial_history_item_description_format = ConfigHelper::getConfig(
+            'sendinvoices.financial_history_item_description_format',
+            ConfigHelper::getConfig(
+                'finances.history_item_description_format',
+                '%comment'
+            )
+        );
 
-    if (!empty($mail_body) && $mail_body[0] == DIRECTORY_SEPARATOR && is_readable($mail_body)) {
-        $mail_body = file_get_contents($mail_body);
+        if ($doc['doctype'] == DOC_DNOTE) {
+            $document = $LMS->GetNoteContent($doc['id']);
+        } else {
+            $document = $LMS->GetInvoiceContent($doc['id']);
+        }
+        if (empty($document) && !empty($doc['archived'])) {
+            $tradeDocument = $LMS->GetTradeDocument($doc);
+            $document = $tradeDocument['document'] ?? null;
+        }
+        if (empty($document)) {
+            die(json_encode(array(
+                'error' => trans("Fatal error: No invoices nor debit notes were selected!"),
+            )));
+        }
+
+        $mailPlaceholders = $LMS->substituteInvoiceMailPlaceholders(
+            $subject,
+            $body,
+            $doc,
+            $document,
+            array(
+                'currtime' => time(),
+                'mail_format' => $mail_format,
+                'aggregate_documents' => $aggregate_documents,
+                'financial_history_reverse_order' => $financial_history_reverse_order,
+                'financial_history_item_description_format' => $financial_history_item_description_format,
+            )
+        );
+
+        $subject = $mailPlaceholders['subject'];
+        $body = $mailPlaceholders['body'];
     }
 
-    if ($doc['doctype'] == DOC_DNOTE) {
-        $document = $LMS->GetNoteContent($doc['id']);
-    } else {
-        $document = $LMS->GetInvoiceContent($doc['id']);
-    }
-    if (empty($document) && !empty($doc['archived'])) {
-        $tradeDocument = $LMS->GetTradeDocument($doc);
-        $document = $tradeDocument['document'] ?? null;
-    }
-    if (empty($document)) {
-        die(json_encode(array(
-            'error' => trans("Fatal error: No invoices nor debit notes were selected!"),
-        )));
-    }
-
-    $mailPlaceholders = $LMS->substituteInvoiceMailPlaceholders(
-        $mail_subject,
-        $mail_body,
-        $doc,
-        $document,
-        array(
-            'currtime' => time(),
-            'mail_format' => $mail_format,
-            'aggregate_documents' => $aggregate_documents,
-            'financial_history_reverse_order' => $financial_history_reverse_order,
-            'financial_history_item_description_format' => $financial_history_item_description_format,
-        )
-    );
-
-    $subject = $mailPlaceholders['subject'];
-    $body = $mailPlaceholders['body'];
     if (isset($mail_format) && $mail_format == 'html') {
         $body = str_replace('<eol>', '<br>', $body);
     } else {
@@ -198,6 +215,7 @@ if ($invoiceSendPreview) {
     die(json_encode(array(
         'subject' => $subject,
         'body' => $body,
+        'mixedTemplates' => $mixedTemplates,
     )));
 }
 
@@ -229,13 +247,15 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
             }
         }
 
-        if (isset($invoiceSend['subject']) && is_string($invoiceSend['subject']) && strlen(trim($invoiceSend['subject']))) {
-            $invoiceSendSubject = trim($invoiceSend['subject']);
-        }
-        if (isset($invoiceSend['body']) && is_string($invoiceSend['body'])) {
-            $invoiceSendBody = str_replace("\r\n", "\n", $invoiceSend['body']);
-            if (strlen($invoiceSendBody) && $invoiceSendBody[0] == DIRECTORY_SEPARATOR && is_readable($invoiceSendBody)) {
-                unset($invoiceSendBody);
+        if (isset($invoiceSend['commontext']) && ConfigHelper::checkValue($invoiceSend['commontext'])) {
+            if (isset($invoiceSend['subject']) && is_string($invoiceSend['subject']) && strlen(trim($invoiceSend['subject']))) {
+                $invoiceSendSubject = trim($invoiceSend['subject']);
+            }
+            if (isset($invoiceSend['body']) && is_string($invoiceSend['body'])) {
+                $invoiceSendBody = str_replace("\r\n", "\n", $invoiceSend['body']);
+                if (strlen($invoiceSendBody) && $invoiceSendBody[0] == DIRECTORY_SEPARATOR && is_readable($invoiceSendBody)) {
+                    unset($invoiceSendBody);
+                }
             }
         }
     }
@@ -332,7 +352,7 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
 
             $currtime = time();
 
-            $combine_documents = isset($invoiceSendRecipients);
+            $combine_documents = false;
             $skip_mail_substitution = $combine_documents && isset($invoiceSendSubject) && isset($invoiceSendBody);
 
             $divisiondocs = array();

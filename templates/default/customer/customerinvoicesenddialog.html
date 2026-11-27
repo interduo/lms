@@ -42,6 +42,13 @@
 				<strong>{trans("Additional e-mail:")}</strong><br>
 				<input type="email" name="invoicesend[extraemail]">
 			</li>
+			<li id="invoice-send-common-text" style="display: none;">
+				<label>
+					<input type="hidden" name="invoicesend[commontext]" value="0">
+					<input type="checkbox" name="invoicesend[commontext]" value="1" id="invoice-send-common-text-checkbox">
+					{trans("Use this subject and body for all selected invoices")}
+				</label>
+			</li>
 			<li>
 				<strong>{trans("Subject:")}</strong><br>
 				<input type="text" name="invoicesend[subject]" required>
@@ -90,8 +97,18 @@
 				alertDialog(result.error, button);
 				return;
 			}
-			$('#invoice-send-form [name="invoicesend[subject]"]').val(result.subject);
-			$('#invoice-send-form [name="invoicesend[body]"]').val(result.body);
+			var invoiceSendSubject = $('#invoice-send-form [name="invoicesend[subject]"]');
+			var invoiceSendBody = $('#invoice-send-form [name="invoicesend[body]"]');
+			var invoiceSendCommonText = $('#invoice-send-common-text');
+			var invoiceSendCommonTextCheckbox = $('#invoice-send-common-text-checkbox');
+			var invoiceSendMixedTemplates = !!result.mixedTemplates;
+
+			invoiceSendSubject.val(result.subject);
+			invoiceSendBody.val(result.body);
+			invoiceSendCommonText.toggle(invoiceSendMixedTemplates);
+			invoiceSendCommonTextCheckbox.prop('checked', !invoiceSendMixedTemplates);
+			invoiceSendSubject.prop('disabled', invoiceSendMixedTemplates).prop('required', !invoiceSendMixedTemplates);
+			invoiceSendBody.prop('disabled', invoiceSendMixedTemplates);
 			invoiceSendDialog.open();
 		}).fail(function(jqXHR) {
 			alertDialog($t('AJAX: Invalid result - status: $a', jqXHR.status), button);
@@ -112,6 +129,15 @@
 
 		$('#invoice-send-cancel-button').click(function() {
 			invoiceSendDialog.close();
+		});
+
+		$('#invoice-send-common-text-checkbox').change(function() {
+			var useCommonText = $(this).prop('checked');
+			var invoiceSendSubject = $('#invoice-send-form [name="invoicesend[subject]"]');
+			var invoiceSendBody = $('#invoice-send-form [name="invoicesend[body]"]');
+
+			invoiceSendSubject.prop('disabled', !useCommonText).prop('required', useCommonText);
+			invoiceSendBody.prop('disabled', !useCommonText);
 		});
 
 		$('#invoice-send-form').submit(function() {
