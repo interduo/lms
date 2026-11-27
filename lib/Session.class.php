@@ -586,39 +586,6 @@ class Session
         }
     }
 
-    public function removeFilter($module = null, $id = null)
-    {
-        if (empty($module)) {
-            $module = $this->_content['module'];
-        }
-
-        if (isset($id)) {
-            if (isset($this->_content['filters'][$module]['subfilters'][$id])) {
-                unset($this->_content['filters'][$module]['subfilters'][$id]);
-                if ($this->autoupdate) {
-                    $this->_saveSession();
-                } else {
-                    $this->_updated = true;
-                }
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            if (isset($this->_content['filters'][$module])) {
-                unset($this->_content['filters'][$module]);
-                if ($this->autoupdate) {
-                    $this->_saveSession();
-                } else {
-                    $this->_updated = true;
-                }
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
     public function savePersistentFilter($name, $filter, $module = null, $id = null)
     {
         if (empty($module)) {

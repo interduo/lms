@@ -182,52 +182,6 @@ function pointCodeByNetNodeType($netNodeType)
     return $point_codes[$netNodeType] ?? '14';
 }
 
-function isMobileTechnology($technology)
-{
-    static $mobile_technologies = null;
-
-    if (!isset($mobile_technologies)) {
-        $mobile_technologies = array(
-            // WiMAX
-            102 => true,
-            // LMDS
-            103 => true,
-            // 2G/GSM (w tym GPRS oraz EDGE)
-            106 => true,
-            // EDGE
-            //107 => true,
-            // 3G/CDMA2000
-            152 => true,
-            // 3G/UMTS,
-            113 => true,
-            // 3G/HSPA
-            108 => true,
-            // 3G/HSPA+
-            109 => true,
-            // 3G/DC-HSPA
-            150 => true,
-            // 3G/DC-HSPA+
-            110 => true,
-            // 3G/MC-HSPA
-            151 => true,
-            // 3G/MC-HSPA+
-            111 => true,
-            // 4G/LTE
-            112 => true,
-            // 4G/LTE-A
-            153 => true,
-            // 4G/LTE-Pro
-            154 => true,
-            // 5G/NR SA
-            155 => true,
-            // 5G/NR NSA
-            156 => true,
-        );
-    }
-
-    return isset($mobile_technologies[$technology]);
-}
-
 function routeTypeName($routetype)
 {
     static $route_types = null;

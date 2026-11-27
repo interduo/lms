@@ -44,24 +44,9 @@ class USERPANEL
         }
     }
 
-    public function _postinit()
-    {
-        return true;
-    }
-
     public function setModuleDirectories($module_dirs)
     {
         $this->module_dirs = $module_dirs;
-    }
-
-    public function getModuleDirectory($filename)
-    {
-        foreach ($this->module_dirs as $dir) {
-            if (strpos($filename, $dir) === 0) {
-                return $dir;
-            }
-        }
-        return null;
     }
 
     public function AddModule($name = '', $module = '', $tip = '', $prio = 99, $description = '', $submenu = null, $icon = null, $module_dir = null)

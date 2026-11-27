@@ -70,27 +70,6 @@ $LMS = new LMS($DB, $AUTH, $SYSLOG);
    We should have all hard work here which is being done by our script!
    ********************************************************************/
 
-/*!
- * \brief Change array to asociative array.
- *
- * \param  array $row single row to parse
- * \return array       associative array with paremeters
- */
-function parse_teryt_building_row($row)
-{
-    static $column_names = array('woj', 'powiat', 'gmina', 'terc', 'miejscowosc',
-        'simc', 'ulica', 'ulic', 'building_num', 'longitude', 'latitude');
-
-    if (count($column_names) == count($row)) {
-        $result = array_combine($column_names, $row);
-        $result['longitude'] = str_replace(',', '.', $result['longitude']);
-        $result['latitude'] = str_replace(',', '.', $result['latitude']);
-        return $result;
-    } else {
-        return null;
-    }
-}
-
 function dbf_to_utf8($src)
 {
     // Zamienia znaki 0x00–0xFF na bajty (latin1), a potem dekoduje jako UTF-8.

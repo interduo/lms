@@ -256,11 +256,6 @@ class Auth
         return $this->authcoderequired != '';
     }
 
-    public function _postinit()
-    {
-        return true;
-    }
-
     public function LogOut()
     {
         if ($this->islogged) {

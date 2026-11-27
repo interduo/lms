@@ -102,11 +102,6 @@ class LMS
         }
     }
 
-    public function _postinit()
-    {
-        return true;
-    }
-
     public static function getInstance()
     {
         return self::$lms;

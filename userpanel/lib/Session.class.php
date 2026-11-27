@@ -810,11 +810,6 @@ class Session
         return false;
     }
 
-    public function _postinit()
-    {
-        return true;
-    }
-
     public function LogOut()
     {
         if ($this->islogged) {

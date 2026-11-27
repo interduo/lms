@@ -92,16 +92,6 @@ class LMSPagination_ext
     }
 
     /*
-     * \brief Method return number of items.
-     *
-     * \return int
-     */
-    public function getItemsCount()
-    {
-        return $this->items;
-    }
-
-    /*
      * \brief Method set range (limit) for page numbers.
      * If you have many pages or don't want see them all set this.
      *

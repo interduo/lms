@@ -109,22 +109,6 @@ class VoipDbBuffer
     }
 
     /*!
-     * \brief Add used tariff rule units to list.
-     *
-     * \param int $v_id voip account id
-     * \param int $r_id tariff rule id
-     * \param int $u    used units
-     */
-    public function appendRuleState($v_id, $r_id, $u)
-    {
-        if (isset($this->rule_states[$v_id][$r_id])) {
-            $this->rule_states[$v_id][$r_id] += $u;
-        } else {
-            $this->rule_states[$v_id][$r_id] = $u;
-        }
-    }
-
-    /*!
      * \brief Method insert appended informations to data base.
      */
     public function insert()
