@@ -185,23 +185,6 @@ function getGPSdistance($p1_lon, $p1_lat, $p2_lon, $p2_lat)
 
 //require_once(dirname(__FILE__) . '/../contrib/initLMS.php');
 
-/*
-function to_wgs84($coord, $ifLongitude = true) {
-    if ($ifLongitude) {
-        if ($coord >= 0)
-            $res = sprintf("%.04fE", $coord);
-        else
-            $res = sprintf("%.04fW", $coord * -1);
-    } else {
-        if ($coord >= 0)
-            $res = sprintf("%.04fN", $coord);
-        else
-            $res = sprintf("%.04fS", $coord * -1);
-    }
-    return str_replace(',', '.', $res);
-}
-*/
-
 define('EOL', "\r\n");
 
 if (isset($_POST['sheets']) && is_array($_POST['sheets'])) {

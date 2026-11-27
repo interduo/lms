@@ -158,25 +158,6 @@ class LMS
     }
 
     /*
-     *  Logging
-     *  0 - disabled
-     *  1 - system log in and modules calls without access privileges
-     *  2 - as above, addition and deletion
-     *  3 - as above, and changes
-     *  4 - as above, and all modules calls (paranoid)
-     */
-    /*
-      public function Log($loglevel=0, $message=NULL)
-      {
-      if( $loglevel <= ConfigHelper::getConfig('phpui.loglevel') && $message )
-      {
-      $this->DB->Execute('INSERT INTO syslog (time, userid, level, message)
-      VALUES (?NOW?, ?, ?, ?)', array(Auth::GetCurrentUser(), $loglevel, $message));
-      }
-      }
-     */
-
-    /*
      * Plugins
      */
 

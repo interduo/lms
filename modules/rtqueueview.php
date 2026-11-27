@@ -136,16 +136,6 @@ if (!empty($filter['catids'])) {
         access_denied();
     }
 }
-/*else {
-    $categories = $DB->GetCol('SELECT categoryid FROM rtcategoryusers WHERE userid=?', array($currentuser));
-    $all_cat = $DB->GetOne('SELECT COUNT(*) FROM rtcategories');
-
-    if (!$categories && $all_cat)
-        access_denied();
-
-    if (count($categories) != $all_cat)
-        $filter['catids'] = $categories;
-}*/
 
 // sort order
 if (isset($_GET['o'])) {

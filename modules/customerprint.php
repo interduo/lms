@@ -390,21 +390,6 @@ switch ($type) {
         $content .= "\t\t<dataStanNa>" . date('d-m-Y') . "</dataStanNa>\n";
         $content .= "\t\t<Nazwa>" . htmlspecialchars($division['name']) . "</Nazwa>\n";
         $content .= "\t\t<Regon>" . $division['regon'] . "</Regon>\n";
-/*
-        $content .= "\t\t<AdresOperatora>\n";
-        $content .= "\t\t\t<Miejscowosc>" . htmlspecialchars($division['city']) . "</Miejscowosc>\n";
-        if (!empty($division_address['street'])) {
-            $content .= "\t\t\t<Ulica>" . htmlspecialchars($division_address['street']) . "</Ulica>\n";
-        }
-        $content .= "\t\t\t<NrDom>" . htmlspecialchars($division_address['house']) . "</NrDom>\n";
-        if (!empty($division_address['flat'])) {
-            $content .= "\t\t\t<NrLokal>" . htmlspecialchars($division_address['flat']) . "</NrLokal>\n";
-        }
-        $content .= "\t\t\t<KodPoczta>" . $division_address['zip'] . "</KodPoczta>\n";
-        $content .= "\t\t\t<Poczta>" . htmlspecialchars(empty($division_address['postoffice']) ? $division['city'] : $division_address['postoffice']) . "</Poczta>\n";
-        $content .= "\t\t\t<Telefon>" . $division['phone'] . "</Telefon>\n";
-        $content .= "\t\t</AdresOperatora>\n";
-*/
 
         $state_ident_by_ids = $DB->GetAllByKey('SELECT id, ident FROM location_states', 'id');
         if (empty($state_ident_by_ids)) {
@@ -461,84 +446,6 @@ switch ($type) {
                         }
                     }
                     $content .= "\t\t\t\t</TelefonyKontaktowe>\n";
-
-/*
-                    $locations = '';
-
-                    $location_content = "\t\t\t\t<AdresPunktu>\n";
-
-                    $location_content .= "\t\t\t\t\t<Województwo>\n";
-                    $location_content .= "\t\t\t\t\t\t<NazwaWojew>"
-                        . htmlspecialchars($address['location_state_name'] ?: trans('(undefined)'))
-                        . "</NazwaWojew>\n";
-                    if (isset($state_ident_by_ids[$address['location_state']])) {
-                        $location_content .= "\t\t\t\t\t\t<KodWojew>"
-                            . $state_ident_by_ids[$address['location_state']]['ident']
-                            . "</KodWojew>\n";
-                    }
-                    $location_content .= "\t\t\t\t\t</Województwo>\n";
-
-                    $teryt_city = $city_idents_by_ids[$address['location_city']] ?? null;
-
-                    $location_content .= "\t\t\t\t\t<Powiat>\n";
-                    $location_content .= "\t\t\t\t\t\t<NazwaPowiatu>"
-                        . htmlspecialchars($teryt_city ? $teryt_city['district_name'] : trans('(undefined)'))
-                        . "</NazwaPowiatu>\n";
-                    if ($teryt_city) {
-                        $location_content .= "\t\t\t\t\t\t<KodPowiatu>"
-                            . $teryt_city['district_ident']
-                            . "</KodPowiatu>\n";
-                    }
-                    $location_content .= "\t\t\t\t\t</Powiat>\n";
-
-                    $location_content .= "\t\t\t\t\t<Gmina>\n";
-                    $location_content .= "\t\t\t\t\t\t<NazwaGminy>"
-                        . htmlspecialchars($teryt_city ? $teryt_city['borough_name'] : trans('(undefined)'))
-                        . "</NazwaGminy>\n";
-                    if ($teryt_city) {
-                        $location_content .= "\t\t\t\t\t\t<KodGminy>"
-                            . $teryt_city['borough_ident'] . $teryt_city['borough_type']
-                            . "</KodGminy>\n";
-                    }
-                    $location_content .= "\t\t\t\t\t</Gmina>\n";
-
-                    $location_content .= "\t\t\t\t\t<Miejscowosc>\n";
-                    $location_content .= "\t\t\t\t\t\t<NazwaMiejscowosci>"
-                        . htmlspecialchars($address['location_city_name'])
-                        . "</NazwaMiejscowosci>\n";
-                    if ($teryt_city) {
-                        $location_content .= "\t\t\t\t\t\t<KodMiejscowosci>"
-                            . $teryt_city['city_ident']
-                            . "</KodMiejscowosci>\n";
-                    }
-                    $location_content .= "\t\t\t\t\t</Miejscowosc>\n";
-
-                    if (!empty($address['location_street_name'])) {
-                        $location_content .= "\t\t\t\t\t<Ulica>\n";
-                        $location_content .= "\t\t\t\t\t\t<NazwaUlicy>"
-                            . htmlspecialchars($address['location_street_name'])
-                            . "</NazwaUlicy>\n";
-                        if (!empty($address['location_street']) && isset($street_ident_by_ids[$address['location_street']])) {
-                            $location_content .= "\t\t\t\t\t\t<KodUlicy>"
-                                . $street_ident_by_ids[$address['location_street']]['ident']
-                                . "</KodUlicy>\n";
-                        }
-                        $location_content .= "\t\t\t\t\t</Ulica>\n";
-                    }
-
-                    if (!empty($address['location_house'])) {
-                        $location_content .= "\t\t\t\t\t<NumerDomu>" . $address['location_house'] . "</NumerDomu>\n";
-                        if (!empty($address['location_flat'])) {
-                            $location_content .= "\t\t\t\t\t<NumerLokalu>" . $address['location_flat'] . "</NumerLokalu>\n";
-                        }
-                    } else {
-                        $location_content .= "\t\t\t\t\t<NumerDomu>" . trans('(undefined)') . "</NumerDomu>\n";
-                    }
-
-                    $locations .= $location_content . "\t\t\t\t</AdresPunktu>\n";
-
-                    $content .= $locations;
-*/
 
                     $content .= "\t\t\t</Abonent>\n";
                 }

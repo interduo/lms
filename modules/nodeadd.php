@@ -518,25 +518,6 @@ if (isset($_POST['nodedata'])) {
     }
 
     $nodedata['info'] = ConfigHelper::getConfig('nodes.default_info', '', true);
-    // check if customer address is selected or if default location address exists
-    // if both are not fullfilled we generate user interface warning
-/*
-    if (isset($_GET['ownerid'])) {
-        $addresses = $LMS->getCustomerAddresses($_GET['ownerid'], true);
-        if (count($addresses) > 1) {
-            $i = 0;
-            foreach ($addresses as $address) {
-                if ($address['location_address_type'] == DEFAULT_LOCATION_ADDRESS) {
-                    break;
-                }
-                $i++;
-            }
-            if ($i == count($addresses)) {
-                $error['address_id'] = trans('No address has been selected!');
-            }
-        }
-    }
-*/
 }
 
 if (empty($nodedata['netdev'])) {

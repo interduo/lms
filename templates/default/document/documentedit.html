@@ -215,24 +215,6 @@
 			</td>
 		</tr>
 		{/if}
-{*
-		<tr>
-			<td>
-				{icon name="template"}
-			</td>
-			<td>
-				<strong>{trans("Template:")}</strong>
-			</td>
-			<td>
-				<select size="1" name="document[template]" {tip text="Select template to generate new document if you haven't got prepared file" trigger="template"}>
-					<option value="0">... {trans("select template")} ...</option>
-					{foreach $docengines as $item}
-						<option value="{$item.name}"{if $document.template == $item.name} selected{/if}>{$item.title}</option>
-					{/foreach}
-				</select>
-			</td>
-		</tr>
-*}
 		{if (!$document.closed && ($document.docrights & $smarty.const.DOCRIGHT_CONFIRM)) || ConfigHelper::checkPrivilege('full_access')}
 		<tr>
 			<td>

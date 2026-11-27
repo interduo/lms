@@ -1187,21 +1187,6 @@ switch ($mode) {
 
             if ($candidates) {
                 foreach ($candidates as $idx => $row) {
-    /*
-                    switch ($row['type']) {
-                    case DOC_INVOICE:
-                        $action = '?m=invoice&id=' . $row['id'];
-                        break;
-                    case DOC_RECEIPT:
-                        $action = '?m=receipt&id=' . $row['id'];
-                        break;
-                    case DOC_CNOTE:
-                        $action = '?m=note&id=' . $row['id'];
-                        break;
-                    default:
-                        $action = '?m=documentview&id=' . $row['id'];
-                    }
-    */
                     $name = $row['fullnumber'];
                     $name_class = '';
                     $description = htmlspecialchars(truncate_str($row['customername'], 35));
@@ -1233,23 +1218,6 @@ switch ($mode) {
 			WHERE LOWER(fullnumber) ?LIKE? LOWER($sql_search)");
         if (!empty($docs) && count($docs) == 1) {
             $cid = $docs[0]['cid'];
-/*
-            $docid = $docs[0]['id'];
-            $type = $docs[0]['type'];
-            switch ($type) {
-                case DOC_INVOICE:
-                    $target = '?m=invoice&id=' . $docid;
-                    break;
-                case DOC_RECEIPT:
-                    $target = '?m=receipt&id=' . $docid;
-                    break;
-                case DOC_CNOTE:
-                    $target = '?m=note&id=' . $docid;
-                    break;
-                default:
-                    $target = '?m=documentview&id=' . $docid;
-            }
-*/
             $target = '?m=customerinfo&id=' . $cid;
         }
         break;

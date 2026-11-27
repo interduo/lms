@@ -121,29 +121,6 @@ if ($schema) {
             $SYSLOG->AddMessage(SYSLOG::RES_PROMOSCHEMA, SYSLOG::OPER_ADD, $args);
         }
 
-        // pre-fill promotionassignments with all tariffs in specified promotion
-/*
-        $tariffs = $DB->GetCol('SELECT DISTINCT tariffid FROM promotionassignments
-            WHERE promotionschemaid IN (SELECT id FROM promotionschemas WHERE promotionid = ?)
-            GROUP BY tariffid', array($schema['promotionid']));
-        if (!empty($tariffs)) {
-            $args = array(
-                SYSLOG::RES_PROMO => $schema['promotionid'],
-                SYSLOG::RES_PROMOSCHEMA => $sid
-            );
-            foreach ($tariffs as $tariff) {
-                $DB->Execute('INSERT INTO promotionassignments (promotionschemaid, tariffid)
-                    VALUES (?, ?)', array($sid, $tariff));
-                if ($SYSLOG) {
-                    $args[SYSLOG::RES_TARIFF] = $tariff;
-                    $args[SYSLOG::RES_PROMOASSIGN] =
-                        $DB->GetLastInsertID('promotionassignments');
-                    $SYSLOG->AddMessage(SYSLOG::RES_PROMOASSIGN, SYSLOG::OPER_ADD, $args);
-                }
-            }
-        }
-*/
-
         if (empty($schema['reuse'])) {
             $SESSION->redirect('?m=promotionschemainfo&id=' . $sid);
         }

@@ -402,22 +402,6 @@ if (empty($numberplans)) {
 $SMARTY->assign('numberplans', $numberplans);
 $SMARTY->assign('planDocumentType', $document['type']);
 
-/*
-if($dirs = getdir(DOC_DIR.'/templates', '^[a-zA-Z0-9_-]+$'))
-    foreach($dirs as $dir)
-    {
-        $infofile = DOC_DIR.'/templates/'.$dir.'/info.php';
-        if(file_exists($infofile))
-        {
-            unset($engine);
-            include($infofile);
-            $docengines[$dir] = $engine;
-        }
-    }
-
-if($docengines) ksort($docengines);
-*/
-
 $layout['pagetitle'] = trans('Edit Document: $a', docnumber(array(
     'number' => $document['number'],
     'template' => $document['template'],
