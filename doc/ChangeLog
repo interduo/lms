@@ -2,6 +2,9 @@ $Id$
 
 version 28-git (????-??-??):
 
+  - bugfix: invoice send dialog on customer card no longer applies placeholders or division
+    template of the last selected invoice to the whole batch; each invoice uses its own template
+    unless the operator chooses a common subject and body [interduo]
   - security: client IP is taken from X-Forwarded-For only when REMOTE_ADDR is listed in new
     'phpui.trusted_proxies' (set it for reverse proxy!) [interduo]
   - improvement: 'phpui.call_phone_url' support in ticket view form [chilan]
