@@ -897,11 +897,6 @@ class LMSEventManager extends LMSManager implements LMSEventManagerInterface
         );
     }
 
-    public function GetCustomerIdByTicketId($id)
-    {
-        return $this->db->GetOne('SELECT customerid FROM rttickets WHERE id=?', array($id));
-    }
-
     /**
      * @param array $params associative array of parameters described below:
      *      users - event user assignments: array() of integer values,

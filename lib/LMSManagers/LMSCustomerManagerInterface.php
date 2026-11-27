@@ -38,15 +38,11 @@ interface LMSCustomerManagerInterface
 
     public function getCustomerNodesNo($id);
 
-    public function getCustomerIDByIP($ipaddr);
-
     public function getCustomerStatus($id);
 
     public function getCustomerNames();
 
     public function getAllCustomerNames();
-
-    public function getCustomerNodesAC($id);
 
     public function getCustomerBalance($id, $totime = null, $expired = false);
 
@@ -66,8 +62,6 @@ interface LMSCustomerManagerInterface
 
     public function getCustomerNodes($id, $count = null);
 
-    public function getCustomerNetDevs($customer_id);
-
     public function GetCustomerNetworks($id, $count = null);
 
     public function getCustomerConsents($id);
@@ -75,8 +69,6 @@ interface LMSCustomerManagerInterface
     public function getCustomerSensitiveData($id);
 
     public function GetCustomer($id, $short = false);
-
-    public function GetCustomerAltName($id);
 
     public function customerUpdate($customerdata);
 
@@ -111,10 +103,6 @@ interface LMSCustomerManagerInterface
     public function getCustomerSMSOptions();
 
     public function getCustomerAddressesWithOrWithoutEndPoints($customerid, $with = true);
-
-    public function GetCustomerAddressesWithEndPoints($customerid);
-
-    public function GetCustomerAddressesWithoutEndPoints($customerid);
 
     public function checkCustomerTenExistence($customerid, $ten, $divisionid = null);
 

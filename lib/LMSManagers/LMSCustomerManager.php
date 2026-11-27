@@ -118,20 +118,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
     }
 
     /**
-     * Returns customer id by node IP
-     *
-     * @param string $ipaddr Node IP
-     * @return int Customer id
-     */
-    public function getCustomerIDByIP($ipaddr)
-    {
-        return $this->db->GetOne(
-            'SELECT ownerid FROM vnodes WHERE ipaddr=inet_aton(?) OR ipaddr_pub=inet_aton(?)',
-            array($ipaddr, $ipaddr)
-        );
-    }
-
-    /**
      * Returns customer status
      *
      * @param int $id Customer id
@@ -176,41 +162,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
             ORDER BY lastname, name',
             'id'
         );
-    }
-
-    /**
-     * Checks if all customer nodes have access
-     *
-     * @param int $id Customer id
-     * @return boolean|int True if all have access, false if not, 2 if some have access and some not
-     */
-    public function getCustomerNodesAC($id)
-    {
-        $y = 0;
-        $n = 0;
-
-        $acl = $this->db->GetAll('SELECT access FROM vnodes WHERE ownerid=?', array($id));
-        if ($acl) {
-            foreach ($acl as $value) {
-                if ($value['access']) {
-                    $y++;
-                } else {
-                    $n++;
-                }
-
-                if ($y && !$n) {
-                    return true;
-                }
-                if ($n && !$y) {
-                    return false;
-                }
-            }
-        }
-        if ($this->db->GetOne('SELECT COUNT(*) FROM vnodes WHERE ownerid=?', array($id))) {
-            return 2;
-        } else {
-            return false;
-        }
     }
 
     /**
@@ -2485,38 +2436,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
     }
 
     /**
-     * Returns customer network devices.
-     *
-     * @param  int   $customer_id Customer id
-     * @return array network devices
-     */
-    public function GetCustomerNetDevs($customer_id)
-    {
-
-        $netdevs = $this->db->GetAllByKey('SELECT
-                                              nd.id, nd.name, va.city AS location_city, va.city_id AS location_city_id, va.street AS location_street,
-                                              va.street_id AS location_street_id, va.zip AS location_zip, va.location_house, va.location_flat,
-                                              nd.description,
-                                              nd.producer,
-                                              nd.model,
-                                              t.id AS devicetypeid,
-                                              t.name AS devicetypename,
-                                              nd.serialnumber, nd.ports, nd.purchasetime, nd.guaranteeperiod, nd.shortname, nd.nastype,
-                                              nd.clients, nd.community, nd.channelid, nd.longitude, nd.latitude, nd.netnodeid, nd.invprojectid,
-                                              nd.status, nd.netdevicemodelid, nd.ownerid, no.authtype, va.id as address_id
-                                           FROM
-                                              netdevices nd
-                                              LEFT JOIN netdevicemodels m ON m.id = nd.netdevicemodelid
-                                              LEFT JOIN netdevicetypes t ON t.id = m.type
-                                              LEFT JOIN vaddresses va ON nd.address_id = va.id
-                                              LEFT JOIN nodes no ON nd.id = no.netdev
-                                           WHERE
-                                              nd.ownerid = ?', 'id', array(intval($customer_id)));
-
-        return $netdevs;
-    }
-
-    /**
      * Returns customer networks
      *
      * @param int $id Customer id
@@ -2732,14 +2651,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         } else {
             return false;
         }
-    }
-
-    public function GetCustomerAltName($id)
-    {
-        return empty($id) ? null : $this->db->GetOne(
-            'SELECT altname FROM customers WHERE id = ?',
-            array($id)
-        );
     }
 
     /**
@@ -3575,16 +3486,6 @@ class LMSCustomerManager extends LMSManager implements LMSCustomerManagerInterfa
         } else {
             return $addresses;
         }
-    }
-
-    public function GetCustomerAddressesWithEndPoints($customerid)
-    {
-        return $this->getCustomerAddressesWithOrWithoutEndPoints($customerid, true);
-    }
-
-    public function GetCustomerAddressesWithoutEndPoints($customerid)
-    {
-        return $this->getCustomerAddressesWithOrWithoutEndPoints($customerid, false);
     }
 
     public function checkCustomerTenExistence($customerid, $ten, $divisionid = null)

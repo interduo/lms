@@ -96,8 +96,6 @@ interface LMSNetDevManagerInterface
 
     public function GetModelList($pid = null);
 
-    public function getNetDevTypes();
-
     public function GetRadioSectors($netdevid, $technology = 0);
 
     public function AddRadioSector($netdevid, array $radiosector);

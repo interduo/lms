@@ -567,18 +567,6 @@ class LMS
         return $manager->getCustomerNodesNo($id);
     }
 
-    public function GetCustomerIDByIP($ipaddr)
-    {
-        $manager = $this->getCustomerManager();
-        return $manager->GetCustomerIDByIP($ipaddr);
-    }
-
-    public function GetCashByID($id)
-    {
-        $manager = $this->getCashManager();
-        return $manager->GetCashByID($id);
-    }
-
     public function CashImportParseFile($filename, $contents, $patterns, $quiet = true, $filemtime = null, $config_section = 'cashimport')
     {
         $manager = $this->getCashManager();
@@ -626,12 +614,6 @@ class LMS
         return $manager->getAllCustomerNames();
     }
 
-    public function GetCustomerNodesAC($id)
-    {
-        $manager = $this->getCustomerManager();
-        return $manager->GetCustomerNodesAC($id);
-    }
-
     public function getCustomerList($params)
     {
         $manager = $this->getCustomerManager();
@@ -648,12 +630,6 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->getCustomerNetDevNodes($id, $count);
-    }
-
-    public function GetCustomerNetDevs($customer_id)
-    {
-        $manager = $this->getCustomerManager();
-        return $manager->GetCustomerNetDevs($customer_id);
     }
 
     public function GetCustomerNetworks($id, $count = null)
@@ -774,18 +750,6 @@ class LMS
     {
         $manager = $this->getCustomerManager();
         return $manager->GetCustomerAddressesWithOrWithoutEndPoints($customerid, $with);
-    }
-
-    public function GetCustomerAddressesWithEndPoints($customerid)
-    {
-        $manager = $this->getCustomerManager();
-        return $manager->GetCustomerAddressesWithEndPoints($customerid);
-    }
-
-    public function GetCustomerAddressesWithoutEndPoints($customerid)
-    {
-        $manager = $this->getCustomerManager();
-        return $manager->GetCustomerAddressesWithoutEndPoints($customerid);
     }
 
     public function checkCustomerTenExistence($customerid, $ten, $divisionid = null)
@@ -1078,12 +1042,6 @@ class LMS
         return $manager->GetGroupNamesWithoutCustomer($customerid);
     }
 
-    public function CustomerassignmentGetForCustomer($id)
-    {
-        $manager = $this->getCustomerGroupManager();
-        return $manager->CustomerassignmentGetForCustomer($id);
-    }
-
     public function CustomerassignmentDelete($customerassignmentdata)
     {
         $manager = $this->getCustomerGroupManager();
@@ -1195,22 +1153,10 @@ class LMS
         return $manager->GetNodePubIPByID($id);
     }
 
-    public function GetNodeMACByID($id)
-    {
-        $manager = $this->getNodeManager();
-        return $manager->GetNodeMACByID($id);
-    }
-
     public function GetNodeName($id)
     {
         $manager = $this->getNodeManager();
         return $manager->GetNodeName($id);
-    }
-
-    public function GetNodeNameByIP($ipaddr)
-    {
-        $manager = $this->getNodeManager();
-        return $manager->GetNodeNameByIP($ipaddr);
     }
 
     public function GetNode($id)
@@ -1397,12 +1343,6 @@ class LMS
     {
         $manager = $this->getNodeManager();
         return $manager->updateNodeField($nodeid, $field, $value);
-    }
-
-    public function GetUniqueNodeLocations($customerid)
-    {
-        $manager = $this->getNodeManager();
-        return $manager->GetUniqueNodeLocations($customerid);
     }
 
     public function GetNodeLocations($customerid, $address_id = null)
@@ -2172,12 +2112,6 @@ class LMS
         return $manager->GetModelList($pid);
     }
 
-    public function getNetDevTypes()
-    {
-        $manager = $this->getNetDevManager();
-        return $manager->getNetDevTypes();
-    }
-
     public function GetRadioSectors($netdevid, $technology = 0)
     {
         $manager = $this->getNetDevManager();
@@ -2368,12 +2302,6 @@ class LMS
         return $manager->GetQueueVerifier($id);
     }
 
-    public function GetQueueNameByTicketId($id)
-    {
-        $manager = $this->getHelpdeskManager();
-        return $manager->GetQueueNameByTicketId($id);
-    }
-
     public function GetQueueName($id)
     {
         $manager = $this->getHelpdeskManager();
@@ -2531,12 +2459,6 @@ class LMS
         return $manager->GetFirstMessage($ticketid);
     }
 
-    public function GetLastMessage($ticketid)
-    {
-        $manager = $this->getHelpdeskManager();
-        return $manager->GetLastMessage($ticketid);
-    }
-
     public function ReplaceNotificationSymbols($text, array $params)
     {
         $manager = $this->getHelpdeskManager();
@@ -2685,18 +2607,6 @@ class LMS
     {
         $manager = $this->getHelpdeskManager();
         return $manager->cleanupTicketSubject($subject);
-    }
-
-    public function isCategoryAssignedToTicket($categoryid, $ticketid)
-    {
-        $manager = $this->getHelpdeskManager();
-        return $manager->isCategoryAssignedToTicket($categoryid, $ticketid);
-    }
-
-    public function assignCategoryToTicket($categoryid, $ticketid)
-    {
-        $manager = $this->getHelpdeskManager();
-        return $manager->assignCategoryToTicket($categoryid, $ticketid);
     }
 
     public function deleteTicket($ticketid, $persistent = true)
@@ -3633,12 +3543,6 @@ class LMS
     {
         $manager = $this->getEventManager();
         return $manager->CloseEvent($params);
-    }
-
-    public function GetCustomerIdByTicketId($id)
-    {
-        $manager = $this->getEventManager();
-        return $manager->GetCustomerIdByTicketId($id);
     }
 
     public function EventOverlaps(array $params)

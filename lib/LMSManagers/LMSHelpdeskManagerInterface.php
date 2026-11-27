@@ -79,8 +79,6 @@ interface LMSHelpdeskManagerInterface
 
     public function GetEventsByTicketId($id);
 
-    public function GetQueueNameByTicketId($id);
-
     public function TicketExists($id);
 
 //  public function SaveTicketMessageAttachments($ticketid, $messageid, $files, $cleanup = false);
@@ -98,8 +96,6 @@ interface LMSHelpdeskManagerInterface
     public function GetMessage($id);
 
     public function GetFirstMessage($ticketid);
-
-    public function GetLastMessage($ticketid);
 
     public function TicketChange($ticketid, array $props);
 
@@ -162,10 +158,6 @@ interface LMSHelpdeskManagerInterface
     public function getTicketImageGalleries(&$ticket);
 
     public function cleanupTicketSubject($subject);
-
-    public function isCategoryAssignedToTicket($categoryid, $ticketid);
-
-    public function assignCategoryToTicket($categoryid, $ticketid);
 
     public function deleteTicket($ticketid, $persistent = true);
 

@@ -52,11 +52,7 @@ interface LMSNodeManagerInterface
 
     public function GetNodePubIPByID($id);
 
-    public function GetNodeMACByID($id);
-
     public function GetNodeName($id);
-
-    public function GetNodeNameByIP($ipaddr);
 
     public function GetNode($id);
 
@@ -87,8 +83,6 @@ interface LMSNodeManagerInterface
     public function SetNodeLinkType($node, $link = null);
 
     public function updateNodeField($nodeid, $field, $value);
-
-    public function GetUniqueNodeLocations($customerid);
 
     public function GetNodeLocations($customerid, $address_id = null);
 

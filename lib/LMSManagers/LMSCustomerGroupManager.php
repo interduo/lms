@@ -276,23 +276,6 @@ class LMSCustomerGroupManager extends LMSManager implements LMSCustomerGroupMana
     }
 
     /**
-     * Returns customer groups assignments for customer
-     *
-     * @param int $id Customer id
-     * @return array Customer groups assignments
-     */
-    public function CustomerassignmentGetForCustomer($id)
-    {
-        return $this->db->GetAll(
-            'SELECT vcustomerassignments.id AS id, customergroupid, customerid
-            FROM vcustomerassignments, customergroups
-            WHERE customerid=? AND customergroups.id = customergroupid
-            ORDER BY customergroupid ASC',
-            array($id)
-        );
-    }
-
-    /**
      * Deletes customer assignment
      *
      * @param array $customerassignmentdata Customer assignment data

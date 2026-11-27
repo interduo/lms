@@ -54,8 +54,6 @@ interface LMSCustomerGroupManagerInterface
 
     public function GetGroupNamesWithoutCustomer($customerid);
 
-    public function CustomerassignmentGetForCustomer($id);
-
     public function CustomerassignmentDelete($customerassignmentdata);
 
     public function CustomerassignmentAdd($customerassignmentdata);

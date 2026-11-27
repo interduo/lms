@@ -781,12 +781,6 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
         return $this->db->GetOne('SELECT verifierid FROM rtqueues WHERE id=?', array($id));
     }
 
-    public function GetQueueNameByTicketId($id)
-    {
-        return $this->db->GetOne('SELECT name FROM rtqueues '
-                . 'WHERE id=(SELECT queueid FROM rttickets WHERE id=?)', array($id));
-    }
-
     public function GetEventsByTicketId($id)
     {
         $events = $this->db->GetAll(
@@ -1608,18 +1602,6 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
     public function GetFirstMessage($ticketid)
     {
         $messageid = $this->db->GetOne('SELECT MIN(id) FROM rtmessages
-			WHERE ticketid = ? AND (type = ? OR type = ?)
-			GROUP BY ticketid', array($ticketid, RTMESSAGE_REGULAR, RTMESSAGE_NOTE));
-        if ($messageid) {
-            return $this->GetMessage($messageid);
-        } else {
-            return null;
-        }
-    }
-
-    public function GetLastMessage($ticketid)
-    {
-        $messageid = $this->db->GetOne('SELECT MAX(id) FROM rtmessages
 			WHERE ticketid = ? AND (type = ? OR type = ?)
 			GROUP BY ticketid', array($ticketid, RTMESSAGE_REGULAR, RTMESSAGE_NOTE));
         if ($messageid) {
@@ -3381,41 +3363,6 @@ class LMSHelpdeskManager extends LMSManager implements LMSHelpdeskManagerInterfa
             $subject = preg_replace('/(Re|Odp):\s*/', '', $subject);
         }
         return preg_replace('/' . $subject_ticket_regexp_match . '/', '', $subject);
-    }
-
-    public function isCategoryAssignedToTicket($categoryid, $ticketid)
-    {
-        return $this->db->GetOne(
-            'SELECT id
-            FROM rtticketcategories
-            WHERE ticketid = ?
-                AND categoryid = ?',
-            array(
-                $ticketid,
-                $categoryid,
-            )
-        );
-    }
-
-    public function assignCategoryToTicket($categoryid, $ticketid)
-    {
-        $categories = is_array($categoryid) ? $categoryid : array($categoryid);
-        $inserted = 0;
-        foreach ($categories as $category) {
-            if (!$this->isCategoryAssignedToTicket($category, $ticketid)) {
-                $res = $this->db->Execute(
-                    'INSERT INTO rtticketcategories (ticketid, categoryid) VALUES (?, ?)',
-                    array(
-                        $ticketid,
-                        $category,
-                    )
-                );
-                if (!empty($res)) {
-                    $inserted++;
-                }
-            }
-        }
-        return $inserted;
     }
 
     public function deleteTicket($ticketid, $persistent = true)

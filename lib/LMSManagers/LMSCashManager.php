@@ -31,18 +31,6 @@
 class LMSCashManager extends LMSManager implements LMSCashManagerInterface
 {
     /**
-     * Returns cash
-     *
-     * @param int $id Cash id
-     * @return array Cash data
-     */
-    public function GetCashByID($id)
-    {
-        return $this->db->GetRow('SELECT time, userid, value, taxid, customerid, comment
-			FROM cash WHERE id=?', array($id));
-    }
-
-    /**
      * Parses import file
      *
      * @global LMS $LMS
