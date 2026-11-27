@@ -48,7 +48,7 @@
 			</li>
 			<li>
 				<strong>{trans("Body:")}</strong><br>
-				<textarea name="documentsend[body]" rows="12"></textarea>
+				<textarea name="documentsend[body]" class="lms-ui-wysiwyg-editor" data-wysiwyg="false" rows="12"></textarea>
 			</li>
 		</ol>
 		<div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
@@ -91,8 +91,17 @@
 				return;
 			}
 			$('#document-send-form [name="documentsend[subject]"]').val(result.subject);
-			$('#document-send-form [name="documentsend[body]"]').val(result.body);
+			var documentSendBody = $('#document-send-form [name="documentsend[body]"]');
+			documentSendBody.trigger('lms:visual_editor_change_required', {
+				ifShow: false
+			});
+			documentSendBody.val(result.body);
 			documentSendDialog.open();
+			if (result.format == 'html') {
+				documentSendBody.trigger('lms:visual_editor_change_required', {
+					ifShow: true
+				});
+			}
 		}).fail(function(jqXHR) {
 			alertDialog($t('AJAX: Invalid result - status: $a', jqXHR.status), button);
 		}).always(function() {
@@ -116,6 +125,10 @@
 
 		$('#document-send-form').submit(function() {
 			var form = $(this);
+
+			if (typeof tinymce !== 'undefined') {
+				tinymce.triggerSave();
+			}
 
 			if (!form.find('[name="documentsend[recipients][]"]:checked').length
 				&& !form.find('[name="documentsend[extraemail]"]').val().trim().length) {

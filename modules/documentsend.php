@@ -81,6 +81,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'preview' && isset($_GET['api']
     $docTypeAlias = $DOCTYPE_ALIASES[$doc['type']];
     $subject = ConfigHelper::getConfig('documents-' . $docTypeAlias . '.mail_subject', ConfigHelper::getConfig('documents.mail_subject', '%document'));
     $body = ConfigHelper::getConfig('documents-' . $docTypeAlias . '.mail_body', ConfigHelper::getConfig('documents.mail_body', '%document'));
+    $mail_format = ConfigHelper::getConfig('documents.mail_format', 'text');
 
     if (count($docs) == 1) {
         $doc['fullnumber'] = docnumber(array(
@@ -109,6 +110,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'preview' && isset($_GET['api']
     die(json_encode(array(
         'subject' => $subject,
         'body' => $body,
+        'format' => $mail_format,
     )));
 }
 
@@ -147,6 +149,9 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
         }
         if (isset($documentSend['body']) && is_string($documentSend['body'])) {
             $mailBody = str_replace("\r\n", "\n", $documentSend['body']);
+        }
+        if (isset($documentSend['wysiwyg']['body'])) {
+            $mailFormat = ConfigHelper::checkValue($documentSend['wysiwyg']['body']) ? 'html' : 'text';
         }
     }
 
@@ -229,17 +234,21 @@ if (!isset($_GET['sent']) && isset($_SERVER['HTTP_REFERER']) && !preg_match('/m=
                 $attachments = Utils::filterIntegers($attachments);
             }
 
+            $sendParams = compact(
+                'currtime',
+                'quiet',
+                'test',
+                'attachments',
+                'mailSubject',
+                'mailBody'
+            );
+            if (isset($mailFormat)) {
+                $sendParams['mailFormat'] = $mailFormat;
+            }
             $LMS->SendDocuments(
                 $docs,
                 'frontend',
-                compact(
-                    'currtime',
-                    'quiet',
-                    'test',
-                    'attachments',
-                    'mailSubject',
-                    'mailBody'
-                )
+                $sendParams
             );
         }
     }
